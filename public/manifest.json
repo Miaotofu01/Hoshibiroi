@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "划词翻译",
+  "version": "0.1.0",
+  "description": "划词翻译 Chrome 插件 — 支持多翻译源、发音、生词收藏",
+  "permissions": ["storage", "scripting", "offscreen"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "src/worker/index.ts"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/index.ts"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "src/popup/index.html",
+    "default_title": "划词翻译"
+  },
+  "options_page": "src/options/index.html",
+  "commands": {
+    "translate": {
+      "suggested_key": { "default": "Alt+T" },
+      "description": "翻译选中文字"
+    },
+    "speak": {
+      "suggested_key": { "default": "Alt+R" },
+      "description": "朗读原文"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}
