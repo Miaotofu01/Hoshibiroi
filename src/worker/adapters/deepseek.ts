@@ -61,14 +61,18 @@ export const deepseekTranslator: TranslatorAdapter = {
         return { text: content.trim(), source: 'DeepSeek' };
       }
 
-      const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        text: parsed.text ?? content.trim(),
-        phonetic: parsed.phonetic,
-        partsOfSpeech: parsed.partsOfSpeech,
-        examples: parsed.examples,
-        source: 'DeepSeek',
-      };
+      try {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          text: parsed.text ?? content.trim(),
+          phonetic: parsed.phonetic,
+          partsOfSpeech: parsed.partsOfSpeech,
+          examples: parsed.examples,
+          source: 'DeepSeek',
+        };
+      } catch {
+        return { text: content.trim(), source: 'DeepSeek' };
+      }
     } finally {
       clearTimeout(timeout);
     }
