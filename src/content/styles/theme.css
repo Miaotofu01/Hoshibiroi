@@ -1,0 +1,46 @@
+/* Tokyo Night 暗色主题 — CSS Custom Properties */
+/* 后续新增主题只需提供一组变量覆盖即可 */
+
+:host {
+  --bg-primary: #1a1b26;
+  --bg-secondary: #24283b;
+  --bg-hover: #2f3348;
+  --text-primary: #c0caf5;
+  --text-secondary: #565f89;
+  --text-muted: #414868;
+  --accent: #7aa2f7;
+  --accent-hover: #89b4fa;
+  --accent-green: #9ece6a;
+  --accent-red: #f7768e;
+  --accent-yellow: #e0af68;
+  --border: #3b4261;
+  --shadow: rgba(0, 0, 0, 0.4);
+  --radius: 8px;
+  --radius-sm: 4px;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --transition: 0.2s ease;
+}
+
+/* 全局 reset（仅在 Shadow DOM 内生效） */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-sm);
+  transition: var(--transition);
+}
+
+button:hover {
+  opacity: 0.8;
+}
