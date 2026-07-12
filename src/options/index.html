@@ -24,8 +24,14 @@
       border-radius: var(--radius); padding: 14px 16px;
       margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
     }
-    .translator-card.dragging { opacity: 0.5; }
-    .drag-handle { cursor: grab; color: var(--text2); font-size: 18px; user-select: none; }
+    .arrow-buttons { display: flex; flex-direction: column; gap: 2px; }
+    .arrow-btn {
+      background: none; border: 1px solid var(--border); border-radius: 4px;
+      color: var(--accent); cursor: pointer; font-size: 11px; line-height: 1;
+      padding: 2px 4px; transition: 0.15s;
+    }
+    .arrow-btn:hover:not(:disabled) { background: var(--accent); color: var(--bg); }
+    .arrow-btn:disabled { opacity: 0.35; cursor: default; }
     .translator-info { flex: 1; }
     .translator-name { font-weight: 600; }
     .translator-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
@@ -77,7 +83,7 @@
   <h1>⚙️ 划词翻译 设置</h1>
 
   <h2>翻译源</h2>
-  <p style="color:var(--text2);font-size:12px;margin-bottom:12px">拖拽 ☰ 排序优先级，靠前的优先使用</p>
+  <p style="color:var(--text2);font-size:12px;margin-bottom:12px">点击 ▲ ▼ 按钮调整翻译源优先级，靠前的优先使用</p>
   <div id="translators-list"></div>
 
   <h2>语言偏好</h2>

@@ -20,25 +20,49 @@ function renderTranslators(translators: TranslatorConfig[]) {
   const list = document.getElementById('translators-list')!;
   list.innerHTML = '';
 
-  translators
-    .sort((a, b) => a.priority - b.priority)
-    .forEach(t => {
-      const card = document.createElement('div');
-      card.className = 'translator-card';
-      card.draggable = true;
-      card.dataset.id = t.id;
-      const needsKey = API_KEY_IDS.has(t.id);
-      card.innerHTML = `
-        <span class="drag-handle" title="拖拽排序">☰</span>
-        <div class="translator-info">
-          <div class="translator-name">${t.name}</div>
-          <div class="translator-desc">${needsKey ? '需要 API Key' : '免费使用'}</div>
-          ${needsKey ? `<input class="api-key-input" type="password" placeholder="输入 API Key" value="${escapeHtml(t.apiKey || '')}" data-id="${t.id}">` : ''}
-        </div>
-        <button class="toggle ${t.enabled ? 'enabled' : ''}" data-id="${t.id}" title="开关"></button>
-      `;
-      list.appendChild(card);
+  translators.forEach((t, i) => {
+    const card = document.createElement('div');
+    card.className = 'translator-card';
+    card.dataset.id = t.id;
+    const needsKey = API_KEY_IDS.has(t.id);
+    const isFirst = i === 0;
+    const isLast = i === translators.length - 1;
+    card.innerHTML = `
+      <div class="arrow-buttons">
+        <button class="arrow-btn up-btn" ${isFirst ? 'disabled' : ''} data-index="${i}" title="上移">▲</button>
+        <button class="arrow-btn down-btn" ${isLast ? 'disabled' : ''} data-index="${i}" title="下移">▼</button>
+      </div>
+      <div class="translator-info">
+        <div class="translator-name">${t.name}</div>
+        <div class="translator-desc">${needsKey ? '需要 API Key' : '免费使用'}</div>
+        ${needsKey ? `<input class="api-key-input" type="password" placeholder="输入 API Key" value="${escapeHtml(t.apiKey || '')}" data-id="${t.id}">` : ''}
+      </div>
+      <button class="toggle ${t.enabled ? 'enabled' : ''}" data-id="${t.id}" title="开关"></button>
+    `;
+    list.appendChild(card);
+  });
+
+  // 上移事件
+  list.querySelectorAll('.up-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const index = parseInt((btn as HTMLElement).dataset.index!);
+      if (index > 0) {
+        [translators[index - 1], translators[index]] = [translators[index], translators[index - 1]];
+        renderTranslators(translators);
+      }
     });
+  });
+
+  // 下移事件
+  list.querySelectorAll('.down-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const index = parseInt((btn as HTMLElement).dataset.index!);
+      if (index < translators.length - 1) {
+        [translators[index], translators[index + 1]] = [translators[index + 1], translators[index]];
+        renderTranslators(translators);
+      }
+    });
+  });
 
   // 开关事件
   list.querySelectorAll('.toggle').forEach(btn => {
@@ -58,10 +82,6 @@ function renderTranslators(translators: TranslatorConfig[]) {
       t.apiKey = (input as HTMLInputElement).value;
     });
   });
-
-  // 拖拽排序 (简化版: 上下按钮)
-  // 注意: 完整的拖拽排序需要更复杂的 DragEvent 处理
-  // 这里用简单的上下箭头替代，后续可升级为完整拖拽
 }
 
 function escapeHtml(s: string): string {
@@ -75,6 +95,8 @@ let state: State;
 async function init() {
   state = await loadSettings();
 
+  // 按优先级排序一次，后续通过上下按钮调整顺序
+  state.translators.sort((a, b) => a.priority - b.priority);
   renderTranslators(state.translators);
 
   const targetSel = document.getElementById('target-lang') as HTMLSelectElement;
