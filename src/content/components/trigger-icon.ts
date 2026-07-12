@@ -63,6 +63,9 @@ export class TriggerIcon extends LitElement {
   show(x: number, y: number) {
     this.x = x;
     this.y = y;
+    // 定位设在宿主 :host 上（position:fixed 的是它，不是内层 div）
+    this.style.left = `${x}px`;
+    this.style.top = `${y}px`;
     this.visible = true;
   }
 

@@ -173,6 +173,10 @@ export class PopupBubble extends LitElement {
 
     this._x = left;
     this._y = Math.max(8, top);
+    // 定位必须设在宿主 :host 上（它才是 position:fixed 的元素）；
+    // 内层 .bubble 是 static，left/top 会被忽略。
+    this.style.left = `${left}px`;
+    this.style.top = `${Math.max(8, top)}px`;
   }
 
   private _speak() {
