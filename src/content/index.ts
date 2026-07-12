@@ -8,7 +8,6 @@ import { SidePanel } from './components/side-panel';
 
 const DEBOUNCE_MS = 200;
 
-// 无条件首行日志：只要本脚本被注入并执行，这条一定打印，用于确认注入是否发生。
 console.log('%c[划词翻译] content script 已加载 ✓', 'color:#7aa2f7;font-weight:bold');
 
 // ── Service Worker 通信 ──
@@ -16,56 +15,31 @@ async function sendToWorker(req: WorkerRequest): Promise<WorkerResponse> {
   return chrome.runtime.sendMessage(req);
 }
 
-// 某些帧（sandbox / about:blank / 受限上下文）没有 customElements，
-// 组件无法注册，此时静默退出，绝不抛错拖垮整个脚本。
-if (typeof customElements === 'undefined' || !customElements || !document.body) {
-  console.log(
-    '%c[划词翻译] 跳过注入 — 诊断:', 'color:#e0af68;font-weight:bold',
-    '\n  typeof customElements =', typeof customElements,
-    '\n  customElements 值 =', (globalThis as { customElements?: unknown }).customElements,
-    '\n  window.customElements =', (window as { customElements?: unknown }).customElements,
-    '\n  document.body 存在 =', !!document.body,
-    '\n  readyState =', document.readyState,
-    '\n  这是顶层帧吗 =', window.top === window.self,
-    '\n  页面 URL =', location.href.slice(0, 80),
-  );
+// 组件用 attachShadow + lit-html 渲染（不依赖 customElements，隔离世界可用）。
+// 仅需 document.body 存在即可注入。
+if (!document.body) {
+  console.log('%c[划词翻译] 无 document.body，跳过注入', 'color:#e0af68');
 } else {
   init();
 }
 
 function init(): void {
-  // 手动注册（组件已去掉 @customElement 自动注册），带 get 守卫防重复定义
-  if (!customElements.get('trigger-icon')) customElements.define('trigger-icon', TriggerIcon);
-  if (!customElements.get('popup-bubble')) customElements.define('popup-bubble', PopupBubble);
-  if (!customElements.get('side-panel')) customElements.define('side-panel', SidePanel);
-
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let lastSelection: { text: string; rect: DOMRect } | null = null;
 
-  // ── 初始化 DOM 容器 ──
-  function createHost(id: string): HTMLElement {
-    const host = document.createElement('div');
-    host.id = `tr-${id}`;
-    // 普通容器 div，挂到 document.body 下（各 Lit 组件内部有自己的 Shadow DOM）
-    let root = document.getElementById('translate-extension-root');
-    if (!root) {
-      root = document.createElement('div');
-      root.id = 'translate-extension-root';
-      document.body.appendChild(root);
-    }
-    root.appendChild(host);
-    return host;
-  }
+  // 所有 UI 挂在一个根容器下（普通 div，各组件内部自带 Shadow DOM）
+  const root = document.createElement('div');
+  root.id = 'translate-extension-root';
+  document.body.appendChild(root);
 
   const triggerIcon = new TriggerIcon();
   const popupBubble = new PopupBubble();
   const sidePanel = new SidePanel();
+  root.appendChild(triggerIcon.el);
+  root.appendChild(popupBubble.el);
+  root.appendChild(sidePanel.el);
 
-  createHost('trigger').appendChild(triggerIcon);
-  createHost('popup').appendChild(popupBubble);
-  createHost('panel').appendChild(sidePanel);
-
-  console.log('%c[划词翻译] 已注入，组件注册完成，选中文字试试', 'color:#9ece6a;font-weight:bold');
+  console.log('%c[划词翻译] 已注入，选中文字试试', 'color:#9ece6a;font-weight:bold');
 
   // ── 选区检测 ──
   document.addEventListener('mouseup', () => {
@@ -81,7 +55,6 @@ function init(): void {
         triggerIcon.hide();
         return;
       }
-      // 在 input/textarea 内选中不触发
       const activeEl = document.activeElement;
       if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
         triggerIcon.hide();
@@ -89,7 +62,6 @@ function init(): void {
       }
       const rect = sel.getRangeAt(0).getBoundingClientRect();
       lastSelection = { text, rect };
-      // 触发按钮显示在选区末尾右侧（视口坐标，position:fixed）
       triggerIcon.show(rect.right + 4, rect.top);
     }, DEBOUNCE_MS);
   });
@@ -114,7 +86,7 @@ function init(): void {
   });
 
   // ── 触发按钮 → 发起翻译 ──
-  triggerIcon.addEventListener('trigger-translate', () => {
+  triggerIcon.el.addEventListener('trigger-translate', () => {
     if (!lastSelection) return;
     triggerIcon.hide();
     const rect = lastSelection.rect;
@@ -131,7 +103,7 @@ function init(): void {
   });
 
   // ── 弹窗 → 展开侧边栏 ──
-  popupBubble.addEventListener('expand-detail', () => {
+  popupBubble.el.addEventListener('expand-detail', () => {
     if (!lastSelection || !popupBubble.translation) return;
     const originalWord = lastSelection.text;
     const translation = popupBubble.translation;
@@ -144,8 +116,8 @@ function init(): void {
     const detail = (e as CustomEvent).detail;
     sendToWorker(speakRequest(detail.word, 'en')).catch(() => {});
   }
-  popupBubble.addEventListener('speak-word', onSpeak);
-  sidePanel.addEventListener('speak-word', onSpeak);
+  popupBubble.el.addEventListener('speak-word', onSpeak);
+  sidePanel.el.addEventListener('speak-word', onSpeak);
 
   // ── 收藏切换 ──
   function onToggleFav(e: Event) {
@@ -156,11 +128,11 @@ function init(): void {
       })
       .catch(() => {});
   }
-  popupBubble.addEventListener('toggle-favorite', onToggleFav);
-  sidePanel.addEventListener('toggle-favorite', onToggleFav);
+  popupBubble.el.addEventListener('toggle-favorite', onToggleFav);
+  sidePanel.el.addEventListener('toggle-favorite', onToggleFav);
 
   // ── 侧边栏换源（跳过缓存，确保用下一个翻译源）──
-  sidePanel.addEventListener('switch-source', () => {
+  sidePanel.el.addEventListener('switch-source', () => {
     if (!lastSelection) return;
     sidePanel.hide();
     popupBubble.setLoading(lastSelection.rect);
@@ -176,7 +148,7 @@ function init(): void {
   });
 
   // ── 重试 ──
-  popupBubble.addEventListener('retry-translate', () => {
+  popupBubble.el.addEventListener('retry-translate', () => {
     if (!lastSelection) return;
     popupBubble.setLoading(lastSelection.rect);
     sendToWorker(translateRequest(lastSelection.text, 'auto', 'zh', window.location.href))
@@ -194,7 +166,7 @@ function init(): void {
   chrome.runtime.onMessage.addListener((msg: unknown) => {
     const message = msg as { action?: string };
     if (message?.action === 'translate-selection' && lastSelection) {
-      triggerIcon.dispatchEvent(new CustomEvent('trigger-translate'));
+      triggerIcon.el.dispatchEvent(new CustomEvent('trigger-translate'));
     }
     if (message?.action === 'speak-selection' && lastSelection) {
       sendToWorker(speakRequest(lastSelection.text, 'en')).catch(() => {});
