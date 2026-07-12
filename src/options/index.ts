@@ -35,7 +35,7 @@ function renderTranslators(translators: TranslatorConfig[]) {
       <div class="translator-info">
         <div class="translator-name">${t.name}</div>
         <div class="translator-desc">${needsKey ? '需要 API Key' : '免费使用'}</div>
-        ${needsKey ? `<input class="api-key-input" type="password" placeholder="输入 API Key" value="${escapeHtml(t.apiKey || '')}" data-id="${t.id}">` : ''}
+        ${needsKey ? `<input class="api-key-input" type="password" placeholder="输入 API Key" data-id="${t.id}">` : ''}
       </div>
       <button class="toggle ${t.enabled ? 'enabled' : ''}" data-id="${t.id}" title="开关"></button>
     `;
@@ -76,18 +76,13 @@ function renderTranslators(translators: TranslatorConfig[]) {
 
   // API key 输入事件
   list.querySelectorAll('.api-key-input').forEach(input => {
+    const id = (input as HTMLInputElement).dataset.id!;
+    const t = translators.find(x => x.id === id)!;
+    (input as HTMLInputElement).value = t.apiKey || '';
     input.addEventListener('input', () => {
-      const id = (input as HTMLInputElement).dataset.id!;
-      const t = translators.find(x => x.id === id)!;
       t.apiKey = (input as HTMLInputElement).value;
     });
   });
-}
-
-function escapeHtml(s: string): string {
-  const el = document.createElement('span');
-  el.textContent = s;
-  return el.innerHTML;
 }
 
 let state: State;
