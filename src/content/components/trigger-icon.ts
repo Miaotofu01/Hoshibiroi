@@ -1,8 +1,7 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { property } from 'lit/decorators.js';
 import themeCss from '../styles/theme.css?inline';
 
-@customElement('trigger-icon')
 export class TriggerIcon extends LitElement {
   @property({ type: Boolean }) visible = false;
   @property({ type: Number }) x = 0;
