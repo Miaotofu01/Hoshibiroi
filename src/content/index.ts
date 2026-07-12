@@ -7,8 +7,9 @@ import { PopupBubble } from './components/popup-bubble';
 import { SidePanel } from './components/side-panel';
 
 // ── 挂载 Web Components ──
-// Lit 组件定义通过 @customElement 自动注册，在这里 import 确保注册
-// TriggerIcon, PopupBubble, SidePanel 已通过 decorator 注册
+// 注意：必须把组件类当"运行时值"引用（下面用 new X()），否则打包器会把
+// 只在类型位置用到的 import 摇掉，@customElement 的注册副作用就不会执行，
+// createElement('trigger-icon') 只会得到未注册的惰性元素。
 
 const DEBOUNCE_MS = 200;
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -35,9 +36,9 @@ const triggerHost = createHost('trigger');
 const popupHost = createHost('popup');
 const panelHost = createHost('panel');
 
-const triggerIcon = document.createElement('trigger-icon') as TriggerIcon;
-const popupBubble = document.createElement('popup-bubble') as PopupBubble;
-const sidePanel = document.createElement('side-panel') as SidePanel;
+const triggerIcon = new TriggerIcon();
+const popupBubble = new PopupBubble();
+const sidePanel = new SidePanel();
 
 triggerHost.appendChild(triggerIcon);
 popupHost.appendChild(popupBubble);
