@@ -1,9 +1,116 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <title>设置</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --bg: #1a1b26; --bg2: #24283b; --text: #c0caf5;
+      --text2: #565f89; --accent: #7aa2f7; --green: #9ece6a;
+      --red: #f7768e; --border: #3b4261; --radius: 8px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: var(--font); font-size: 14px;
+      max-width: 720px; margin: 0 auto; padding: 32px 24px;
+    }
+    h1 { font-size: 24px; margin-bottom: 24px; }
+    h2 { font-size: 16px; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+
+    .translator-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
+    }
+    .translator-card.dragging { opacity: 0.5; }
+    .drag-handle { cursor: grab; color: var(--text2); font-size: 18px; user-select: none; }
+    .translator-info { flex: 1; }
+    .translator-name { font-weight: 600; }
+    .translator-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .api-key-input {
+      width: 200px; padding: 6px 10px; border-radius: 4px;
+      border: 1px solid var(--border); background: var(--bg);
+      color: var(--text); font-size: 13px; font-family: var(--font);
+      margin-left: 8px;
+    }
+    .api-key-input:focus { outline: none; border-color: var(--accent); }
+    .toggle {
+      width: 44px; height: 24px; border-radius: 12px;
+      background: var(--text2); border: none; cursor: pointer;
+      position: relative; transition: 0.2s; flex-shrink: 0;
+    }
+    .toggle.enabled { background: var(--green); }
+    .toggle::after {
+      content: ''; position: absolute; top: 2px; left: 2px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: white; transition: 0.2s;
+    }
+    .toggle.enabled::after { left: 22px; }
+
+    select {
+      padding: 8px 12px; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--bg2);
+      color: var(--text); font-size: 14px; font-family: var(--font);
+    }
+
+    .save-btn {
+      margin-top: 24px; padding: 10px 28px;
+      background: var(--accent); color: #1a1b26;
+      border: none; border-radius: var(--radius);
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      font-family: var(--font);
+    }
+    .save-btn:hover { opacity: 0.9; }
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--green); color: #1a1b26;
+      padding: 10px 20px; border-radius: var(--radius);
+      font-weight: 600; opacity: 0; transition: 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+  </style>
 </head>
 <body>
+  <h1>⚙️ 划词翻译 设置</h1>
+
+  <h2>翻译源</h2>
+  <p style="color:var(--text2);font-size:12px;margin-bottom:12px">拖拽 ☰ 排序优先级，靠前的优先使用</p>
+  <div id="translators-list"></div>
+
+  <h2>语言偏好</h2>
+  <div style="display:flex;gap:16px;align-items:center">
+    <label>
+      目标语言：
+      <select id="target-lang">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+        <option value="ko">한국어</option>
+      </select>
+    </label>
+    <label>
+      源语言默认：
+      <select id="source-lang">
+        <option value="auto">自动检测</option>
+        <option value="en">English</option>
+        <option value="zh">中文</option>
+        <option value="ja">日本語</option>
+        <option value="ko">한국어</option>
+      </select>
+    </label>
+  </div>
+
+  <h2>快捷键</h2>
+  <p style="color:var(--text2);font-size:12px">
+    在 <a href="chrome://extensions/shortcuts" style="color:var(--accent)">chrome://extensions/shortcuts</a> 中自定义
+  </p>
+
+  <button class="save-btn" id="save">💾 保存设置</button>
+  <div class="toast" id="toast">已保存 ✓</div>
+
+  <script type="module" src="./index.ts"></script>
 </body>
 </html>
