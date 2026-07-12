@@ -1,9 +1,8 @@
 import { LitElement, html, css, unsafeCSS } from 'lit';
-import { customElement, property, state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
 import type { TranslationResult } from '../../shared/types';
 import themeCss from '../styles/theme.css?inline';
 
-@customElement('side-panel')
 export class SidePanel extends LitElement {
   @property({ type: Boolean }) visible = false;
   @state() translation: TranslationResult | null = null;
