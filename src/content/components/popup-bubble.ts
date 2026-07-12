@@ -151,28 +151,28 @@ export class PopupBubble extends LitElement {
   }
 
   private _position(rect: DOMRect) {
-    // 优先显示在选区下方
+    // 优先显示在选区下方 (viewport-relative for position: fixed)
     const gap = 8;
-    let top = rect.bottom + gap + window.scrollY;
-    let left = rect.left + window.scrollX;
+    let top = rect.bottom + gap;
+    let left = rect.left;
 
     // 如果下方空间不够，显示在上方
-    if (top + 200 > window.innerHeight + window.scrollY) {
-      top = rect.top - gap + window.scrollY - 200; // 估计高度
+    if (top + 200 > window.innerHeight) {
+      top = rect.top - gap - 200; // 估计高度
     }
 
     // 避免超出右侧边界
-    if (left + 360 > window.innerWidth + window.scrollX) {
-      left = window.innerWidth + window.scrollX - 370;
+    if (left + 360 > window.innerWidth) {
+      left = window.innerWidth - 370;
     }
 
     // 避免超出左侧边界
-    if (left < window.scrollX + 8) {
-      left = window.scrollX + 8;
+    if (left < 8) {
+      left = 8;
     }
 
     this._x = left;
-    this._y = Math.max(window.scrollY + 8, top);
+    this._y = Math.max(8, top);
   }
 
   private _speak() {
