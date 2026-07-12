@@ -3,7 +3,7 @@
   "name": "划词翻译",
   "version": "0.1.0",
   "description": "划词翻译 Chrome 插件 — 支持多翻译源、发音、生词收藏",
-  "permissions": ["storage", "scripting", "offscreen", "tts"],
+  "permissions": ["storage", "scripting", "tts"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "src/worker/index.ts"

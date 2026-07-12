@@ -17,7 +17,7 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 function createHost(id: string): HTMLElement {
   const host = document.createElement('div');
   host.id = `tr-${id}`;
-  // 挂载到 document.body 下的 Shadow DOM 容器
+  // 挂载到 document.body 下的普通容器 div（各 Lit 组件内部有自己的 Shadow DOM）
   const wrapper = document.createElement('div');
   wrapper.id = 'translate-extension-root';
   const existing = document.getElementById('translate-extension-root');
@@ -112,7 +112,7 @@ triggerIcon.addEventListener('trigger-translate', () => {
   const rect = lastSelection.rect;
   popupBubble.setLoading(rect);
 
-  sendToWorker(translateRequest(lastSelection.text, 'auto', 'zh'))
+  sendToWorker(translateRequest(lastSelection.text, 'auto', 'zh', window.location.href))
     .then(res => {
       if (res.type === 'TRANSLATE_RESULT') {
         popupBubble.show(lastSelection!.text, res.translation, rect);
@@ -153,15 +153,12 @@ function onToggleFav(e: Event) {
 popupBubble.addEventListener('toggle-favorite', onToggleFav);
 sidePanel.addEventListener('toggle-favorite', onToggleFav);
 
-// 侧边栏换源
+// 侧边栏换源（跳过缓存，确保使用下一个翻译源）
 sidePanel.addEventListener('switch-source', () => {
   if (!lastSelection) return;
-  // 简单重试翻译（translator 会自动尝试下一个源，但由于当前翻译可能已经被缓存，这里直接重新请求）
-  // 实际逻辑可以跳过缓存，但简单起见：告知用户手动在 options 调整优先级后关闭面板重新划词
-  // TODO: 更完善的换源逻辑 — 传 skipCache 标记
   sidePanel.hide();
   popupBubble.setLoading(lastSelection.rect);
-  sendToWorker(translateRequest(lastSelection.text, 'auto', 'zh'))
+  sendToWorker(translateRequest(lastSelection.text, 'auto', 'zh', window.location.href, true))
     .then(res => {
       if (res.type === 'TRANSLATE_RESULT') {
         popupBubble.show(lastSelection!.text, res.translation, lastSelection!.rect);
@@ -175,7 +172,7 @@ sidePanel.addEventListener('switch-source', () => {
 popupBubble.addEventListener('retry-translate', () => {
   if (!lastSelection) return;
   popupBubble.setLoading(lastSelection.rect);
-  sendToWorker(translateRequest(lastSelection.text, 'auto', 'zh'))
+  sendToWorker(translateRequest(lastSelection.text, 'auto', 'zh', window.location.href))
     .then(res => {
       if (res.type === 'TRANSLATE_RESULT') {
         popupBubble.show(lastSelection!.text, res.translation, lastSelection!.rect);
@@ -196,5 +193,8 @@ chrome.runtime.onMessage.addListener((msg: unknown) => {
   // 处理来自 background 的快捷键指令
   if (message?.action === 'translate-selection' && lastSelection) {
     triggerIcon.dispatchEvent(new CustomEvent('trigger-translate'));
+  }
+  if (message?.action === 'speak-selection' && lastSelection) {
+    sendToWorker(speakRequest(lastSelection.text, 'en')).catch(() => {});
   }
 });

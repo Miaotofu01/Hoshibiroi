@@ -27,6 +27,17 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 }
 
+// ── 键盘快捷键 ──
+chrome.commands.onCommand.addListener(async (command) => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) return;
+  if (command === 'translate') {
+    chrome.tabs.sendMessage(tab.id, { action: 'translate-selection' }).catch(() => {});
+  } else if (command === 'speak') {
+    chrome.tabs.sendMessage(tab.id, { action: 'speak-selection' }).catch(() => {});
+  }
+});
+
 // ── 消息路由 ──
 chrome.runtime.onMessage.addListener(
   (message: unknown, _sender, sendResponse) => {
@@ -52,14 +63,14 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
       const to = req.targetLang || 'zh';
 
       try {
-        const result = await translate(req.text, from, to);
+        const result = await translate(req.text, from, to, req.skipCache);
 
         // 写入历史
         await addHistory({
           id: generateId(),
           word: req.text,
           translation: result,
-          sourceUrl: '', // content script 会填充
+          sourceUrl: req.sourceUrl ?? '',
           timestamp: Date.now(),
         });
 
