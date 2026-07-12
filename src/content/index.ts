@@ -8,8 +8,6 @@ import { SidePanel } from './components/side-panel';
 
 const DEBOUNCE_MS = 200;
 
-console.log('%c[划词翻译] content script 已加载 ✓', 'color:#7aa2f7;font-weight:bold');
-
 // ── Service Worker 通信 ──
 async function sendToWorker(req: WorkerRequest): Promise<WorkerResponse> {
   return chrome.runtime.sendMessage(req);
@@ -17,9 +15,7 @@ async function sendToWorker(req: WorkerRequest): Promise<WorkerResponse> {
 
 // 组件用 attachShadow + lit-html 渲染（不依赖 customElements，隔离世界可用）。
 // 仅需 document.body 存在即可注入。
-if (!document.body) {
-  console.log('%c[划词翻译] 无 document.body，跳过注入', 'color:#e0af68');
-} else {
+if (document.body) {
   init();
 }
 
@@ -38,8 +34,6 @@ function init(): void {
   root.appendChild(triggerIcon.el);
   root.appendChild(popupBubble.el);
   root.appendChild(sidePanel.el);
-
-  console.log('%c[划词翻译] 已注入，选中文字试试', 'color:#9ece6a;font-weight:bold');
 
   // ── 选区检测 ──
   document.addEventListener('mouseup', () => {
