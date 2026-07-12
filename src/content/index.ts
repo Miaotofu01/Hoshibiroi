@@ -125,8 +125,10 @@ triggerIcon.addEventListener('trigger-translate', () => {
 // 弹窗 → 展开侧边栏
 popupBubble.addEventListener('expand-detail', () => {
   if (!lastSelection || !popupBubble.translation) return;
+  const originalWord = lastSelection.text;
+  const translation = popupBubble.translation;
   popupBubble.hide();
-  sidePanel.show(lastSelection.text, popupBubble.translation);
+  sidePanel.show(originalWord, translation);
 });
 
 // 朗读
@@ -163,6 +165,8 @@ sidePanel.addEventListener('switch-source', () => {
     .then(res => {
       if (res.type === 'TRANSLATE_RESULT') {
         popupBubble.show(lastSelection!.text, res.translation, lastSelection!.rect);
+      } else if (res.type === 'TRANSLATE_ERROR') {
+        popupBubble.setError(res.error, lastSelection!.rect);
       }
     });
 });
