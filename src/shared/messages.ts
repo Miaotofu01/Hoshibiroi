@@ -7,6 +7,8 @@ export interface TranslateRequest {
   text: string;
   sourceLang: string;
   targetLang: string;
+  sourceUrl?: string;
+  skipCache?: boolean;
 }
 
 export interface SpeakRequest {
@@ -124,8 +126,8 @@ export function isWorkerResponse(msg: unknown): msg is WorkerResponse {
 
 // ── 工厂函数 ──
 
-export function translateRequest(text: string, from: string, to: string): TranslateRequest {
-  return { type: 'TRANSLATE', text, sourceLang: from, targetLang: to };
+export function translateRequest(text: string, from: string, to: string, sourceUrl?: string, skipCache?: boolean): TranslateRequest {
+  return { type: 'TRANSLATE', text, sourceLang: from, targetLang: to, sourceUrl, skipCache };
 }
 
 export function speakRequest(text: string, lang: string): SpeakRequest {

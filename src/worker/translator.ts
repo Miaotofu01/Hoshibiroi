@@ -17,7 +17,7 @@ const ADAPTERS: Record<string, TranslatorAdapter> = {
 };
 
 export async function translate(
-  text: string, from: string, to: string
+  text: string, from: string, to: string, skipCache = false
 ): Promise<TranslationResult> {
   const { translators } = await getSettings();
 
@@ -35,9 +35,9 @@ export async function translate(
   for (const config of enabled) {
     const adapter = ADAPTERS[config.id];
 
-    // 尝试缓存
+    // 尝试缓存（skipCache 时跳过读取，但成功仍写入）
     const cacheKey = makeCacheKey(text, from, to, adapter.id);
-    const cached = await getCached(cacheKey);
+    const cached = skipCache ? null : await getCached(cacheKey);
     if (cached) return cached;
 
     try {
