@@ -7,6 +7,8 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
     "outDir": "dist",
     "rootDir": "src",
     "sourceMap": true,
