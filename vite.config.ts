@@ -6,6 +6,7 @@ export default defineConfig({
     webExtension({
       manifest: 'public/manifest.json',
       watchFilePaths: ['public/**/*'],
+      skipManifestValidation: true,
     }),
   ],
   build: {
