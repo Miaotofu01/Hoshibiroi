@@ -8,6 +8,9 @@ import { SidePanel } from './components/side-panel';
 
 const DEBOUNCE_MS = 200;
 
+// 无条件首行日志：只要本脚本被注入并执行，这条一定打印，用于确认注入是否发生。
+console.log('%c[划词翻译] content script 已加载 ✓', 'color:#7aa2f7;font-weight:bold');
+
 // ── Service Worker 通信 ──
 async function sendToWorker(req: WorkerRequest): Promise<WorkerResponse> {
   return chrome.runtime.sendMessage(req);
@@ -16,7 +19,7 @@ async function sendToWorker(req: WorkerRequest): Promise<WorkerResponse> {
 // 某些帧（sandbox / about:blank / 受限上下文）没有 customElements，
 // 组件无法注册，此时静默退出，绝不抛错拖垮整个脚本。
 if (typeof customElements === 'undefined' || !customElements || !document.body) {
-  console.debug('[划词翻译] 当前帧不支持自定义元素，跳过注入');
+  console.log('%c[划词翻译] 当前帧不支持自定义元素，跳过注入', 'color:#e0af68');
 } else {
   init();
 }
@@ -53,7 +56,7 @@ function init(): void {
   createHost('popup').appendChild(popupBubble);
   createHost('panel').appendChild(sidePanel);
 
-  console.debug('[划词翻译] 已注入，组件注册完成');
+  console.log('%c[划词翻译] 已注入，组件注册完成，选中文字试试', 'color:#9ece6a;font-weight:bold');
 
   // ── 选区检测 ──
   document.addEventListener('mouseup', () => {
