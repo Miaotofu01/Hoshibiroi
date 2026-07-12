@@ -19,7 +19,16 @@ async function sendToWorker(req: WorkerRequest): Promise<WorkerResponse> {
 // 某些帧（sandbox / about:blank / 受限上下文）没有 customElements，
 // 组件无法注册，此时静默退出，绝不抛错拖垮整个脚本。
 if (typeof customElements === 'undefined' || !customElements || !document.body) {
-  console.log('%c[划词翻译] 当前帧不支持自定义元素，跳过注入', 'color:#e0af68');
+  console.log(
+    '%c[划词翻译] 跳过注入 — 诊断:', 'color:#e0af68;font-weight:bold',
+    '\n  typeof customElements =', typeof customElements,
+    '\n  customElements 值 =', (globalThis as { customElements?: unknown }).customElements,
+    '\n  window.customElements =', (window as { customElements?: unknown }).customElements,
+    '\n  document.body 存在 =', !!document.body,
+    '\n  readyState =', document.readyState,
+    '\n  这是顶层帧吗 =', window.top === window.self,
+    '\n  页面 URL =', location.href.slice(0, 80),
+  );
 } else {
   init();
 }
