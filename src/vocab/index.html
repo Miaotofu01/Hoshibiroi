@@ -1,426 +1,624 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>生词本 — 划词翻译</title>
-  <style>
-    :root {
-      --bg-primary: #1a1b26;
-      --bg-secondary: #24283b;
-      --bg-hover: #2f3348;
-      --text-primary: #c0caf5;
-      --text-secondary: #7982a9;
-      --text-muted: #565f89;
-      --accent: #7aa2f7;
-      --accent-green: #9ece6a;
-      --accent-yellow: #e0af68;
-      --accent-red: #f7768e;
-      --accent-purple: #bb9af7;
-      --accent-cyan: #7dcfff;
-      --border: #2f3550;
-      --border-soft: #232842;
-      --radius: 8px;
-      --radius-sm: 5px;
-      --radius-lg: 12px;
-      --font-sans: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --font-mono: 'FiraCode Nerd Font', 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
-      --transition: 0.2s ease;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-family: var(--font-sans);
-      font-size: 14px;
-      line-height: 1.6;
-      min-height: 100vh;
-    }
-    .container { max-width: 780px; margin: 0 auto; padding: 36px 24px 80px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>生词本 — 划词翻译</title>
+<style>
+:root {
+  --bg-base: #0d1117;
+  --bg-surface: #161b22;
+  --bg-elevated: #1c2129;
+  --bg-selection: rgba(31,111,235,0.2);
+  --fg-default: #e6edf3;
+  --fg-body: #c9d1d9;
+  --fg-muted: #8b949e;
+  --border-default: #30363d;
+  --border-muted: #21262d;
+  --accent: #58a6ff;
+  --accent-success: #3fb950;
+  --accent-warning: #d29922;
+  --accent-danger: #f85149;
+  --accent-purple: #bc8cff;
+  --accent-secondary: #79c0ff;
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-lg: 8px;
+  --font-sans: "Inter","SF Pro Display",-apple-system,"Noto Sans SC","PingFang SC",sans-serif;
+  --font-mono: "Fira Code","SF Mono","Cascadia Code","JetBrains Mono",monospace;
+  --ease-elastic: cubic-bezier(0.34,1.56,0.64,1);
+  --ease-standard: cubic-bezier(0.4,0,0.2,1);
+  --ease-out: cubic-bezier(0.25,0.46,0.45,0.94);
+  --text-micro: 11px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-display: 56px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:var(--bg-base);color:var(--fg-body);
+  font-family:var(--font-sans);font-size:var(--text-base);
+  line-height:1.6;min-height:100vh;
+}
+.container{max-width:860px;margin:0 auto;padding:36px 24px 80px}
+.ico{width:1em;height:1em;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.ico svg{width:100%;height:100%;display:block}
 
-    /* ── SVG icon wrapper ── */
-    .ico { width: 1em; height: 1em; display: inline-block; vertical-align: -.15em; flex-shrink: 0; }
-    .ico svg { width: 100%; height: 100%; display: block; }
+/* ── Navigation ── */
+.nav{display:flex;align-items:center;gap:0;margin-bottom:28px;border-bottom:1px solid var(--border-default)}
+.nav-tab{
+  padding:10px 20px;font-family:var(--font-mono);font-size:var(--text-sm);
+  letter-spacing:.04em;color:var(--fg-muted);background:none;border:none;
+  border-bottom:2px solid transparent;cursor:pointer;
+  transition:color .2s var(--ease-standard),border-color .2s var(--ease-standard);
+  display:inline-flex;align-items:center;gap:6px;
+}
+.nav-tab:hover{color:var(--fg-body)}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.nav-spacer{flex:1}
+.nav-gear{
+  width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
+  background:none;border:1px solid transparent;border-radius:var(--radius);
+  color:var(--fg-muted);cursor:pointer;font-size:18px;transition:all .2s var(--ease-standard);
+}
+.nav-gear:hover{color:var(--fg-default);border-color:var(--border-default);transform:scale(1.1)}
 
-    /* ── Header ── */
-    .header {
-      display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: 12px; margin-bottom: 4px;
-    }
-    .header h1 {
-      font-family: var(--font-mono); font-size: 22px; font-weight: 600;
-      letter-spacing: .04em; color: var(--text-primary);
-      display: flex; align-items: center; gap: 8px;
-    }
-    .header h1 .ico { color: var(--accent); font-size: 22px; }
+/* ── Panel ── */
+.panel{display:none}
+.panel.active{display:block}
 
-    /* ── Tabs ── */
-    .tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
-    .tab-btn {
-      padding: 10px 20px; font-family: var(--font-mono); font-size: 13px;
-      letter-spacing: .04em; color: var(--text-muted);
-      background: none; border: none; border-bottom: 2px solid transparent;
-      cursor: pointer; transition: all var(--transition);
-      display: inline-flex; align-items: center; gap: 6px;
-    }
-    .tab-btn:hover { color: var(--text-secondary); }
-    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-btn .badge {
-      font-size: 11px; background: var(--bg-hover); color: var(--text-muted);
-      padding: 1px 7px; border-radius: 10px; transition: all var(--transition);
-    }
-    .tab-btn.active .badge { background: rgba(122,162,247,.15); color: var(--accent); }
+/* ═══════════════════════  LEARN PANEL  ═══════════════════════ */
+.fc-card-inner{transition:transform .15s var(--ease-standard),opacity .15s var(--ease-standard)}
+.fc-word{
+  font-family:var(--font-mono);font-size:var(--text-display);font-weight:700;
+  color:var(--fg-default);text-align:center;word-break:break-word;
+  line-height:1.15;letter-spacing:-.02em;margin-bottom:8px;
+}
+.fc-word.long{font-size:36px}
+.fc-phon{font-family:var(--font-mono);font-size:var(--text-base);color:var(--fg-muted);text-align:center;margin-bottom:8px}
+.fc-hint{
+  font-family:var(--font-mono);font-size:var(--text-micro);
+  color:var(--fg-muted);letter-spacing:.1em;text-align:center;
+  opacity:.5;transition:opacity .3s ease;margin-top:24px;
+}
+.fc-reveal{
+  max-height:0;overflow:hidden;width:100%;
+  transition:max-height .4s var(--ease-standard),opacity .35s ease,margin-top .4s var(--ease-standard);
+  opacity:0;margin-top:0;
+}
+.fc-reveal.open{max-height:500px;opacity:1;margin-top:28px}
+.fc-card-inner.exit-left{transform:translateX(-30px);opacity:0}
+@keyframes enter-right{
+  from{transform:translateX(30px);opacity:0}
+  to{transform:translateX(0);opacity:1}
+}
+.fc-card-inner.enter-right{animation:enter-right .35s var(--ease-elastic) both}
 
-    /* ── Stats bar ── */
-    .stats-bar {
-      display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 22px;
-      padding: 12px 16px; background: var(--bg-secondary);
-      border: 1px solid var(--border); border-radius: var(--radius);
-    }
-    .stat-item {
-      font-family: var(--font-mono); font-size: 12px; color: var(--text-muted);
-      display: flex; align-items: center; gap: 5px;
-    }
-    .stat-item .num { color: var(--accent); font-weight: 600; }
-    .stat-item.due .num { color: var(--accent-yellow); }
-    .stat-item.mastered .num { color: var(--accent-green); }
+.fc-pos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
+.fc-pos .pos-tag{
+  font-family:var(--font-mono);font-size:var(--text-sm);
+  color:var(--accent-purple);background:rgba(188,140,255,.1);
+  border:1px solid rgba(188,140,255,.2);padding:1px 6px;border-radius:var(--radius-sm);
+}
+.fc-meaning{font-size:var(--text-lg);color:var(--fg-default);line-height:1.6;text-align:center;margin-bottom:16px}
+.fc-context{
+  border-left:2px solid var(--accent-warning);background:var(--bg-surface);
+  padding:12px 16px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+  font-size:var(--text-sm);font-style:italic;color:var(--fg-muted);
+  line-height:1.6;text-align:left;margin-bottom:12px;
+}
+.fc-meta{font-family:var(--font-mono);font-size:var(--text-micro);color:var(--fg-muted);text-align:center;margin-bottom:6px}
+.fc-session-info{font-family:var(--font-mono);font-size:var(--text-micro);color:var(--fg-muted);text-align:center;padding-top:4px}
 
-    /* ── Toolbar (browse) ── */
-    .toolbar { display: flex; gap: 10px; margin-bottom: 22px; align-items: center; }
-    .search-wrap { flex: 1; position: relative; }
-    .search-wrap .ico {
-      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-      font-size: 14px; color: var(--text-muted); pointer-events: none; z-index: 1;
-    }
-    .search {
-      width: 100%; padding: 10px 14px 10px 36px; border-radius: var(--radius);
-      border: 1px solid var(--border); background: var(--bg-secondary);
-      color: var(--text-primary); font-family: var(--font-mono); font-size: 13px;
-      outline: none; transition: border-color var(--transition);
-    }
-    .search::placeholder { color: var(--text-muted); }
-    .search:focus { border-color: var(--accent); }
-    .sort-select {
-      padding: 10px 32px 10px 12px; border-radius: var(--radius);
-      border: 1px solid var(--border); background: var(--bg-secondary);
-      color: var(--text-primary); font-family: var(--font-mono); font-size: 12px;
-      cursor: pointer; outline: none; appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23565f89'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 10px center;
-      transition: border-color var(--transition);
-    }
-    .sort-select:focus { border-color: var(--accent); }
-    .export-btn {
-      padding: 10px 14px; border-radius: var(--radius);
-      border: 1px solid var(--border); background: var(--bg-secondary);
-      color: var(--text-muted); font-family: var(--font-mono); font-size: 11px;
-      cursor: pointer; letter-spacing: .04em; transition: all var(--transition);
-    }
-    .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* progress */
+.review-progress{display:flex;align-items:center;gap:12px;margin-bottom:48px;padding-top:8px}
+.progress-track{flex:1;height:4px;background:var(--border-default);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .35s var(--ease-elastic)}
+.progress-text{font-family:var(--font-mono);font-size:var(--text-sm);color:var(--fg-muted);white-space:nowrap}
 
-    /* ═══════════════════════════════════════════ */
-    /*  BROWSE CARDS                             */
-    /* ═══════════════════════════════════════════ */
+/* rating */
+.rating-row{display:flex;gap:12px;justify-content:center;margin-top:32px;transition:opacity .3s ease}
+.rating-row.hidden{opacity:0;pointer-events:none}
+.rate-btn{
+  flex:1;max-width:180px;padding:14px 0;border-radius:var(--radius);
+  border:1px solid var(--border-default);background:var(--bg-surface);
+  cursor:pointer;font-family:var(--font-sans);font-size:var(--text-lg);
+  font-weight:500;transition:all .25s var(--ease-standard);text-align:center;
+  color:var(--fg-muted);position:relative;overflow:hidden;
+}
+.rate-btn:hover{transform:scale(1.06)}
+.rate-btn:active{transform:scale(.96)}
+.rate-btn.unknown{color:var(--fg-body)}
+.rate-btn.unknown:hover{
+  border-color:var(--accent-danger);color:var(--accent-danger);
+  background:rgba(248,81,73,.06);
+}
+.rate-btn.unknown:active{background:rgba(248,81,73,.15)}
+.rate-btn.fuzzy{color:var(--fg-body)}
+.rate-btn.fuzzy:hover{
+  border-color:var(--accent-warning);color:var(--accent-warning);
+  background:rgba(210,153,34,.06);
+}
+.rate-btn.fuzzy:active{background:rgba(210,153,34,.15)}
+.rate-btn.known{color:var(--fg-body)}
+.rate-btn.known:hover{
+  border-color:var(--accent-success);color:var(--accent-success);
+  background:rgba(63,185,80,.06);
+}
+.rate-btn.known:active{background:rgba(63,185,80,.15)}
 
-    .card {
-      background: var(--bg-secondary); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); margin-bottom: 14px;
-      overflow: hidden; transition: border-color var(--transition), box-shadow var(--transition);
-    }
-    .card:hover { border-color: var(--text-muted); box-shadow: 0 4px 20px rgba(0,0,0,.25); }
-    .card-body { padding: 18px 22px 20px; }
+/* review done */
+.review-done{display:none;text-align:center;padding:60px 20px}
+.review-done.active{display:block}
+.done-icon{font-size:56px;margin-bottom:16px;color:var(--accent-success)}
+.done-title{font-family:var(--font-mono);font-size:var(--text-xl);color:var(--fg-default);margin-bottom:8px}
+.done-desc{font-size:var(--text-base);color:var(--fg-muted);line-height:1.6;margin-bottom:24px}
+.back-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:10px 24px;border-radius:var(--radius);
+  border:1px solid var(--accent);background:transparent;
+  color:var(--accent);font-family:var(--font-mono);font-size:var(--text-sm);
+  cursor:pointer;transition:all .2s var(--ease-standard);
+}
+.back-btn:hover{background:var(--accent);color:var(--bg-base)}
 
-    .card-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
-    .card-head .word {
-      font-family: var(--font-mono); font-size: 20px; font-weight: 600;
-      color: var(--text-primary); word-break: break-word; line-height: 1.2;
-    }
-    .card-head .phon { font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); white-space: nowrap; }
-    .card-actions { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
+/* ═══════════════════════  BROWSE PANEL  ═══════════════════════ */
+.browse-toolbar{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.search-wrap{position:relative}
+.search-wrap .ico{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  font-size:14px;color:var(--fg-muted);pointer-events:none;z-index:1;
+}
+.search-input{
+  width:100%;padding:10px 14px 10px 36px;border-radius:var(--radius);
+  border:1px solid var(--border-default);background:var(--bg-surface);
+  color:var(--fg-default);font-family:var(--font-mono);font-size:var(--text-sm);
+  outline:none;transition:border-color .2s var(--ease-standard);
+}
+.search-input::placeholder{color:var(--fg-muted)}
+.search-input:focus{border-color:var(--accent)}
 
-    .act-btn {
-      width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
-      border-radius: var(--radius-sm); border: 1px solid var(--border);
-      background: transparent; color: var(--text-secondary); cursor: pointer;
-      font-size: 14px; text-decoration: none; transition: all var(--transition);
-    }
-    .act-btn:hover { background: var(--bg-hover); border-color: var(--accent); color: var(--text-primary); }
-    .act-delete:hover { background: var(--accent-red); border-color: var(--accent-red); color: #1a1b26; }
-    .act-copy.copied { border-color: var(--accent-green); color: var(--accent-green); }
+.sort-select{
+  padding:10px 32px 10px 12px;border-radius:var(--radius);
+  border:1px solid var(--border-default);background:var(--bg-surface);
+  color:var(--fg-body);font-family:var(--font-mono);font-size:var(--text-sm);
+  cursor:pointer;outline:none;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b949e'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  transition:border-color .2s var(--ease-standard);
+}
+.sort-select:focus{border-color:var(--accent)}
 
-    .card-meanings {
-      display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
-      margin-bottom: 8px;
-    }
-    .card-meanings .plain { font-size: 14px; color: var(--text-primary); line-height: 1.5; }
-    .pos-tag {
-      flex-shrink: 0; font-family: var(--font-mono); font-size: 10px;
-      color: var(--accent-purple); background: rgba(187,154,247,.1);
-      border: 1px solid rgba(187,154,247,.2); padding: 1px 6px; border-radius: 4px;
-    }
-    .pos-meanings { font-size: 14px; line-height: 1.5; color: var(--text-primary); }
+.filter-pills{display:flex;gap:8px;flex-wrap:wrap}
+.filter-pill{
+  padding:5px 14px;border-radius:20px;border:1px solid var(--border-default);
+  background:transparent;color:var(--fg-muted);font-size:var(--text-sm);
+  font-family:var(--font-mono);cursor:pointer;transition:all .2s var(--ease-standard);
+}
+.filter-pill:hover{border-color:var(--fg-muted);color:var(--fg-body)}
+.filter-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
-    .card-context {
-      border-left: 2px solid var(--accent-yellow); background: var(--bg-hover);
-      padding: 8px 12px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-      font-size: 12px; font-style: italic; color: var(--text-secondary);
-      line-height: 1.5; margin-bottom: 8px;
-      display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
-    }
+.word-card{
+  background:var(--bg-surface);border:1px solid var(--border-default);
+  border-radius:var(--radius);margin-bottom:10px;overflow:hidden;
+  transition:border-color .2s var(--ease-standard),transform .2s var(--ease-standard);
+}
+.word-card:hover{border-color:var(--fg-muted);transform:translateX(4px)}
+.card-body{padding:16px 20px}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.card-head .word{
+  font-family:var(--font-mono);font-size:var(--text-lg);font-weight:600;
+  color:var(--fg-default);word-break:break-word;line-height:1.2;
+}
+.card-head .phon{font-family:var(--font-mono);font-size:var(--text-sm);color:var(--fg-muted);white-space:nowrap}
+.card-actions{margin-left:auto;display:flex;gap:4px;flex-shrink:0}
+.act-btn{
+  width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-sm);border:1px solid var(--border-default);
+  background:transparent;color:var(--fg-muted);cursor:pointer;
+  font-size:14px;text-decoration:none;transition:all .2s var(--ease-standard);
+}
+.act-btn:hover{background:var(--bg-elevated);border-color:var(--fg-muted);color:var(--fg-body)}
+.act-btn.copy-btn.copied{border-color:var(--accent-success);color:var(--accent-success)}
+.act-btn.delete-btn:hover{border-color:var(--accent-danger);color:var(--accent-danger);transform:scale(1.1)}
 
-    .card-meta {
-      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
-      font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
-      padding-top: 8px; border-top: 1px solid var(--border-soft);
-    }
-    .card-meta .src-link { color: var(--accent); text-decoration: none; display: inline-flex; align-items: center; gap: 3px; transition: color var(--transition); }
-    .card-meta .src-link:hover { color: var(--accent-cyan); }
-    .card-meta .review-info { color: var(--accent-yellow); }
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.status-dot.mastered{background:var(--accent-success)}
+.status-dot.learning{background:var(--accent-warning)}
+.status-dot.new{background:var(--fg-muted)}
 
-    /* source dot */
-    .src-dot {
-      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-      background: var(--border); margin-right: 2px; flex-shrink: 0;
-    }
-    .src-dot.s-deepseek  { background: var(--accent-purple); }
-    .src-dot.s-google    { background: var(--accent-green); }
-    .src-dot.s-tencent   { background: var(--accent); }
-    .src-dot.s-baidu     { background: var(--accent-red); }
-    .src-dot.s-deepl     { background: var(--accent-cyan); }
+.card-body .meanings{font-size:var(--text-base);color:var(--fg-body);margin-bottom:8px;line-height:1.5}
+.pos-tag{
+  flex-shrink:0;font-family:var(--font-mono);font-size:var(--text-micro);
+  color:var(--accent-purple);background:rgba(188,140,255,.1);
+  border:1px solid rgba(188,140,255,.2);padding:1px 6px;border-radius:var(--radius-sm);
+  margin-right:6px;
+}
+.card-context{
+  border-left:2px solid var(--accent-warning);background:var(--bg-elevated);
+  padding:8px 12px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+  font-size:var(--text-sm);font-style:italic;color:var(--fg-muted);
+  line-height:1.5;margin-bottom:8px;cursor:pointer;
+  display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
+  transition:-webkit-line-clamp .2s;
+}
+.card-context.expanded{-webkit-line-clamp:unset}
+.card-meta{
+  display:flex;gap:12px;flex-wrap:wrap;align-items:center;
+  font-family:var(--font-mono);font-size:var(--text-micro);color:var(--fg-muted);
+  padding-top:8px;border-top:1px solid var(--border-muted);
+}
+.card-meta .src-link{color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:3px;transition:color .2s}
+.card-meta .src-link:hover{color:var(--accent-secondary)}
+.card-mastery{font-family:var(--font-mono);font-size:var(--text-micro);color:var(--accent-success);margin-left:8px}
+.src-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--border-default);margin-right:2px;flex-shrink:0}
+.src-dot.s-deepseek{background:var(--accent-purple)}
+.src-dot.s-google{background:var(--accent-success)}
+.src-dot.s-tencent{background:var(--accent)}
+.src-dot.s-baidu{background:var(--accent-danger)}
+.src-dot.s-deepl{background:var(--accent-secondary)}
 
-    /* ── Empty ── */
-    .empty { display: none; text-align: center; padding: 80px 20px; color: var(--text-muted); }
-    .empty.visible { display: block; }
-    .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: .6; color: var(--text-muted); }
-    .empty-icon .ico { width: 48px; height: 48px; }
-    .empty-title { font-family: var(--font-mono); font-size: 15px; color: var(--text-secondary); margin-bottom: 6px; }
-    .empty-desc { font-size: 13px; line-height: 1.6; }
+.browse-empty{
+  display:none;text-align:center;padding:80px 20px;color:var(--fg-muted);
+}
+.browse-empty.visible{display:block}
+.empty-icon{font-size:48px;margin-bottom:16px;opacity:.6}
+.empty-icon .ico{width:48px;height:48px}
+.empty-title{font-family:var(--font-mono);font-size:var(--text-base);color:var(--fg-muted);margin-bottom:6px}
+.empty-desc{font-size:var(--text-sm);line-height:1.6}
 
-    /* ═══════════════════════════════════════════ */
-    /*  REVIEW MODE — 不背单词 inspired           */
-    /* ═══════════════════════════════════════════ */
+/* ═══════════════════════  STATS PANEL  ═══════════════════════ */
+.section-title{
+  font-family:var(--font-mono);font-size:var(--text-base);font-weight:600;
+  color:var(--fg-default);margin-bottom:16px;letter-spacing:.04em;
+}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px}
+.stat-big{flex:1;min-width:100px;text-align:center}
+.stat-big-num{font-family:var(--font-mono);font-size:36px;font-weight:600;color:var(--fg-default);line-height:1.2}
+.stat-big-label{font-size:var(--text-sm);color:var(--fg-muted);margin-top:4px}
+.today-progress{margin-bottom:28px}
+.today-progress .progress-track{height:4px}
+.today-progress .progress-fill{background:var(--accent)}
+.today-progress .progress-text{margin-top:6px;display:block}
 
-    .browse-wrap.hidden { display: none; }
-    .review-wrap { display: none; }
-    .review-wrap.active { display: block; }
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:16px}
+.calendar-cell{width:12px;height:12px;border-radius:2px;background:var(--border-muted)}
+.calendar-cell.level-1{background:#3fb95044}
+.calendar-cell.level-2{background:#3fb95088}
+.calendar-cell.level-3{background:var(--accent-success)}
+.calendar-header{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px;
+  font-family:var(--font-mono);font-size:var(--text-micro);color:var(--fg-muted);text-align:center;
+}
+.calendar-legend{
+  display:flex;align-items:center;gap:6px;justify-content:flex-end;
+  font-family:var(--font-mono);font-size:var(--text-micro);color:var(--fg-muted);margin-bottom:16px;
+}
+.calendar-legend .calendar-cell{display:inline-block}
 
-    /* thin progress bar */
-    .review-progress {
-      display: flex; align-items: center; gap: 12px;
-      margin-bottom: 48px;
-    }
-    .progress-track {
-      flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
-    }
-    .progress-fill { height: 100%; background: var(--accent-green); border-radius: 2px; transition: width .35s ease; }
-    .progress-text {
-      font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); white-space: nowrap;
-    }
+.forecast-list{margin-bottom:24px}
+.forecast-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:var(--text-sm)}
+.forecast-row .date-label{font-family:var(--font-mono);color:var(--fg-muted);width:80px;flex-shrink:0}
+.forecast-row .count-label{font-family:var(--font-mono);color:var(--fg-muted);width:36px;text-align:right;flex-shrink:0}
+.forecast-bar-track{flex:1;height:8px;background:var(--border-muted);border-radius:4px;overflow:hidden}
+.forecast-bar-fill{height:100%;background:var(--accent);border-radius:4px;transition:width .35s var(--ease-elastic)}
+.forecast-row.heavy .forecast-bar-fill{background:var(--accent-danger)}
+.forecast-row.heavy .count-label{color:var(--accent-danger)}
 
-    /* flashcard — large centered, minimal */
-    .flashcard-area {
-      display: flex; flex-direction: column; align-items: center;
-      min-height: 380px; justify-content: center;
-      margin-bottom: 36px;
-      cursor: pointer;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .fc-word {
-      font-family: var(--font-mono); font-size: 56px; font-weight: 700;
-      color: var(--text-primary); text-align: center;
-      word-break: break-word; line-height: 1.15;
-      letter-spacing: -.02em;
-    }
-    .fc-word.long { font-size: 36px; }
-    .fc-phon {
-      font-family: var(--font-mono); font-size: 14px; color: var(--text-muted);
-      margin-top: 8px; text-align: center;
-    }
-    .fc-tap-hint {
-      font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
-      letter-spacing: .1em; margin-top: 32px; text-align: center;
-      opacity: .5; transition: opacity .3s ease;
-    }
+.curve-word-select{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:16px}
+.curve-word-chip{
+  white-space:nowrap;padding:4px 12px;border-radius:20px;
+  border:1px solid var(--border-default);background:transparent;
+  font-family:var(--font-mono);font-size:var(--text-micro);color:var(--fg-muted);
+  cursor:pointer;transition:all .2s var(--ease-standard);
+}
+.curve-word-chip:hover{border-color:var(--fg-muted)}
+.curve-word-chip.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.curve-svg-wrap{width:100%;overflow-x:auto;margin-bottom:12px}
 
-    /* revealed content */
-    .fc-reveal {
-      max-height: 0; overflow: hidden; width: 100%;
-      transition: max-height .4s cubic-bezier(.4,0,.2,1), opacity .35s ease, margin .4s ease;
-      opacity: 0; margin-top: 0;
-    }
-    .fc-reveal.open {
-      max-height: 400px; opacity: 1; margin-top: 28px;
-    }
-    .fc-meaning {
-      font-size: 18px; color: var(--text-primary); line-height: 1.6;
-      text-align: center; margin-bottom: 16px;
-    }
-    .fc-pos-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
-    .fc-context {
-      border-left: 2px solid var(--accent-yellow); background: var(--bg-hover);
-      padding: 12px 16px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-      font-size: 13px; font-style: italic; color: var(--text-secondary);
-      line-height: 1.6; text-align: left; margin-bottom: 12px;
-    }
-    .fc-meta {
-      font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);
-      text-align: center;
-    }
+/* ═══════════════════════  SETTINGS DRAWER  ═══════════════════════ */
+.drawer-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);
+  z-index:100;opacity:0;pointer-events:none;
+  transition:opacity .3s var(--ease-standard);
+}
+.drawer-overlay.open{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;width:380px;height:100%;z-index:101;
+  background:var(--bg-surface);border-left:1px solid var(--border-default);
+  transform:translateX(100%);transition:transform .35s var(--ease-elastic);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.drawer.open{transform:translateX(0)}
+.drawer-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 24px;border-bottom:1px solid var(--border-default);
+}
+.drawer-header h2{font-family:var(--font-mono);font-size:var(--text-lg);color:var(--fg-default);letter-spacing:.04em}
+.drawer-close-btn{
+  width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
+  background:none;border:1px solid transparent;border-radius:var(--radius);
+  color:var(--fg-muted);cursor:pointer;font-size:18px;transition:all .2s;
+}
+.drawer-close-btn:hover{color:var(--fg-default);border-color:var(--border-default)}
+.drawer-body{flex:1;overflow-y:auto;padding:24px}
+.setting-section{margin-bottom:24px}
+.setting-section-title{
+  font-family:var(--font-mono);font-size:var(--text-sm);font-weight:600;
+  color:var(--fg-muted);letter-spacing:.04em;margin-bottom:12px;padding-bottom:4px;
+  border-bottom:1px solid var(--border-muted);
+}
+.setting-group{margin-bottom:14px}
+.setting-label{display:block;font-size:var(--text-sm);color:var(--fg-body);margin-bottom:6px}
+.setting-check{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:var(--text-sm);color:var(--fg-body);cursor:pointer}
+.setting-check input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;cursor:pointer}
+.setting-radio{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:var(--text-sm);color:var(--fg-body);cursor:pointer}
+.setting-radio input[type=radio]{accent-color:var(--accent);width:16px;height:16px;cursor:pointer}
+.setting-select{
+  width:100%;padding:8px 12px;border-radius:var(--radius);
+  border:1px solid var(--border-default);background:var(--bg-elevated);
+  color:var(--fg-default);font-family:var(--font-mono);font-size:var(--text-sm);
+  cursor:pointer;outline:none;transition:border-color .2s;
+}
+.setting-select:focus{border-color:var(--accent)}
+.setting-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.setting-btn{
+  padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border-default);
+  background:var(--bg-elevated);color:var(--fg-body);font-size:var(--text-sm);
+  font-family:var(--font-mono);cursor:pointer;text-align:center;transition:all .2s;
+}
+.setting-btn:hover{border-color:var(--fg-muted)}
+.setting-btn.danger{color:var(--accent-danger);border-color:rgba(248,81,73,.3)}
+.setting-btn.danger:hover{background:rgba(248,81,73,.1);border-color:var(--accent-danger)}
+.drawer-footer{
+  padding:16px 24px;border-top:1px solid var(--border-default);
+}
+.save-btn{
+  width:100%;padding:10px 0;border-radius:var(--radius);
+  background:var(--accent);color:#fff;border:none;
+  font-family:var(--font-mono);font-size:var(--text-sm);font-weight:600;
+  cursor:pointer;transition:opacity .2s;letter-spacing:.04em;
+}
+.save-btn:hover{opacity:.9}
 
-    /* two-button rating */
-    .rating-row {
-      display: flex; gap: 16px; justify-content: center;
-      transition: opacity .3s ease;
-    }
-    .rating-row.hidden { opacity: 0; pointer-events: none; }
-    .rate-btn {
-      flex: 1; max-width: 200px; padding: 14px 0;
-      border-radius: var(--radius); border: 1px solid var(--border);
-      background: var(--bg-secondary); cursor: pointer;
-      font-family: var(--font-sans); font-size: 16px; font-weight: 500;
-      transition: all var(--transition); text-align: center;
-    }
-    .rate-btn.unknown { color: var(--text-secondary); }
-    .rate-btn.unknown:hover {
-      border-color: var(--accent-red); color: var(--accent-red);
-      background: rgba(247,118,142,.06);
-    }
-    .rate-btn.known { color: var(--text-secondary); }
-    .rate-btn.known:hover {
-      border-color: var(--accent-green); color: var(--accent-green);
-      background: rgba(158,206,106,.06);
-    }
+/* ═══════════════════════  TOAST  ═══════════════════════ */
+.toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  background:var(--accent-success);color:var(--bg-base);
+  padding:10px 24px;border-radius:20px;
+  font-family:var(--font-mono);font-size:var(--text-sm);font-weight:600;
+  opacity:0;transition:opacity .2s;pointer-events:none;z-index:200;
+}
+.toast.show{opacity:1}
 
-    /* review done */
-    .review-done { display: none; text-align: center; padding: 60px 20px; }
-    .review-done.active { display: block; }
-    .done-icon { font-size: 56px; margin-bottom: 16px; color: var(--accent-green); }
-    .done-title {
-      font-family: var(--font-mono); font-size: 20px; color: var(--text-primary); margin-bottom: 8px;
-    }
-    .done-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; }
-    .back-btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 10px 24px; border-radius: var(--radius);
-      border: 1px solid var(--accent); background: transparent;
-      color: var(--accent); font-family: var(--font-mono); font-size: 13px;
-      cursor: pointer; transition: all var(--transition);
-    }
-    .back-btn:hover { background: var(--accent); color: #1a1b26; }
+/* ═══════════════════════  CUSTOM CURSOR + GLOW  ═══════════════════════ */
+.custom-cursor{
+  position:fixed;width:16px;height:16px;border:2px solid var(--accent);
+  border-radius:50%;pointer-events:none;z-index:9999;
+  transform:translate(-50%,-50%);transition:width .15s,height .15s;
+  mix-blend-mode:difference;display:none;
+}
+.custom-cursor.active{display:block}
+.custom-cursor.pressing{width:24px;height:24px}
+#glow-canvas{position:fixed;inset:0;pointer-events:none;z-index:9998;display:none}
+#glow-canvas.active{display:block}
 
-    /* ── Toast ── */
-    .toast {
-      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
-      background: var(--accent-green); color: #1a1b26;
-      padding: 10px 24px; border-radius: 20px;
-      font-family: var(--font-mono); font-size: 12px; font-weight: 600;
-      opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 99;
-    }
-    .toast.show { opacity: 1; }
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-thumb{background:var(--border-default);border-radius:3px}
+::-webkit-scrollbar-track{background:transparent}
 
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-
-    @media (prefers-reduced-motion: reduce) {
-      * { animation: none !important; transition: none !important; }
-    }
-  </style>
+/* ── Reduced motion ── */
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  .custom-cursor,.custom-cursor.active,#glow-canvas,#glow-canvas.active{display:none!important}
+}
+</style>
 </head>
 <body>
-  <div class="container">
-    <!-- Header + Tabs -->
-    <div class="header">
-      <h1>
-        <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
-        生词本
-      </h1>
-      <div class="tabs" id="tabs">
-        <button class="tab-btn active" data-mode="browse">
-          <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span>
-          浏览
-        </button>
-        <button class="tab-btn" data-mode="review">
-          <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
-          复习
-          <span class="badge" id="due-badge">0</span>
-        </button>
+<div id="app" class="container">
+  <nav class="nav">
+    <button class="nav-tab active" data-panel="learn">学习</button>
+    <button class="nav-tab" data-panel="browse">词库</button>
+    <button class="nav-tab" data-panel="stats">统计</button>
+    <div class="nav-spacer"></div>
+    <button class="nav-gear" id="btn-settings" title="设置">
+      <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+    </button>
+  </nav>
+
+  <!-- ═══ LEARN PANEL ═══ -->
+  <div class="panel active" id="panel-learn">
+    <div class="review-progress" id="review-progress">
+      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0"></div></div>
+      <span class="progress-text" id="progress-text">0/0</span>
+    </div>
+    <div class="fc-card-inner" id="fc-inner">
+      <div class="fc-word" id="fc-word"></div>
+      <div class="fc-phon" id="fc-phon"></div>
+      <div class="fc-hint" id="fc-hint">点击显示释义</div>
+      <div class="fc-reveal" id="fc-reveal">
+        <div class="fc-pos" id="fc-pos"></div>
+        <div class="fc-meaning" id="fc-meaning"></div>
+        <div class="fc-context" id="fc-context"></div>
+        <div class="fc-meta" id="fc-meta"></div>
+        <div class="fc-session-info" id="fc-session-info"></div>
       </div>
     </div>
+    <div class="rating-row hidden" id="rating-row">
+      <button class="rate-btn unknown" id="btn-unknown">不认识</button>
+      <button class="rate-btn fuzzy" id="btn-fuzzy">模糊</button>
+      <button class="rate-btn known" id="btn-known">认识</button>
+    </div>
+    <div class="review-done" id="review-done">
+      <div class="done-icon">
+        <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:56px;height:56px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+      </div>
+      <div class="done-title" id="done-title">今日复习完成</div>
+      <div class="done-desc" id="done-desc"></div>
+      <button class="back-btn" id="back-to-browse">
+        <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></span>
+        返回词库
+      </button>
+    </div>
+  </div>
 
-    <!-- Stats bar -->
-    <div class="stats-bar" id="stats-bar"></div>
-
-    <!-- ═══ BROWSE MODE ═══ -->
-    <div class="browse-wrap" id="browse-wrap">
-      <div class="toolbar">
-        <div class="search-wrap">
+  <!-- ═══ BROWSE PANEL ═══ -->
+  <div class="panel" id="panel-browse">
+    <div class="browse-toolbar" id="browse-toolbar">
+      <div class="toolbar-row" style="display:flex;gap:10px;align-items:center">
+        <div class="search-wrap" style="flex:1">
           <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-          <input class="search" id="search" placeholder="搜索单词或释义…" autofocus />
+          <input class="search-input" id="search-input" placeholder="搜索单词或释义" autofocus>
         </div>
-        <select class="sort-select" id="sort">
+        <select class="sort-select" id="sort-select">
           <option value="newest">最新添加</option>
           <option value="oldest">最早添加</option>
           <option value="alpha-asc">A → Z</option>
           <option value="alpha-desc">Z → A</option>
+          <option value="last-reviewed">最近复习</option>
+          <option value="mastery">掌握度</option>
         </select>
-        <button class="export-btn" id="btn-export-csv" title="导出 Anki CSV">CSV</button>
-        <button class="export-btn" id="btn-export-json" title="导出 JSON">JSON</button>
       </div>
-      <div id="list"></div>
-      <div class="empty" id="empty">
-        <div class="empty-icon">
-          <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
-        </div>
-        <div class="empty-title">还没有收藏词汇</div>
-        <div class="empty-desc">在任意网页选中文字翻译后，<br>点击收藏即可加入生词本。</div>
+      <div class="filter-pills" id="filter-pills">
+        <button class="filter-pill active" data-filter="all">全部 <span id="count-all">0</span></button>
+        <button class="filter-pill" data-filter="new">新词 <span id="count-new">0</span></button>
+        <button class="filter-pill" data-filter="learning">学习中 <span id="count-learning">0</span></button>
+        <button class="filter-pill" data-filter="mastered">已掌握 <span id="count-mastered">0</span></button>
       </div>
     </div>
-
-    <!-- ═══ REVIEW MODE ═══ -->
-    <div class="review-wrap" id="review-wrap">
-      <!-- thin progress -->
-      <div class="review-progress" id="review-progress">
-        <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
-        <span class="progress-text" id="progress-text">0/0</span>
+    <div id="word-list"></div>
+    <div class="browse-empty" id="browse-empty">
+      <div class="empty-icon">
+        <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
       </div>
-
-      <!-- flashcard -->
-      <div class="flashcard-area" id="flashcard-area">
-        <div class="fc-word" id="fc-word"></div>
-        <div class="fc-phon" id="fc-phon"></div>
-        <div class="fc-tap-hint" id="fc-hint">点击显示释义</div>
-        <div class="fc-reveal" id="fc-reveal">
-          <div class="fc-pos-row" id="fc-pos"></div>
-          <div class="fc-meaning" id="fc-meaning"></div>
-          <div class="fc-context" id="fc-context" style="display:none"></div>
-          <div class="fc-meta" id="fc-meta"></div>
-        </div>
-      </div>
-
-      <!-- rating buttons -->
-      <div class="rating-row hidden" id="rating-row">
-        <button class="rate-btn unknown" id="btn-unknown">不认识</button>
-        <button class="rate-btn known" id="btn-known">认识</button>
-      </div>
-
-      <!-- done -->
-      <div class="review-done" id="review-done">
-        <div class="done-icon">
-          <span class="ico" style="width:56px;height:56px;color:var(--accent-green)"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
-        </div>
-        <div class="done-title">今日复习完成</div>
-        <div class="done-desc" id="done-desc"></div>
-        <button class="back-btn" id="back-to-browse">
-          <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></span>
-          返回浏览
-        </button>
-      </div>
+      <div class="empty-title">还没有收藏词汇</div>
+      <div class="empty-desc">在任意网页选中文字翻译后，点击收藏即可加入生词本。</div>
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
-  <script type="module" src="./index.ts"></script>
+  <!-- ═══ STATS PANEL ═══ -->
+  <div class="panel" id="panel-stats">
+    <div id="stats-overview">
+      <div class="stat-row">
+        <div class="stat-big"><div class="stat-big-num" id="stat-total">0</div><div class="stat-big-label">总词汇</div></div>
+        <div class="stat-big"><div class="stat-big-num" id="stat-learning">0</div><div class="stat-big-label">学习中</div></div>
+        <div class="stat-big"><div class="stat-big-num" id="stat-mastered">0</div><div class="stat-big-label">已掌握</div></div>
+        <div class="stat-big"><div class="stat-big-num" id="stat-streak">0</div><div class="stat-big-label">连续天数</div></div>
+      </div>
+      <div class="today-progress">
+        <div class="progress-track"><div class="progress-fill" id="today-fill" style="width:0%"></div></div>
+        <span class="progress-text" id="today-text">今日 0/0 目标</span>
+      </div>
+    </div>
+    <div id="stats-calendar">
+      <div class="section-title">学习日历</div>
+      <div class="calendar-header">
+        <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+      </div>
+      <div class="calendar-grid" id="calendar-grid"></div>
+      <div class="calendar-legend">
+        <span>少</span>
+        <span class="calendar-cell"></span>
+        <span class="calendar-cell level-1"></span>
+        <span class="calendar-cell level-2"></span>
+        <span class="calendar-cell level-3"></span>
+        <span>多</span>
+      </div>
+    </div>
+    <div id="stats-forecast">
+      <div class="section-title">未来 7 天复习预测</div>
+      <div class="forecast-list" id="forecast-list"></div>
+    </div>
+    <div id="stats-curve">
+      <div class="section-title">记忆曲线</div>
+      <div class="curve-word-select" id="curve-word-select"></div>
+      <div class="curve-svg-wrap" id="curve-svg-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS DRAWER ═══ -->
+<div class="drawer-overlay" id="drawer-overlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <h2>设置</h2>
+    <button class="drawer-close-btn" id="drawer-close-btn"><span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></button>
+  </div>
+  <div class="drawer-body">
+    <div class="setting-section">
+      <div class="setting-section-title">卡片模板</div>
+      <div class="setting-group">
+        <div class="setting-label">正面显示</div>
+        <label class="setting-check"><input type="checkbox" checked> 单词</label>
+        <label class="setting-check"><input type="checkbox" checked> 音标</label>
+        <label class="setting-check"><input type="checkbox"> 上下文</label>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">背面显示</div>
+        <label class="setting-check"><input type="checkbox" checked> 释义</label>
+        <label class="setting-check"><input type="checkbox" checked> 词性</label>
+        <label class="setting-check"><input type="checkbox" checked> 例句</label>
+        <label class="setting-check"><input type="checkbox" checked> 上下文</label>
+        <label class="setting-check"><input type="checkbox"> 来源</label>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">布局风格</div>
+        <label class="setting-radio"><input type="radio" name="layout" checked> 不背单词（单词为主）</label>
+        <label class="setting-radio"><input type="radio" name="layout"> 上下文优先（句子挖空）</label>
+      </div>
+    </div>
+    <div class="setting-section">
+      <div class="setting-section-title">学习参数</div>
+      <div class="setting-group">
+        <div class="setting-label">每日新词上限</div>
+        <select class="setting-select" id="setting-new-limit">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+          <option value="25">25</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">每日复习上限</div>
+        <select class="setting-select" id="setting-review-limit">
+          <option value="20">20</option>
+          <option value="30">30</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+          <option value="0">无限制</option>
+        </select>
+      </div>
+    </div>
+    <div class="setting-section">
+      <div class="setting-section-title">通知</div>
+      <label class="setting-check"><input type="checkbox" id="setting-reminder" checked> 复习提醒</label>
+      <label class="setting-check"><input type="checkbox" id="setting-celebration"> 达标庆祝</label>
+    </div>
+    <div class="setting-section">
+      <div class="setting-section-title">数据</div>
+      <div class="setting-actions">
+        <button class="setting-btn" id="btn-export-csv">导出 CSV</button>
+        <button class="setting-btn" id="btn-export-json">导出 JSON</button>
+        <button class="setting-btn danger" id="btn-clear-all">清除全部数据</button>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="save-btn" id="save-settings">保存设置</button>
+  </div>
+</div>
+
+<!-- ═══ TOAST ═══ -->
+<div class="toast" id="toast"></div>
+
+<!-- ═══ CURSOR + GLOW ═══ -->
+<div class="custom-cursor" id="custom-cursor"></div>
+<canvas id="glow-canvas"></canvas>
+
+<script type="module" src="./index.ts"></script>
 </body>
 </html>
