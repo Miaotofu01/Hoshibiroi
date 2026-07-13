@@ -14,6 +14,7 @@ export interface TranslationResult {
     translated: string;
   }>;
   source: string;   // 翻译源名称, e.g. "DeepSeek", "Google Translate"
+  sourceId?: string; // 产出该结果的翻译源 id, e.g. "deepseek"（用于侧栏高亮当前源）
 }
 
 // 翻译源配置 (用户可自定义)
@@ -35,7 +36,8 @@ export interface FavoriteWord {
   createdAt: number;
   reviewCount: number;
   lastReviewedAt: number;
-  nextReviewAt: number;  // SRS 预留
+  nextReviewAt: number;
+  easeFactor: number;    // SM-2 ease factor, default 2.5
 }
 
 // 翻译历史
@@ -51,6 +53,18 @@ export interface HistoryEntry {
 export interface CacheEntry {
   result: TranslationResult;
   timestamp: number;
+}
+
+// 语法分析结果（DeepSeek 句子拆解）
+export interface GrammarAnalysis {
+  structure: string;         // 句型概述，如 "主谓宾结构，包含一个定语从句"
+  tokens: Array<{
+    word: string;
+    pos: string;             // 词性：noun/verb/adj/adv/prep/...
+    lemma?: string;          // 原形
+    role: string;            // 句子成分：主语/谓语/宾语/定语/状语...
+  }>;
+  grammarPoints: string[];   // 关键语法点
 }
 
 // UI 偏好

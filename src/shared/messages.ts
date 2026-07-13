@@ -1,4 +1,4 @@
-import type { TranslationResult, FavoriteWord, HistoryEntry, TranslatorConfig, Preferences } from './types';
+import type { TranslationResult, FavoriteWord, HistoryEntry, TranslatorConfig, Preferences, GrammarAnalysis } from './types';
 
 // ── 请求类型 ──
 
@@ -9,6 +9,7 @@ export interface TranslateRequest {
   targetLang: string;
   sourceUrl?: string;
   skipCache?: boolean;
+  sourceId?: string;   // 指定翻译源 id；不传则按优先级自动挑
 }
 
 export interface SpeakRequest {
@@ -42,10 +43,41 @@ export interface GetSettingsRequest {
   type: 'GET_SETTINGS';
 }
 
+export interface GetSourcesRequest {
+  type: 'GET_SOURCES';
+}
+
+export interface AnalyzeGrammarRequest {
+  type: 'ANALYZE_GRAMMAR';
+  text: string;
+  lang: string;
+  detail: 'brief' | 'full';
+}
+
+export interface ShowSidebarRequest {
+  type: 'SHOW_SIDEBAR';
+  word: string;
+  translation: TranslationResult;
+}
+
 export interface SaveSettingsRequest {
   type: 'SAVE_SETTINGS';
   translators: TranslatorConfig[];
   preferences: Preferences;
+}
+
+export interface SubmitReviewRequest {
+  type: 'SUBMIT_REVIEW';
+  wordId: string;
+  quality: number;
+}
+
+export interface GetDueWordsRequest {
+  type: 'GET_DUE_WORDS';
+}
+
+export interface GetLearnStatsRequest {
+  type: 'GET_LEARN_STATS';
 }
 
 export type WorkerRequest =
@@ -56,7 +88,13 @@ export type WorkerRequest =
   | GetHistoryRequest
   | GetFavoritesRequest
   | GetSettingsRequest
-  | SaveSettingsRequest;
+  | GetSourcesRequest
+  | ShowSidebarRequest
+  | AnalyzeGrammarRequest
+  | SaveSettingsRequest
+  | SubmitReviewRequest
+  | GetDueWordsRequest
+  | GetLearnStatsRequest;
 
 // ── 响应类型 ──
 
@@ -64,6 +102,8 @@ export interface TranslateResponse {
   type: 'TRANSLATE_RESULT';
   text: string;
   translation: TranslationResult;
+  from: string;   // 实际使用的源语言（auto 已解析）
+  to: string;     // 目标语言
 }
 
 export interface TranslateErrorResponse {
@@ -99,6 +139,42 @@ export interface SettingsResponse {
   preferences: Preferences;
 }
 
+export interface SourcesResponse {
+  type: 'SOURCES_RESULT';
+  sources: Array<{ id: string; name: string }>;   // 仅已启用的源，按优先级排序
+}
+
+export interface GrammarResponse {
+  type: 'GRAMMAR_RESULT';
+  text: string;
+  analysis: GrammarAnalysis;
+}
+
+export interface GrammarErrorResponse {
+  type: 'GRAMMAR_ERROR';
+  text: string;
+  error: string;
+}
+
+export interface ReviewResponse {
+  type: 'REVIEW_RESULT';
+  word: FavoriteWord;
+}
+
+export interface DueWordsResponse {
+  type: 'DUE_WORDS_RESULT';
+  words: FavoriteWord[];
+}
+
+export interface LearnStatsResponse {
+  type: 'LEARN_STATS_RESULT';
+  total: number;
+  due: number;
+  reviewedToday: number;
+  streak: number;
+  mastered: number;
+}
+
 export type WorkerResponse =
   | TranslateResponse
   | TranslateErrorResponse
@@ -106,13 +182,22 @@ export type WorkerResponse =
   | ToggleFavoriteResponse
   | HistoryResponse
   | FavoritesResponse
-  | SettingsResponse;
+  | SettingsResponse
+  | SourcesResponse
+  | GrammarResponse
+  | GrammarErrorResponse
+  | ReviewResponse
+  | DueWordsResponse
+  | LearnStatsResponse;
 
 // ── 类型守卫 ──
 
 const RESPONSE_TYPES: WorkerResponse['type'][] = [
   'TRANSLATE_RESULT', 'TRANSLATE_ERROR', 'SPEAK_RESULT',
   'FAVORITE_RESULT', 'HISTORY_RESULT', 'FAVORITES_RESULT', 'SETTINGS_RESULT',
+  'SOURCES_RESULT',
+  'GRAMMAR_RESULT', 'GRAMMAR_ERROR',
+  'REVIEW_RESULT', 'DUE_WORDS_RESULT', 'LEARN_STATS_RESULT',
 ];
 
 export function isWorkerResponse(msg: unknown): msg is WorkerResponse {
@@ -126,8 +211,22 @@ export function isWorkerResponse(msg: unknown): msg is WorkerResponse {
 
 // ── 工厂函数 ──
 
-export function translateRequest(text: string, from: string, to: string, sourceUrl?: string, skipCache?: boolean): TranslateRequest {
-  return { type: 'TRANSLATE', text, sourceLang: from, targetLang: to, sourceUrl, skipCache };
+export function translateRequest(
+  text: string, from: string, to: string, sourceUrl?: string, skipCache?: boolean, sourceId?: string
+): TranslateRequest {
+  return { type: 'TRANSLATE', text, sourceLang: from, targetLang: to, sourceUrl, skipCache, sourceId };
+}
+
+export function getSourcesRequest(): GetSourcesRequest {
+  return { type: 'GET_SOURCES' };
+}
+
+export function showSidebarRequest(word: string, translation: TranslationResult): ShowSidebarRequest {
+  return { type: 'SHOW_SIDEBAR', word, translation };
+}
+
+export function analyzeGrammarRequest(text: string, lang: string, detail: 'brief' | 'full' = 'brief'): AnalyzeGrammarRequest {
+  return { type: 'ANALYZE_GRAMMAR', text, lang, detail };
 }
 
 export function speakRequest(text: string, lang: string): SpeakRequest {
@@ -138,4 +237,16 @@ export function toggleFavoriteRequest(
   word: string, translation: TranslationResult, sourceUrl: string, context?: string
 ): ToggleFavoriteRequest {
   return { type: 'TOGGLE_FAVORITE', word, translation, sourceUrl, context };
+}
+
+export function submitReviewRequest(wordId: string, quality: number): SubmitReviewRequest {
+  return { type: 'SUBMIT_REVIEW', wordId, quality };
+}
+
+export function getDueWordsRequest(): GetDueWordsRequest {
+  return { type: 'GET_DUE_WORDS' };
+}
+
+export function getLearnStatsRequest(): GetLearnStatsRequest {
+  return { type: 'GET_LEARN_STATS' };
 }

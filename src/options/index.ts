@@ -99,6 +99,28 @@ async function init() {
   targetSel.value = state.preferences.targetLang;
   sourceSel.value = state.preferences.sourceLang;
 
+  // ── 外观默认值（字体大小 + 透明度）──
+  const fontSlider = document.getElementById('font-scale') as HTMLInputElement;
+  const fontVal = document.getElementById('font-val')!;
+  const opacitySlider = document.getElementById('opacity') as HTMLInputElement;
+  const opacityVal = document.getElementById('opacity-val')!;
+
+  // 加载当前值
+  const local = await chrome.storage.local.get(['fontScale', 'popupOpacity']);
+  const curFont = (local as any)?.fontScale ?? 20;
+  const curOpacity = (local as any)?.popupOpacity ?? 0.95;
+  fontSlider.value = String(curFont);
+  fontVal.textContent = `${curFont}px`;
+  opacitySlider.value = String(Math.round(curOpacity * 100));
+  opacityVal.textContent = `${Math.round(curOpacity * 100)}%`;
+
+  fontSlider.addEventListener('input', () => {
+    fontVal.textContent = `${fontSlider.value}px`;
+  });
+  opacitySlider.addEventListener('input', () => {
+    opacityVal.textContent = `${opacitySlider.value}%`;
+  });
+
   document.getElementById('save')!.addEventListener('click', async () => {
     state.preferences.targetLang = targetSel.value as Preferences['targetLang'];
     state.preferences.sourceLang = sourceSel.value as Preferences['sourceLang'];
@@ -110,6 +132,12 @@ async function init() {
       type: 'SAVE_SETTINGS',
       translators: state.translators,
       preferences: state.preferences,
+    });
+
+    // 同时保存外观默认值到 local storage
+    await chrome.storage.local.set({
+      fontScale: parseInt(fontSlider.value, 10),
+      popupOpacity: parseInt(opacitySlider.value, 10) / 100,
     });
 
     const toast = document.getElementById('toast')!;

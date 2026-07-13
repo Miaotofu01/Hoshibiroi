@@ -1,17 +1,48 @@
 import type { WorkerRequest, TranslateResponse, TranslateErrorResponse } from '../shared/messages';
-import { translate } from './translator';
+import { translate, getEnabledSources } from './translator';
+import { analyzeGrammar } from './grammar';
 import { speak } from './tts';
 import {
   getHistory, addHistory,
   getFavorites, addFavorite, removeFavorite, isFavorite,
+  updateFavorite, getDueWords,
   getSettings, saveSettings,
 } from './storage';
+import { sm2 } from './srs';
 import { cleanExpiredCache } from './cache';
 
 // ── 定期清理过期缓存 ──
-// SW 启动时清理一次，之后每 6 小时清理一次
 cleanExpiredCache();
 setInterval(cleanExpiredCache, 6 * 60 * 60 * 1000);
+
+// ── SRS 复习提醒 ──
+chrome.alarms.create('srs-check', { periodInMinutes: 60 }).catch(() => {});
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== 'srs-check') return;
+  const due = await getDueWords();
+  if (due.length === 0) return;
+
+  // 检查每日目标
+  const goalData = await chrome.storage.sync.get(['dailyGoal']);
+  const dailyGoal: number = (goalData as any)?.dailyGoal || 10;
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const all = await getFavorites();
+  const reviewedToday = all.filter(f => f.lastReviewedAt >= todayStart.getTime()).length;
+
+  let message = `你有 ${due.length} 个单词等待复习`;
+  if (reviewedToday >= dailyGoal && due.length > 0) {
+    message = `今日目标 ${dailyGoal} 词已达成！还有 ${due.length} 个待复习`;
+  }
+
+  chrome.notifications.create('srs-reminder', {
+    type: 'basic',
+    iconUrl: 'icons/icon-48.png',
+    title: '生词本',
+    message,
+    priority: 1,
+  }).catch(() => {});
+});
 
 // ── 语言检测辅助 ──
 function detectLang(text: string): string {
@@ -63,7 +94,7 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
       const to = req.targetLang || 'zh';
 
       try {
-        const result = await translate(req.text, from, to, req.skipCache);
+        const result = await translate(req.text, from, to, req.skipCache, req.sourceId);
 
         // 写入历史
         await addHistory({
@@ -78,6 +109,8 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
           type: 'TRANSLATE_RESULT',
           text: req.text,
           translation: result,
+          from,
+          to,
         };
         return resp;
       } catch (err) {
@@ -113,6 +146,7 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
           reviewCount: 0,
           lastReviewedAt: 0,
           nextReviewAt: 0,
+          easeFactor: 2.5,
         };
         await addFavorite(word);
         return { type: 'FAVORITE_RESULT', added: true, word };
@@ -140,9 +174,77 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
       return { type: 'SETTINGS_RESULT', ...settings };
     }
 
+    case 'GET_SOURCES': {
+      const sources = await getEnabledSources();
+      return { type: 'SOURCES_RESULT', sources };
+    }
+
+    case 'ANALYZE_GRAMMAR': {
+      try {
+        const analysis = await analyzeGrammar(req.text, req.lang, req.detail);
+        return { type: 'GRAMMAR_RESULT', text: req.text, analysis };
+      } catch (err) {
+        return {
+          type: 'GRAMMAR_ERROR',
+          text: req.text,
+          error: err instanceof Error ? err.message : '语法分析失败',
+        };
+      }
+    }
+
+    case 'SHOW_SIDEBAR': {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (tab?.id) {
+        chrome.tabs.sendMessage(tab.id, { action: 'show-sidebar', word: req.word, translation: req.translation }).catch(() => {});
+      }
+      return { type: 'SPEAK_RESULT', success: true }; // 复用简单应答
+    }
+
     case 'SAVE_SETTINGS': {
       await saveSettings(req.translators, req.preferences);
       return { type: 'SETTINGS_RESULT', translators: req.translators, preferences: req.preferences };
+    }
+
+    case 'SUBMIT_REVIEW': {
+      const favorites = await getFavorites();
+      const word = favorites.find(f => f.id === req.wordId);
+      if (!word) return { type: 'REVIEW_RESULT', word: null };
+      const patch = sm2(word, req.quality);
+      const updated = await updateFavorite(req.wordId, patch);
+      return { type: 'REVIEW_RESULT', word: updated! };
+    }
+
+    case 'GET_DUE_WORDS': {
+      const due = await getDueWords();
+      return { type: 'DUE_WORDS_RESULT', words: due };
+    }
+
+    case 'GET_LEARN_STATS': {
+      const all = await getFavorites();
+      const now = Date.now();
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayTs = todayStart.getTime();
+
+      const total = all.length;
+      const due = all.filter(f => f.nextReviewAt === 0 || f.nextReviewAt <= now).length;
+      const reviewedToday = all.filter(f => f.lastReviewedAt >= todayTs).length;
+      const mastered = all.filter(f => f.reviewCount >= 3 && f.easeFactor >= 2.0).length;
+
+      // streak: 简单按连续有复习的天数算
+      let streak = 0;
+      const dayMs = 86400000;
+      let checkDay = todayTs;
+      while (true) {
+        const hasReview = all.some(f =>
+          f.lastReviewedAt >= checkDay && f.lastReviewedAt < checkDay + dayMs
+        );
+        if (!hasReview) break;
+        streak++;
+        checkDay -= dayMs;
+      }
+
+      return { type: 'LEARN_STATS_RESULT', total, due, reviewedToday, streak, mastered };
     }
 
     default:

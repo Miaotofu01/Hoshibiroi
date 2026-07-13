@@ -3,7 +3,7 @@
   "name": "划词翻译",
   "version": "0.1.0",
   "description": "划词翻译 Chrome 插件 — 支持多翻译源、发音、生词收藏",
-  "permissions": ["storage", "scripting", "tts"],
+  "permissions": ["storage", "scripting", "tts", "alarms", "notifications"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "src/worker/index.ts"
@@ -30,6 +30,12 @@
       "description": "朗读原文"
     }
   },
+  "web_accessible_resources": [
+    {
+      "resources": ["src/vocab/index.html"],
+      "matches": ["<all_urls>"]
+    }
+  ],
   "icons": {
     "16": "icons/icon-16.png",
     "48": "icons/icon-48.png",

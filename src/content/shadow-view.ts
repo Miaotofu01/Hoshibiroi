@@ -48,4 +48,19 @@ export abstract class ShadowView {
   protected setVisible(visible: boolean): void {
     this.el.style.display = visible ? 'block' : 'none';
   }
+
+  /** 设置字体大小（small / medium / large），通过 CSS 变量落到子组件 */
+  setFontSize(size: 'small' | 'medium' | 'large'): void {
+    const map: Record<string, number> = { small: 15, medium: 20, large: 26 };
+    this.applyFontScale(map[size] ?? 20);
+  }
+
+  /** 用滑条值（--font-size-xl 的 px 值）等比缩放所有字号 */
+  applyFontScale(xlPx: number): void {
+    const xl = Math.round(Math.max(12, Math.min(32, xlPx)));
+    this.el.style.setProperty('--font-size-xl', `${xl}px`);
+    this.el.style.setProperty('--font-size-lg', `${Math.round(xl * 0.8)}px`);
+    this.el.style.setProperty('--font-size-base', `${Math.round(xl * 0.7)}px`);
+    this.el.style.setProperty('--font-size-sm', `${Math.round(xl * 0.6)}px`);
+  }
 }
