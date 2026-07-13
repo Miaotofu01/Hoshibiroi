@@ -38,6 +38,8 @@ export interface FavoriteWord {
   lastReviewedAt: number;
   nextReviewAt: number;
   easeFactor: number;    // SM-2 ease factor, default 2.5
+  reviewHistory: ReviewRecord[];  // 复习记录，最多 30 条
+  learned: boolean;               // 是否已掌握（首次毕业）
 }
 
 // 翻译历史
@@ -65,6 +67,24 @@ export interface GrammarAnalysis {
     role: string;            // 句子成分：主语/谓语/宾语/定语/状语...
   }>;
   grammarPoints: string[];   // 关键语法点
+}
+
+// 复习记录
+export interface ReviewRecord {
+  timestamp: number;   // 复习时间
+  quality: number;     // 1/3/5 (不认识/模糊/认识)
+  interval: number;    // 本次复习后安排的间隔(天)
+}
+
+// 生词本设置
+export interface VocabSettings {
+  cardFront: ('word' | 'phonetic' | 'context')[];
+  cardBack: ('meaning' | 'pos' | 'examples' | 'context' | 'source')[];
+  cardLayout: 'minimal' | 'context-first';
+  dailyNewLimit: number;
+  dailyReviewLimit: number;  // 0 = unlimited
+  reviewReminder: boolean;
+  goalCelebration: boolean;
 }
 
 // UI 偏好
