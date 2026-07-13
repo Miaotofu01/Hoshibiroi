@@ -1,8 +1,8 @@
-import { getState, loadWords, loadSettings, loadFullStats, setPanel, subscribe } from './state';
+import { loadWords, loadSettings, loadFullStats, setPanel } from './state';
 import { renderLearn, mountLearn, unmountLearn } from './panels/learn';
 import { renderBrowse, mountBrowse, unmountBrowse } from './panels/browse';
 import { renderStats, mountStats, unmountStats } from './panels/stats';
-import { renderSettings, mountSettings, unmountSettings, openDrawer, closeDrawer } from './panels/settings';
+import { renderSettings, mountSettings, openDrawer, closeDrawer } from './panels/settings';
 import { mountCursor, unmountCursor } from './effects/cursor';
 
 const panelRenderers: Record<string, { render: () => void; mount: () => void; unmount: () => void }> = {
@@ -31,6 +31,7 @@ async function init(): Promise<void> {
   await Promise.all([loadWords(), loadSettings(), loadFullStats()]);
   renderLearn(); renderBrowse(); renderStats(); renderSettings();
   panelRenderers[currentPanel]?.mount();
+  mountSettings(); // settings drawer event listeners
   mountCursor(); // learn is default panel
   document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', () => switchPanel((tab as HTMLElement).dataset.panel!));
