@@ -14,6 +14,11 @@ let currentIndex = 0;
 let graduatedCount = 0;
 let skippedCount = 0;
 let revealed = false;
+let revealHandler: ((e: Event) => void) | null = null;
+let unknownHandler: ((e: Event) => void) | null = null;
+let fuzzyHandler: ((e: Event) => void) | null = null;
+let knownHandler: ((e: Event) => void) | null = null;
+let backHandler: (() => void) | null = null;
 
 function buildQueue(): void {
   const { dueWords, settings } = getState();
@@ -47,9 +52,10 @@ export function renderLearn(): void {
     showDoneState();
     return;
   }
-  const progressEl = document.getElementById('review-progress')!;
-  const fcArea = document.getElementById('fc-area')!;
-  const doneEl = document.getElementById('review-done')!;
+  const progressEl = document.getElementById('review-progress');
+  const fcArea = document.getElementById('fc-area');
+  const doneEl = document.getElementById('review-done');
+  if (!progressEl || !fcArea || !doneEl) return;
   progressEl.style.display = '';
   fcArea.style.display = '';
   doneEl.style.display = 'none';
@@ -66,16 +72,28 @@ function showCard(): void {
   const word = item.word;
   revealed = false;
 
-  const inner = document.getElementById('fc-inner')!;
-  inner.classList.remove('exit-left', 'enter-right');
+  const inner = document.getElementById('fc-inner');
+  const wordEl = document.getElementById('fc-word');
+  const phonEl = document.getElementById('fc-phon');
+  const hintEl = document.getElementById('fc-hint');
+  const revealEl = document.getElementById('fc-reveal');
+  const ratingRow = document.getElementById('rating-row');
+  const posEl = document.getElementById('fc-pos');
+  const meaningEl = document.getElementById('fc-meaning');
+  const ctxEl = document.getElementById('fc-context');
+  const metaEl = document.getElementById('fc-meta');
+  const sessionInfoEl = document.getElementById('fc-session-info');
+  if (!inner || !wordEl || !phonEl || !hintEl || !revealEl || !ratingRow || !posEl || !meaningEl || !ctxEl || !metaEl || !sessionInfoEl) return;
 
-  document.getElementById('fc-word')!.textContent = word.word;
-  document.getElementById('fc-word')!.classList.toggle('long', word.word.length > 12);
-  document.getElementById('fc-phon')!.textContent = word.translation.phonetic
+  inner.classList.remove('exit-left');
+
+  wordEl.textContent = word.word;
+  wordEl.classList.toggle('long', word.word.length > 12);
+  phonEl.textContent = word.translation.phonetic
     ? `/${word.translation.phonetic}/` : '';
-  document.getElementById('fc-hint')!.style.display = '';
-  document.getElementById('fc-reveal')!.classList.remove('open');
-  document.getElementById('rating-row')!.classList.add('hidden');
+  hintEl.style.display = '';
+  revealEl.classList.remove('open');
+  ratingRow.classList.add('hidden');
 
   // Pre-fill reveal content
   let meaningHtml: string;
@@ -83,16 +101,15 @@ function showCard(): void {
     meaningHtml = word.translation.partsOfSpeech.map(p =>
       `<span class="pos-tag">${escapeHtml(p.type)}</span> ${escapeHtml(p.meanings.join('；'))}`
     ).join('<br>');
-    document.getElementById('fc-pos')!.innerHTML = word.translation.partsOfSpeech.map(p =>
+    posEl.innerHTML = word.translation.partsOfSpeech.map(p =>
       `<span class="pos-tag">${escapeHtml(p.type)}</span>`
     ).join('');
   } else {
     meaningHtml = escapeHtml(word.translation.text);
-    document.getElementById('fc-pos')!.innerHTML = '';
+    posEl.innerHTML = '';
   }
-  document.getElementById('fc-meaning')!.innerHTML = meaningHtml;
+  meaningEl.innerHTML = meaningHtml;
 
-  const ctxEl = document.getElementById('fc-context')!;
   if (word.context) {
     ctxEl.style.display = '';
     ctxEl.textContent = word.context;
@@ -101,19 +118,23 @@ function showCard(): void {
   }
 
   const hostname = word.sourceUrl ? extractHostname(word.sourceUrl) : '';
-  document.getElementById('fc-meta')!.textContent =
+  metaEl.textContent =
     `${word.translation.source || ''}${hostname ? ' · ' + hostname : ''}`;
 
-  document.getElementById('fc-session-info')!.textContent =
+  sessionInfoEl.textContent =
     `本次第 ${item.sessionAppearances + 1} 次 · ${item.isNew ? '新词' : '复习'}`;
 }
 
 function revealCard(): void {
   if (revealed) return;
   revealed = true;
-  document.getElementById('fc-reveal')!.classList.add('open');
-  document.getElementById('fc-hint')!.style.display = 'none';
-  document.getElementById('rating-row')!.classList.remove('hidden');
+  const revealEl = document.getElementById('fc-reveal');
+  const hintEl = document.getElementById('fc-hint');
+  const ratingRow = document.getElementById('rating-row');
+  if (!revealEl || !hintEl || !ratingRow) return;
+  revealEl.classList.add('open');
+  hintEl.style.display = 'none';
+  ratingRow.classList.remove('hidden');
 }
 
 async function submitRating(quality: number): Promise<void> {
@@ -138,7 +159,11 @@ async function submitRating(quality: number): Promise<void> {
     insertBack(item, 5);
   } else {
     item.sessionResult.push('unknown');
-    const consecutiveUnknowns = item.sessionResult.filter(r => r === 'unknown').length;
+    let consecutiveUnknowns = 0;
+    for (let i = item.sessionResult.length - 1; i >= 0; i--) {
+      if (item.sessionResult[i] === 'unknown') consecutiveUnknowns++;
+      else break;
+    }
     if (consecutiveUnknowns >= 3 || item.sessionAppearances >= 5) {
       skippedCount++;
     } else {
@@ -148,7 +173,8 @@ async function submitRating(quality: number): Promise<void> {
   }
 
   // Animate card out
-  const inner = document.getElementById('fc-inner')!;
+  const inner = document.getElementById('fc-inner');
+  if (!inner) return;
   inner.classList.add('exit-left');
 
   setTimeout(() => {
@@ -162,16 +188,22 @@ async function submitRating(quality: number): Promise<void> {
 }
 
 function showDoneState(): void {
-  document.getElementById('fc-area')!.style.display = 'none';
-  document.getElementById('rating-row')!.classList.add('hidden');
-  document.getElementById('review-progress')!.style.display = 'none';
-  const doneEl = document.getElementById('review-done')!;
+  const fcArea = document.getElementById('fc-area');
+  const ratingRow = document.getElementById('rating-row');
+  const progressEl = document.getElementById('review-progress');
+  const doneEl = document.getElementById('review-done');
+  const titleEl = document.getElementById('done-title');
+  const descEl = document.getElementById('done-desc');
+  if (!fcArea || !ratingRow || !progressEl || !doneEl || !titleEl || !descEl) return;
+  fcArea.style.display = 'none';
+  ratingRow.classList.add('hidden');
+  progressEl.style.display = 'none';
   doneEl.style.display = '';
 
   const total = queue.length;
-  document.getElementById('done-title')!.textContent =
+  titleEl.textContent =
     total === 0 ? '没有待复习的单词' : '本轮学习完成';
-  document.getElementById('done-desc')!.textContent =
+  descEl.textContent =
     `本次学了 ${total} 个词，${graduatedCount} 个毕业` +
     (skippedCount > 0 ? `，${skippedCount} 个跳过` : '');
   loadWords();
@@ -180,24 +212,42 @@ function showDoneState(): void {
 function updateProgress(): void {
   const total = queue.length;
   const pct = total > 0 ? Math.round((currentIndex / total) * 100) : 0;
-  document.getElementById('progress-fill')!.style.width = `${pct}%`;
-  document.getElementById('progress-text')!.textContent = `${currentIndex}/${total}`;
+  const fillEl = document.getElementById('progress-fill');
+  const textEl = document.getElementById('progress-text');
+  if (!fillEl || !textEl) return;
+  fillEl.style.width = `${pct}%`;
+  textEl.textContent = `${currentIndex}/${total}`;
 }
 
 export function mountLearn(): void {
-  document.getElementById('fc-area')?.addEventListener('click', revealCard);
-  document.getElementById('btn-unknown')?.addEventListener('click', (e) => { e.stopPropagation(); submitRating(1); });
-  document.getElementById('btn-fuzzy')?.addEventListener('click', (e) => { e.stopPropagation(); submitRating(3); });
-  document.getElementById('btn-known')?.addEventListener('click', (e) => { e.stopPropagation(); submitRating(5); });
-  document.getElementById('back-to-browse')?.addEventListener('click', () => {
-    document.getElementById('review-done')!.style.display = 'none';
-    document.getElementById('fc-area')!.style.display = '';
-    document.getElementById('review-progress')!.style.display = '';
+  revealHandler = revealCard;
+  unknownHandler = (e) => { e.stopPropagation(); submitRating(1); };
+  fuzzyHandler = (e) => { e.stopPropagation(); submitRating(3); };
+  knownHandler = (e) => { e.stopPropagation(); submitRating(5); };
+  backHandler = () => {
+    const doneEl = document.getElementById('review-done');
+    const fcArea = document.getElementById('fc-area');
+    const progressEl = document.getElementById('review-progress');
+    if (doneEl) doneEl.style.display = 'none';
+    if (fcArea) fcArea.style.display = '';
+    if (progressEl) progressEl.style.display = '';
     document.querySelector<HTMLElement>('.nav-tab[data-panel="browse"]')?.click();
-  });
+  };
+
+  document.getElementById('fc-area')?.addEventListener('click', revealHandler);
+  document.getElementById('btn-unknown')?.addEventListener('click', unknownHandler);
+  document.getElementById('btn-fuzzy')?.addEventListener('click', fuzzyHandler);
+  document.getElementById('btn-known')?.addEventListener('click', knownHandler);
+  document.getElementById('back-to-browse')?.addEventListener('click', backHandler);
 }
 
 export function unmountLearn(): void {
+  if (revealHandler) document.getElementById('fc-area')?.removeEventListener('click', revealHandler);
+  if (unknownHandler) document.getElementById('btn-unknown')?.removeEventListener('click', unknownHandler);
+  if (fuzzyHandler) document.getElementById('btn-fuzzy')?.removeEventListener('click', fuzzyHandler);
+  if (knownHandler) document.getElementById('btn-known')?.removeEventListener('click', knownHandler);
+  if (backHandler) document.getElementById('back-to-browse')?.removeEventListener('click', backHandler);
+  revealHandler = null; unknownHandler = null; fuzzyHandler = null; knownHandler = null; backHandler = null;
   revealed = false;
   queue = [];
 }
