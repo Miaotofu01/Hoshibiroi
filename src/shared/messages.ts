@@ -1,4 +1,4 @@
-import type { TranslationResult, FavoriteWord, HistoryEntry, TranslatorConfig, Preferences, GrammarAnalysis } from './types';
+import type { TranslationResult, FavoriteWord, HistoryEntry, TranslatorConfig, Preferences, GrammarAnalysis, ReviewRecord, VocabSettings } from './types';
 
 // ── 请求类型 ──
 
@@ -80,6 +80,25 @@ export interface GetLearnStatsRequest {
   type: 'GET_LEARN_STATS';
 }
 
+export interface GetWordHistoryRequest {
+  type: 'GET_WORD_HISTORY';
+  wordId: string;
+}
+
+export interface GetForecastRequest {
+  type: 'GET_FORECAST';
+  days: number;
+}
+
+export interface GetFullStatsRequest {
+  type: 'GET_FULL_STATS';
+}
+
+export interface SaveVocabSettingsRequest {
+  type: 'SAVE_VOCAB_SETTINGS';
+  settings: VocabSettings;
+}
+
 export type WorkerRequest =
   | TranslateRequest
   | SpeakRequest
@@ -94,7 +113,11 @@ export type WorkerRequest =
   | SaveSettingsRequest
   | SubmitReviewRequest
   | GetDueWordsRequest
-  | GetLearnStatsRequest;
+  | GetLearnStatsRequest
+  | GetWordHistoryRequest
+  | GetForecastRequest
+  | GetFullStatsRequest
+  | SaveVocabSettingsRequest;
 
 // ── 响应类型 ──
 
@@ -175,6 +198,34 @@ export interface LearnStatsResponse {
   mastered: number;
 }
 
+export interface WordHistoryResponse {
+  type: 'WORD_HISTORY_RESULT';
+  wordId: string;
+  history: ReviewRecord[];
+}
+
+export interface ForecastResponse {
+  type: 'FORECAST_RESULT';
+  days: Array<{ date: string; count: number }>;
+}
+
+export interface FullStatsResponse {
+  type: 'FULL_STATS_RESULT';
+  total: number;
+  learning: number;
+  mastered: number;
+  streak: number;
+  reviewedToday: number;
+  dailyGoal: number;
+  calendar: Array<{ date: string; count: number }>;
+  forecast: Array<{ date: string; count: number }>;
+}
+
+export interface VocabSettingsResponse {
+  type: 'VOCAB_SETTINGS_RESULT';
+  settings: VocabSettings;
+}
+
 export type WorkerResponse =
   | TranslateResponse
   | TranslateErrorResponse
@@ -188,7 +239,11 @@ export type WorkerResponse =
   | GrammarErrorResponse
   | ReviewResponse
   | DueWordsResponse
-  | LearnStatsResponse;
+  | LearnStatsResponse
+  | WordHistoryResponse
+  | ForecastResponse
+  | FullStatsResponse
+  | VocabSettingsResponse;
 
 // ── 类型守卫 ──
 
@@ -198,6 +253,7 @@ const RESPONSE_TYPES: WorkerResponse['type'][] = [
   'SOURCES_RESULT',
   'GRAMMAR_RESULT', 'GRAMMAR_ERROR',
   'REVIEW_RESULT', 'DUE_WORDS_RESULT', 'LEARN_STATS_RESULT',
+  'WORD_HISTORY_RESULT', 'FORECAST_RESULT', 'FULL_STATS_RESULT', 'VOCAB_SETTINGS_RESULT',
 ];
 
 export function isWorkerResponse(msg: unknown): msg is WorkerResponse {
@@ -249,4 +305,20 @@ export function getDueWordsRequest(): GetDueWordsRequest {
 
 export function getLearnStatsRequest(): GetLearnStatsRequest {
   return { type: 'GET_LEARN_STATS' };
+}
+
+export function getWordHistoryRequest(wordId: string): GetWordHistoryRequest {
+  return { type: 'GET_WORD_HISTORY', wordId };
+}
+
+export function getForecastRequest(days: number): GetForecastRequest {
+  return { type: 'GET_FORECAST', days };
+}
+
+export function getFullStatsRequest(): GetFullStatsRequest {
+  return { type: 'GET_FULL_STATS' };
+}
+
+export function saveVocabSettingsRequest(settings: VocabSettings): SaveVocabSettingsRequest {
+  return { type: 'SAVE_VOCAB_SETTINGS', settings };
 }
