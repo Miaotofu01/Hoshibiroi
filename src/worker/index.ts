@@ -7,6 +7,7 @@ import {
   getFavorites, addFavorite, removeFavorite, isFavorite,
   updateFavorite, getDueWords,
   getSettings, saveSettings,
+  saveVocabSettings,
 } from './storage';
 import { sm2 } from './srs';
 import { cleanExpiredCache } from './cache';
@@ -147,6 +148,8 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
           lastReviewedAt: 0,
           nextReviewAt: 0,
           easeFactor: 2.5,
+          reviewHistory: [],
+          learned: false,
         };
         await addFavorite(word);
         return { type: 'FAVORITE_RESULT', added: true, word };
@@ -208,9 +211,30 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
     case 'SUBMIT_REVIEW': {
       const favorites = await getFavorites();
       const word = favorites.find(f => f.id === req.wordId);
-      if (!word) return { type: 'REVIEW_RESULT', word: null };
+      if (!word) return { type: 'REVIEW_RESULT', word: null as any };
+
       const patch = sm2(word, req.quality);
-      const updated = await updateFavorite(req.wordId, patch);
+
+      // Compute interval in days for history record
+      const intervalDays = Math.round((patch.nextReviewAt - patch.lastReviewedAt) / 86400000);
+
+      // Append to review history (max 30 entries)
+      const history = word.reviewHistory ?? [];
+      history.push({
+        timestamp: Date.now(),
+        quality: req.quality,
+        interval: intervalDays,
+      });
+      if (history.length > 30) history.splice(0, history.length - 30);
+
+      // Mark learned on first quality >= 5 graduation
+      const learned = word.learned || (req.quality >= 5 && patch.reviewCount >= 1);
+
+      const updated = await updateFavorite(req.wordId, {
+        ...patch,
+        reviewHistory: history,
+        learned,
+      });
       return { type: 'REVIEW_RESULT', word: updated! };
     }
 
@@ -245,6 +269,92 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
       }
 
       return { type: 'LEARN_STATS_RESULT', total, due, reviewedToday, streak, mastered };
+    }
+
+    case 'GET_WORD_HISTORY': {
+      const favorites = await getFavorites();
+      const word = favorites.find(f => f.id === req.wordId);
+      return {
+        type: 'WORD_HISTORY_RESULT',
+        wordId: req.wordId,
+        history: word?.reviewHistory ?? [],
+      };
+    }
+
+    case 'GET_FORECAST': {
+      const favorites = await getFavorites();
+      const now = Date.now();
+      const forecast: Array<{ date: string; count: number }> = [];
+      for (let i = 1; i <= req.days; i++) {
+        const dayStart = now + i * 86400000;
+        const dayEnd = dayStart + 86400000;
+        const count = favorites.filter(f =>
+          f.nextReviewAt > 0 && f.nextReviewAt >= dayStart && f.nextReviewAt < dayEnd
+        ).length;
+        forecast.push({ date: new Date(dayStart).toISOString().slice(0, 10), count });
+      }
+      return { type: 'FORECAST_RESULT', days: forecast };
+    }
+
+    case 'GET_FULL_STATS': {
+      const all = await getFavorites();
+      const now = Date.now();
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayTs = todayStart.getTime();
+
+      const total = all.length;
+      const learning = all.filter(f => f.reviewCount > 0 && !(f.reviewCount >= 3 && f.easeFactor >= 2.0)).length;
+      const mastered = all.filter(f => f.reviewCount >= 3 && f.easeFactor >= 2.0).length;
+      const reviewedToday = all.filter(f => f.lastReviewedAt >= todayTs).length;
+
+      let streak = 0;
+      const dayMs = 86400000;
+      let checkDay = todayTs;
+      while (true) {
+        const hasReview = all.some(f =>
+          f.lastReviewedAt >= checkDay && f.lastReviewedAt < checkDay + dayMs
+        );
+        if (!hasReview) break;
+        streak++;
+        checkDay -= dayMs;
+      }
+
+      // calendar: last 119 days (17 weeks)
+      const calendar: Array<{ date: string; count: number }> = [];
+      for (let i = 118; i >= 0; i--) {
+        const dayStart = todayTs - i * dayMs;
+        const dayEnd = dayStart + dayMs;
+        const count = all.filter(f =>
+          f.lastReviewedAt >= dayStart && f.lastReviewedAt < dayEnd
+        ).length;
+        calendar.push({ date: new Date(dayStart).toISOString().slice(0, 10), count });
+      }
+
+      // forecast: next 7 days
+      const forecast: Array<{ date: string; count: number }> = [];
+      for (let i = 1; i <= 7; i++) {
+        const dayStart = now + i * dayMs;
+        const dayEnd = dayStart + dayMs;
+        const count = all.filter(f =>
+          f.nextReviewAt > 0 && f.nextReviewAt >= dayStart && f.nextReviewAt < dayEnd
+        ).length;
+        forecast.push({ date: new Date(dayStart).toISOString().slice(0, 10), count });
+      }
+
+      const goalData = await chrome.storage.sync.get(['dailyGoal']);
+      const dailyGoal: number = (goalData as any)?.dailyGoal || 10;
+
+      return {
+        type: 'FULL_STATS_RESULT',
+        total, learning, mastered, streak, reviewedToday, dailyGoal,
+        calendar, forecast,
+      };
+    }
+
+    case 'SAVE_VOCAB_SETTINGS': {
+      await saveVocabSettings(req.settings);
+      return { type: 'VOCAB_SETTINGS_RESULT', settings: req.settings };
     }
 
     default:
