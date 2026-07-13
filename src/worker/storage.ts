@@ -1,5 +1,5 @@
 import type {
-  CacheEntry, HistoryEntry, FavoriteWord,
+  CacheEntry, HistoryEntry, FavoriteWord, VocabSettings,
   TranslatorConfig, Preferences
 } from '../shared/types';
 
@@ -105,4 +105,25 @@ export async function saveSettings(
   preferences: Preferences
 ): Promise<void> {
   await chrome.storage.sync.set({ translators, preferences });
+}
+
+// ── 生词本设置 ──
+
+const DEFAULT_VOCAB_SETTINGS: VocabSettings = {
+  cardFront: ['word', 'phonetic'],
+  cardBack: ['meaning', 'pos', 'examples', 'context'],
+  cardLayout: 'minimal',
+  dailyNewLimit: 10,
+  dailyReviewLimit: 50,
+  reviewReminder: true,
+  goalCelebration: false,
+};
+
+export async function getVocabSettings(): Promise<VocabSettings> {
+  const result = await chrome.storage.sync.get('vocabSettings');
+  return { ...DEFAULT_VOCAB_SETTINGS, ...(result.vocabSettings ?? {}) as Partial<VocabSettings> };
+}
+
+export async function saveVocabSettings(settings: VocabSettings): Promise<void> {
+  await chrome.storage.sync.set({ vocabSettings: settings });
 }
