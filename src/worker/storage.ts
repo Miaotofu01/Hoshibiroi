@@ -71,6 +71,22 @@ export async function isFavorite(word: string): Promise<FavoriteWord | null> {
   return favorites.find(f => f.word === word) ?? null;
 }
 
+export async function updateFavorite(id: string, patch: Partial<FavoriteWord>): Promise<FavoriteWord | null> {
+  const favorites = await getFavorites();
+  const idx = favorites.findIndex(f => f.id === id);
+  if (idx === -1) return null;
+  favorites[idx] = { ...favorites[idx], ...patch };
+  await chrome.storage.local.set({ favorites });
+  return favorites[idx];
+}
+
+export async function getDueWords(): Promise<FavoriteWord[]> {
+  const favorites = await getFavorites();
+  const now = Date.now();
+  // 新词 (nextReviewAt === 0) 或 到期词 (nextReviewAt <= now)
+  return favorites.filter(f => f.nextReviewAt === 0 || f.nextReviewAt <= now);
+}
+
 // ── 设置 ──
 
 export async function getSettings(): Promise<{

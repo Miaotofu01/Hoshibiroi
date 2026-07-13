@@ -109,6 +109,24 @@
     </label>
   </div>
 
+  <h2>外观默认值</h2>
+  <div style="display:flex;flex-direction:column;gap:14px;max-width:400px">
+    <div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px">
+        <span style="font-family:monospace;color:var(--text2)">Aa</span> 字体大小
+        <input type="range" id="font-scale" min="12" max="32" style="flex:1;max-width:200px" />
+        <span id="font-val" style="font-family:monospace;color:var(--accent);min-width:32px">20px</span>
+      </label>
+    </div>
+    <div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px">
+        <span style="color:var(--text2)">◐</span> 卡片透明度
+        <input type="range" id="opacity" min="40" max="100" style="flex:1;max-width:200px" />
+        <span id="opacity-val" style="font-family:monospace;color:var(--accent);min-width:32px">95%</span>
+      </label>
+    </div>
+  </div>
+
   <h2>快捷键</h2>
   <p style="color:var(--text2);font-size:12px">
     在 <a href="chrome://extensions/shortcuts" style="color:var(--accent)">chrome://extensions/shortcuts</a> 中自定义

@@ -4,24 +4,31 @@
 :host {
   --bg-primary: #1a1b26;
   --bg-secondary: #24283b;
+  --bg-elevated: #292e42;
   --bg-hover: #2f3348;
   --text-primary: #c0caf5;
-  --text-secondary: #565f89;
-  --text-muted: #414868;
+  --text-secondary: #7982a9;
+  --text-muted: #565f89;
   --accent: #7aa2f7;
   --accent-hover: #89b4fa;
   --accent-green: #9ece6a;
+  --accent-cyan: #7dcfff;
   --accent-red: #f7768e;
   --accent-yellow: #e0af68;
-  --border: #3b4261;
+  --accent-purple: #bb9af7;
+  --border: #2f3550;
+  --border-soft: #232842;
   --shadow: rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 12px 40px rgba(0, 0, 0, 0.55), 0 3px 10px rgba(0, 0, 0, 0.4);
   --radius: 8px;
-  --radius-sm: 4px;
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  --radius-sm: 6px;
+  --radius-lg: 12px;
+  --font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'FiraCode Nerd Font', 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
   --font-size-sm: 12px;
   --font-size-base: 14px;
   --font-size-lg: 16px;
-  --transition: 0.2s ease;
+  --transition: 0.14s ease;
 }
 
 /* 全局 reset（仅在 Shadow DOM 内生效） */
@@ -41,6 +48,9 @@ button {
   transition: var(--transition);
 }
 
-button:hover {
-  opacity: 0.8;
+/* SVG 图标随文字颜色走（描边风格） */
+svg { display: block; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
 }
