@@ -3,6 +3,16 @@ import { getState, loadWords, loadFullStats } from '../state';
 import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, Icons, ico } from '../utils';
 import { renderCurveSvg } from './stats';
 
+// ── Source-to-Sayo variant mapping ──
+
+const SOURCE_SYO_MAP: Record<string, string> = {
+  's-deepseek': 'syo-tag-dot--accent',
+  's-google': 'syo-tag-dot--success',
+  's-tencent': 'syo-tag-dot--info',
+  's-baidu': 'syo-tag-dot--danger',
+  's-deepl': 'syo-tag-dot--secondary',
+};
+
 // ── Module-level state ──
 
 let currentFilter = 'all';
@@ -121,7 +131,7 @@ function renderCard(word: FavoriteWord): string {
   let meaningHtml: string;
   if (word.translation.partsOfSpeech?.length) {
     meaningHtml = word.translation.partsOfSpeech.map(p =>
-      `<span class="pos-tag">${escapeHtml(p.type)}</span>${escapeHtml(p.meanings.join('；'))}`
+      `<span class="syo-tag pos-tag">${escapeHtml(p.type)}</span>${escapeHtml(p.meanings.join('；'))}`
     ).join('<br>');
   } else {
     meaningHtml = escapeHtml(word.translation.text);
@@ -130,20 +140,20 @@ function renderCard(word: FavoriteWord): string {
   const phonetic = word.translation.phonetic ? `/${escapeHtml(word.translation.phonetic)}/` : '';
   const hostname = word.sourceUrl ? extractHostname(word.sourceUrl) : '';
 
-  return `<div class="word-card" data-id="${escapeHtml(word.id)}">
+  return `<div class="syo-card word-card" data-id="${escapeHtml(word.id)}">
     <div class="card-body">
-      <div class="card-head">
-        <span class="status-dot ${status}"></span>
+      <div class="syo-flex card-head" style="gap:8px">
+        <span class="syo-tag-dot${status === 'mastered' ? ' syo-tag-dot--success' : status === 'learning' ? ' syo-tag-dot--warning' : ''} status-dot ${status}"></span>
         <span class="word">${escapeHtml(word.word)}</span>
         ${phonetic ? `<span class="phon">${phonetic}</span>` : ''}
         <div class="card-actions">
-          <button class="act-btn delete-btn" title="删除">${ico(Icons.trash)}</button>
+          <button class="syo-btn--icon act-btn delete-btn" title="删除">${ico(Icons.trash)}</button>
         </div>
       </div>
       <div class="meanings">${meaningHtml}</div>
       ${word.context ? `<div class="card-context" data-expanded="false">${escapeHtml(word.context)}</div>` : ''}
       <div class="card-meta">
-        <span class="src-dot ${sourceDotClass(word.translation.sourceId)}" title="${escapeHtml(word.translation.source)}"></span>
+        <span class="syo-tag-dot ${(() => { const sc = sourceDotClass(word.translation.sourceId); return SOURCE_SYO_MAP[sc] || ''; })()} src-dot ${sourceDotClass(word.translation.sourceId)}" title="${escapeHtml(word.translation.source)}"></span>
         <span>${escapeHtml(word.translation.source)}</span>
         ${hostname ? `<a class="src-link" href="${escapeHtml(word.sourceUrl)}" target="_blank">${ico(Icons.link)}${escapeHtml(hostname)}</a>` : ''}
         <span class="card-mastery" style="color:${masteryColor}">${mastery}%</span>
