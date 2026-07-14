@@ -39,6 +39,12 @@ function getFiltered(): FavoriteWord[] {
   const sorted = [...filtered];
   switch (currentSort) {
     case 'newest': sorted.sort((a, b) => b.createdAt - a.createdAt); break;
+    case 'starred':
+      sorted.sort((a, b) => {
+        if (a.starred !== b.starred) return a.starred ? -1 : 1;
+        return b.createdAt - a.createdAt;
+      });
+      break;
     case 'oldest': sorted.sort((a, b) => a.createdAt - b.createdAt); break;
     case 'alpha-asc': sorted.sort((a, b) => a.word.localeCompare(b.word)); break;
     case 'alpha-desc': sorted.sort((a, b) => b.word.localeCompare(a.word)); break;
@@ -131,10 +137,11 @@ function renderCard(word: FavoriteWord): string {
   const phonetic = word.translation.phonetic ? `/${escapeHtml(word.translation.phonetic)}/` : '';
   const hostname = word.sourceUrl ? extractHostname(word.sourceUrl) : '';
 
-  return `<div class="syo-card word-card" data-id="${escapeHtml(word.id)}">
+  return `<div class="syo-card word-card${word.starred ? ' starred' : ''}" data-id="${escapeHtml(word.id)}">
     <div class="card-body">
       <div class="syo-flex card-head" style="gap:8px">
         <span class="syo-tag-dot${status === 'mastered' ? ' syo-tag-dot--success' : status === 'learning' ? ' syo-tag-dot--warning' : ''} status-dot ${status}"></span>
+        <button class="syo-btn syo-btn--ghost act-btn star-btn${word.starred ? ' starred' : ''}" data-action="star" title="${word.starred ? '取消星标' : '星标'}">${ico(word.starred ? Icons.starFilled : Icons.star)}</button>
         <span class="word">${escapeHtml(word.word)}</span>
         ${phonetic ? `<span class="phon">${phonetic}</span>` : ''}
         <div class="card-actions">
@@ -190,6 +197,17 @@ export function mountBrowse(): void {
     const card = target.closest('.word-card') as HTMLElement | null;
     if (!card?.dataset.id) return;
     const id = card.dataset.id;
+
+    if (target.closest('.star-btn')) {
+      const btn = target.closest('.star-btn') as HTMLElement;
+      const newStarred = !btn.classList.contains('starred');
+      try {
+        await chrome.runtime.sendMessage({ type: 'STAR_WORD', wordId: id, starred: newStarred });
+      } catch { /* */ }
+      await loadWords();
+      renderBrowse();
+      return;
+    }
 
     if (target.closest('.delete-btn')) {
       const ok = await Sayo.dialog.confirm({
