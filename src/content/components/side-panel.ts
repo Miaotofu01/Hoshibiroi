@@ -28,13 +28,13 @@ const CSS = `
     font-family: var(--font-mono); font-size: var(--font-size-sm); letter-spacing: .16em; text-transform: uppercase;
     color: var(--text-muted);
   }
-  .brand svg { width: 14px; height: 14px; color: var(--accent); }
+  .brand svg { width: 14px; height: 14px; color: var(--color-info); }
   .closebtn {
     width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
     border-radius: var(--radius-sm); border: 1px solid var(--border);
     background: transparent; color: var(--text-secondary); cursor: pointer; transition: var(--transition);
   }
-  .closebtn:hover { background: var(--accent-red); border-color: var(--accent-red); color: #1a1b26; }
+  .closebtn:hover { background: var(--color-info-red); border-color: var(--color-info-red); color: #1a1b26; }
   .closebtn svg { width: 14px; height: 14px; }
 
   .headword { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 4px; }
@@ -43,9 +43,9 @@ const CSS = `
     flex-shrink: 0; width: 30px; height: 30px; margin-bottom: 3px;
     display: inline-flex; align-items: center; justify-content: center;
     border-radius: 50%; border: 1px solid var(--border);
-    background: transparent; color: var(--accent); cursor: pointer; transition: var(--transition);
+    background: transparent; color: var(--color-info); cursor: pointer; transition: var(--transition);
   }
-  .play:hover { background: var(--accent); color: #1a1b26; }
+  .play:hover { background: var(--color-info); color: #1a1b26; }
   .play svg { width: 15px; height: 15px; }
   .phonline { font-family: var(--font-mono); font-size: var(--font-size-base); color: var(--text-muted); margin-bottom: 24px; }
 
@@ -59,14 +59,14 @@ const CSS = `
 
   .pos { display: flex; gap: 10px; margin-bottom: 9px; align-items: baseline; }
   .pos .t {
-    flex-shrink: 0; font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--accent-purple);
+    flex-shrink: 0; font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-accent);
     background: rgba(187,154,247,.1); border: 1px solid rgba(187,154,247,.2);
     padding: 1px 7px; border-radius: 5px;
   }
   .pos .m { font-size: var(--font-size-base); line-height: 1.5; color: var(--text-primary); }
 
   .ex {
-    border-left: 2px solid var(--accent-green); background: var(--bg-secondary);
+    border-left: 2px solid var(--color-info-green); background: var(--bg-secondary);
     border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 14px; margin-bottom: 9px;
   }
   .ex .o { font-size: var(--font-size-base); color: var(--text-primary); margin-bottom: 4px; line-height: 1.5; }
@@ -79,7 +79,7 @@ const CSS = `
     cursor: pointer; transition: var(--transition);
   }
   .srctab:hover { background: var(--bg-hover); color: var(--text-secondary); }
-  .srctab.active { background: rgba(158,206,106,.14); color: var(--accent-green); border-color: rgba(158,206,106,.3); }
+  .srctab.active { background: rgba(158,206,106,.14); color: var(--color-info-green); border-color: rgba(158,206,106,.3); }
   .srctab.loading { opacity: .5; cursor: default; }
 
   .pfoot {
@@ -94,9 +94,9 @@ const CSS = `
     cursor: pointer; transition: var(--transition);
   }
   .fbtn:hover { background: var(--bg-hover); color: var(--text-primary); }
-  .fbtn.on { color: var(--accent-yellow); border-color: rgba(224,175,104,.4); }
-  .fbtn.on svg { fill: var(--accent-yellow); }
-  .fbtn.copied { color: var(--accent-green); border-color: rgba(158,206,106,.4); }
+  .fbtn.on { color: var(--color-info-yellow); border-color: rgba(224,175,104,.4); }
+  .fbtn.on svg { fill: var(--color-info-yellow); }
+  .fbtn.copied { color: var(--color-info-green); border-color: rgba(158,206,106,.4); }
   .fbtn svg { width: 15px; height: 15px; }
 `;
 
@@ -166,7 +166,7 @@ export class SidePanel extends ShadowView {
         <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--font-size-sm);padding:8px 0">分析中…</div>
       </div>` : this._grammarError ? html`<div class="sect">
         <div class="lbl">语法分析</div>
-        <div style="color:var(--accent-red);font-size:var(--font-size-sm)">${this._grammarError}</div>
+        <div style="color:var(--color-info-red);font-size:var(--font-size-sm)">${this._grammarError}</div>
       </div>` : this._grammar ? html`<div class="sect">
         <div class="lbl">语法分析</div>
         <div class="gram-structure" style="margin-bottom:12px;font-size:var(--font-size-base);line-height:1.6;color:var(--text-primary)">${this._grammar.structure}</div>
@@ -174,7 +174,7 @@ export class SidePanel extends ShadowView {
           ${this._grammar.tokens.map(tk => html`
             <div style="display:flex;align-items:baseline;gap:8px;padding:3px 0;font-size:var(--font-size-sm)">
               <span style="font-family:var(--font-mono);color:var(--text-primary);font-weight:600;min-width:40px">${tk.word}</span>
-              <span style="font-family:var(--font-mono);font-size:10px;color:var(--accent-purple);background:rgba(187,154,247,.1);border:1px solid rgba(187,154,247,.2);padding:1px 5px;border-radius:4px">${tk.pos}</span>
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--color-accent);background:rgba(187,154,247,.1);border:1px solid rgba(187,154,247,.2);padding:1px 5px;border-radius:4px">${tk.pos}</span>
               ${tk.lemma && tk.lemma !== tk.word ? html`<span style="color:var(--text-muted);font-size:11px">(${tk.lemma})</span>` : nothing}
               <span style="color:var(--text-secondary);margin-left:auto">${tk.role}</span>
             </div>`)}
@@ -182,7 +182,7 @@ export class SidePanel extends ShadowView {
         ${this._grammar.grammarPoints.length > 0 ? html`
           <div style="display:flex;flex-direction:column;gap:6px">
             ${this._grammar.grammarPoints.map(gp => html`
-              <div style="background:var(--bg-secondary);border-left:2px solid var(--accent-purple);padding:6px 10px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:var(--font-size-sm);color:var(--text-secondary);line-height:1.5">${gp}</div>`)}
+              <div style="background:var(--bg-secondary);border-left:2px solid var(--color-accent);padding:6px 10px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:var(--font-size-sm);color:var(--text-secondary);line-height:1.5">${gp}</div>`)}
           </div>` : nothing}
       </div>` : nothing}
 

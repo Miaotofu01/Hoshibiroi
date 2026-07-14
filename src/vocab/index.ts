@@ -1,4 +1,4 @@
-import { loadWords, loadSettings, loadFullStats, setPanel } from './state';
+import { getState, loadWords, loadSettings, loadFullStats, setPanel } from './state';
 import { renderLearn, mountLearn, unmountLearn } from './panels/learn';
 import { renderBrowse, mountBrowse, unmountBrowse } from './panels/browse';
 import { renderStats, mountStats, unmountStats } from './panels/stats';
@@ -29,10 +29,40 @@ function switchPanel(panel: string): void {
 
 async function init(): Promise<void> {
   await Promise.all([loadWords(), loadSettings(), loadFullStats()]);
+
+  // Parse URL hash for direct panel navigation (#/learn, #/browse, #/stats)
+  const hash = window.location.hash;
+  const hashPanel = hash.startsWith('#/') ? hash.slice(2) : null;
+  const validPanels = ['learn', 'browse', 'stats'];
+
+  const { words } = getState();
+
+  // Determine initial panel: hash > default logic
+  let initialPanel = 'learn';
+  if (hashPanel && validPanels.includes(hashPanel)) {
+    initialPanel = hashPanel;
+  } else if (words.length === 0) {
+    initialPanel = 'browse';
+  }
+
+  if (initialPanel === 'browse') {
+    currentPanel = 'browse';
+    document.querySelector('.nav-tab[data-panel="learn"]')?.classList.remove('active');
+    document.getElementById('panel-learn')?.classList.remove('active');
+    document.querySelector('.nav-tab[data-panel="browse"]')?.classList.add('active');
+    document.getElementById('panel-browse')?.classList.add('active');
+  } else if (initialPanel === 'stats') {
+    currentPanel = 'stats';
+    document.querySelector('.nav-tab[data-panel="learn"]')?.classList.remove('active');
+    document.getElementById('panel-learn')?.classList.remove('active');
+    document.querySelector('.nav-tab[data-panel="stats"]')?.classList.add('active');
+    document.getElementById('panel-stats')?.classList.add('active');
+  }
+
   renderLearn(); renderBrowse(); renderStats(); renderSettings();
   panelRenderers[currentPanel]?.mount();
-  mountSettings(); // settings drawer event listeners
-  mountCursor(); // learn is default panel
+  mountSettings();
+  if (currentPanel === 'learn' || currentPanel === 'stats') mountCursor();
   document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', () => switchPanel((tab as HTMLElement).dataset.panel!));
   });
