@@ -2,7 +2,7 @@
 
 <p align="center">语言是夜空，词汇是散落的星。每一次遇见好词，都是拾起一颗属于自己的星光。</p>
 
-Chrome 扩展 (Manifest V3)。选中文字即时翻译 + FSRS-5 间隔重复生词本。Tokyo Night 暗色主题，自研 [Sayo UI](https://github.com/user/sayo-ui) 组件库。
+Chrome 扩展 (Manifest V3)。选中文字即时翻译 + FSRS-5 间隔重复生词本。Sayo 暗色主题，自研 [Sayo UI](https://github.com/user/sayo-ui) 组件库。
 
 ## 安装到浏览器
 
