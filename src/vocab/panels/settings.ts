@@ -193,6 +193,8 @@ let exportCsvHandler: ((e: Event) => void) | null = null;
 let exportJsonHandler: ((e: Event) => void) | null = null;
 let clearHandler: ((e: Event) => void) | null = null;
 let closeHandler: ((e: Event) => void) | null = null;
+let overlayClickHandler: ((e: Event) => void) | null = null;
+let escapeKeyHandler: ((e: Event) => void) | null = null;
 
 export function mountSettings(): void {
   saveHandler = async () => {
@@ -239,11 +241,23 @@ export function mountSettings(): void {
     closeDrawer();
   };
 
+  overlayClickHandler = (_e: Event) => {
+    closeDrawer();
+  };
+
+  escapeKeyHandler = (e: Event) => {
+    if ((e as KeyboardEvent).key === 'Escape') {
+      closeDrawer();
+    }
+  };
+
   document.getElementById('save-settings')?.addEventListener('click', saveHandler);
   document.getElementById('btn-export-csv')?.addEventListener('click', exportCsvHandler);
   document.getElementById('btn-export-json')?.addEventListener('click', exportJsonHandler);
   document.getElementById('btn-clear-all')?.addEventListener('click', clearHandler);
   document.getElementById('drawer-close-btn')?.addEventListener('click', closeHandler);
+  document.getElementById('drawer-overlay')?.addEventListener('click', overlayClickHandler);
+  document.addEventListener('keydown', escapeKeyHandler);
 }
 
 export function unmountSettings(): void {
@@ -262,9 +276,17 @@ export function unmountSettings(): void {
   if (closeHandler) {
     document.getElementById('drawer-close-btn')?.removeEventListener('click', closeHandler);
   }
+  if (overlayClickHandler) {
+    document.getElementById('drawer-overlay')?.removeEventListener('click', overlayClickHandler);
+  }
+  if (escapeKeyHandler) {
+    document.removeEventListener('keydown', escapeKeyHandler);
+  }
   saveHandler = null;
   exportCsvHandler = null;
   exportJsonHandler = null;
   clearHandler = null;
   closeHandler = null;
+  overlayClickHandler = null;
+  escapeKeyHandler = null;
 }
