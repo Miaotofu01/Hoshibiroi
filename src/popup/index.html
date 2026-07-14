@@ -114,6 +114,7 @@
     }
     .foot #open-vocab:hover { background: var(--syo-info); color: var(--syo-bg-base); }
 
+    .skeleton{background:var(--syo-bg-surface);border-radius:var(--syo-radius-sm);animation:syo-shimmer 1.8s ease-in-out infinite;background-size:200% 100%}
 
 </style>
 </head>
@@ -140,13 +141,13 @@
       <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg></span>
       开始复习
     </button>
-    <div class="cta-sub" id="due-info">加载中...</div>
+    <div class="cta-sub" id="due-info"><div class="skeleton" style="height:16px;width:80%;margin:4px auto"></div></div>
   </div>
 
   <!-- ── Recent Favorites ── -->
   <div class="mini-section">
     <div class="mini-title">最近收藏</div>
-    <div id="recent-favs"><div class="mini-empty">加载中...</div></div>
+    <div id="recent-favs"><div class="skeleton" style="height:16px;width:80%;margin:12px auto"></div></div>
   </div>
 
   <!-- ── Footer ── -->

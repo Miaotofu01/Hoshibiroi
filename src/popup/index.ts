@@ -117,7 +117,7 @@ function renderRecent(isDue: boolean): void {
     const meaning = f.translation.partsOfSpeech?.length
       ? f.translation.partsOfSpeech.map(p => p.meanings[0]).join('；')
       : f.translation.text;
-    return `<div class="mini-word" data-word-id="${f.id}">
+    return `<div class="mini-word" tabindex="0" role="button" data-word-id="${f.id}">
       <span class="mw">${escapeHtml(f.word)}</span>
       <span class="mt">${escapeHtml(meaning)}</span>
     </div>`;
@@ -135,6 +135,11 @@ function renderRecent(isDue: boolean): void {
         translation: word.translation,
       }).catch(() => {});
       window.close();
+    });
+    el.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        (el as HTMLElement).click();
+      }
     });
   });
 }
