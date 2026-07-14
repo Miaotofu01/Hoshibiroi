@@ -114,9 +114,9 @@ export function renderBrowse(): void {
 function renderCard(word: FavoriteWord): string {
   const status = wordStatus(word);
   const mastery = calcMastery(word);
-  let masteryColor = 'var(--fg-muted)';
-  if (mastery >= 80) masteryColor = 'var(--color-success)';
-  else if (mastery >= 40) masteryColor = 'var(--color-warning)';
+  let masteryColor = 'var(--syo-fg-muted)';
+  if (mastery >= 80) masteryColor = 'var(--syo-success)';
+  else if (mastery >= 40) masteryColor = 'var(--syo-warning)';
 
   let meaningHtml: string;
   if (word.translation.partsOfSpeech?.length) {
@@ -152,7 +152,7 @@ function renderCard(word: FavoriteWord): string {
       <div class="card-curve" style="display:none">
         ${word.reviewHistory.length >= 2
           ? `<svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;max-height:200px">${renderCurveSvg(word)}</svg>`
-          : '<div style="text-align:center;padding:16px 0;color:var(--fg-muted);font-size:12px">完成至少 2 次复习后显示记忆曲线</div>'}
+          : '<div style="text-align:center;padding:16px 0;color:var(--syo-fg-muted);font-size:12px">完成至少 2 次复习后显示记忆曲线</div>'}
       </div>
     </div>
   </div>`;

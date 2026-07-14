@@ -74,9 +74,9 @@ async function loadDueAndRecent(): Promise<void> {
     } else {
       dueEl.textContent = '暂无待复习词汇 ✨';
       ctaBtn.textContent = '📖 浏览生词本';
-      ctaBtn.style.background = 'var(--bg-elevated)';
-      ctaBtn.style.color = 'var(--color-info)';
-      ctaBtn.style.border = '1px solid var(--color-info)';
+      ctaBtn.style.background = 'var(--syo-bg-elevated)';
+      ctaBtn.style.color = 'var(--syo-info)';
+      ctaBtn.style.border = '1px solid var(--syo-info)';
     }
 
     // Show due words if any; otherwise recent favorites

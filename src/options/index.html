@@ -6,7 +6,7 @@
   <style>
     :root {
       --bg: #1a1b26; --bg2: #24283b; --text: #c0caf5;
-      --text2: #565f89; --color-info: #7aa2f7; --green: #9ece6a;
+      --text2: #565f89; --syo-info: #7aa2f7; --green: #9ece6a;
       --red: #f7768e; --border: #3b4261; --radius-md: 8px;
       --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
     }
@@ -27,10 +27,10 @@
     .arrow-buttons { display: flex; flex-direction: column; gap: 2px; }
     .arrow-btn {
       background: none; border: 1px solid var(--border); border-radius: 4px;
-      color: var(--color-info); cursor: pointer; font-size: 11px; line-height: 1;
+      color: var(--syo-info); cursor: pointer; font-size: 11px; line-height: 1;
       padding: 2px 4px; transition: 0.15s;
     }
-    .arrow-btn:hover:not(:disabled) { background: var(--color-info); color: var(--bg); }
+    .arrow-btn:hover:not(:disabled) { background: var(--syo-info); color: var(--bg); }
     .arrow-btn:disabled { opacity: 0.35; cursor: default; }
     .translator-info { flex: 1; }
     .translator-name { font-weight: 600; }
@@ -41,7 +41,7 @@
       color: var(--text); font-size: 13px; font-family: var(--font);
       margin-left: 8px;
     }
-    .api-key-input:focus { outline: none; border-color: var(--color-info); }
+    .api-key-input:focus { outline: none; border-color: var(--syo-info); }
     .toggle {
       width: 44px; height: 24px; border-radius: 12px;
       background: var(--text2); border: none; cursor: pointer;
@@ -63,7 +63,7 @@
 
     .save-btn {
       margin-top: 24px; padding: 10px 28px;
-      background: var(--color-info); color: #1a1b26;
+      background: var(--syo-info); color: #1a1b26;
       border: none; border-radius: var(--radius-md);
       font-size: 14px; font-weight: 600; cursor: pointer;
       font-family: var(--font);
@@ -115,21 +115,21 @@
       <label style="display:flex;align-items:center;gap:8px;font-size:13px">
         <span style="font-family:monospace;color:var(--text2)">Aa</span> 字体大小
         <input type="range" id="font-scale" min="12" max="32" style="flex:1;max-width:200px" />
-        <span id="font-val" style="font-family:monospace;color:var(--color-info);min-width:32px">20px</span>
+        <span id="font-val" style="font-family:monospace;color:var(--syo-info);min-width:32px">20px</span>
       </label>
     </div>
     <div>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px">
         <span style="color:var(--text2)">◐</span> 卡片透明度
         <input type="range" id="opacity" min="40" max="100" style="flex:1;max-width:200px" />
-        <span id="opacity-val" style="font-family:monospace;color:var(--color-info);min-width:32px">95%</span>
+        <span id="opacity-val" style="font-family:monospace;color:var(--syo-info);min-width:32px">95%</span>
       </label>
     </div>
   </div>
 
   <h2>快捷键</h2>
   <p style="color:var(--text2);font-size:12px">
-    在 <a href="chrome://extensions/shortcuts" style="color:var(--color-info)">chrome://extensions/shortcuts</a> 中自定义
+    在 <a href="chrome://extensions/shortcuts" style="color:var(--syo-info)">chrome://extensions/shortcuts</a> 中自定义
   </p>
 
   <button class="save-btn" id="save">💾 保存设置</button>
