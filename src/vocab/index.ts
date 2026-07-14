@@ -3,7 +3,7 @@ import { renderLearn, mountLearn, unmountLearn } from './panels/learn';
 import { renderBrowse, mountBrowse, unmountBrowse } from './panels/browse';
 import { renderStats, mountStats, unmountStats } from './panels/stats';
 import { renderSettings, mountSettings, openDrawer, closeDrawer } from './panels/settings';
-import { mountCursor, unmountCursor } from './effects/cursor';
+
 
 const panelRenderers: Record<string, { render: () => void; mount: () => void; unmount: () => void }> = {
   learn: { render: renderLearn, mount: mountLearn, unmount: unmountLearn },
@@ -24,7 +24,13 @@ function switchPanel(panel: string): void {
   document.querySelector(`.nav-tab[data-panel="${panel}"]`)?.classList.add('active');
   panelRenderers[panel]?.mount();
   panelRenderers[panel]?.render();
-  if (panel === 'learn' || panel === 'stats') mountCursor(); else unmountCursor();
+  if (panel === 'learn' || panel === 'stats') {
+    Sayo.cursor.init({ accentR: 88, accentG: 166, accentB: 255 });
+    Sayo.trail.init();
+  } else {
+    Sayo.cursor.destroy();
+    Sayo.trail.destroy();
+  }
 }
 
 async function init(): Promise<void> {
@@ -62,7 +68,10 @@ async function init(): Promise<void> {
   renderLearn(); renderBrowse(); renderStats(); renderSettings();
   panelRenderers[currentPanel]?.mount();
   mountSettings();
-  if (currentPanel === 'learn' || currentPanel === 'stats') mountCursor();
+  if (currentPanel === 'learn' || currentPanel === 'stats') {
+    Sayo.cursor.init({ accentR: 88, accentG: 166, accentB: 255 });
+    Sayo.trail.init();
+  }
   document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', () => switchPanel((tab as HTMLElement).dataset.panel!));
   });
