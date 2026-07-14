@@ -3,6 +3,7 @@ import { renderLearn, mountLearn, unmountLearn } from './panels/learn';
 import { renderBrowse, mountBrowse, unmountBrowse } from './panels/browse';
 import { renderStats, mountStats, unmountStats } from './panels/stats';
 import { renderSettings, mountSettings, openDrawer, closeDrawer } from './panels/settings';
+import { ico, Icons } from './utils';
 
 
 const panelRenderers: Record<string, { render: () => void; mount: () => void; unmount: () => void }> = {
@@ -79,7 +80,11 @@ async function init(): Promise<void> {
   document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', () => switchPanel((tab as HTMLElement).dataset.panel!));
   });
-  document.getElementById('btn-settings')?.addEventListener('click', () => openDrawer());
+  const gearBtn = document.getElementById('btn-settings');
+  if (gearBtn) {
+    gearBtn.innerHTML = ico(Icons.gear);
+    gearBtn.addEventListener('click', () => openDrawer());
+  }
   document.getElementById('drawer-overlay')?.addEventListener('click', () => closeDrawer());
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
 }

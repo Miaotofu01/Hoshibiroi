@@ -1,7 +1,6 @@
 import type { FavoriteWord } from '../../shared/types';
 import { getState, loadWords, loadFullStats } from '../state';
 import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, Icons, ico } from '../utils';
-import { renderCurveSvg } from './stats';
 
 // ── Module-level state ──
 
@@ -25,6 +24,7 @@ function getFiltered(): FavoriteWord[] {
     filtered = filtered.filter(w => {
       if (w.word.toLowerCase().includes(q)) return true;
       if (w.translation.text.toLowerCase().includes(q)) return true;
+      if (w.note?.toLowerCase().includes(q)) return true;
       if (w.translation.partsOfSpeech) {
         for (const p of w.translation.partsOfSpeech) {
           for (const m of p.meanings) {
@@ -39,17 +39,26 @@ function getFiltered(): FavoriteWord[] {
   const sorted = [...filtered];
   switch (currentSort) {
     case 'newest': sorted.sort((a, b) => b.createdAt - a.createdAt); break;
-    case 'starred':
-      sorted.sort((a, b) => {
-        if (a.starred !== b.starred) return a.starred ? -1 : 1;
-        return b.createdAt - a.createdAt;
-      });
-      break;
     case 'oldest': sorted.sort((a, b) => a.createdAt - b.createdAt); break;
     case 'alpha-asc': sorted.sort((a, b) => a.word.localeCompare(b.word)); break;
     case 'alpha-desc': sorted.sort((a, b) => b.word.localeCompare(a.word)); break;
     case 'last-reviewed': sorted.sort((a, b) => b.lastReviewedAt - a.lastReviewedAt); break;
     case 'mastery': sorted.sort((a, b) => calcMastery(b) - calcMastery(a)); break;
+    case 'starred-first':
+      sorted.sort((a, b) => {
+        if (a.starred !== b.starred) return a.starred ? -1 : 1;
+        return b.createdAt - a.createdAt;
+      });
+      break;
+    case 'next-review':
+      sorted.sort((a, b) => {
+        const aHas = a.nextReviewAt > 0;
+        const bHas = b.nextReviewAt > 0;
+        if (aHas !== bHas) return aHas ? -1 : 1;
+        if (!aHas && !bHas) return b.createdAt - a.createdAt;
+        return a.nextReviewAt - b.nextReviewAt;
+      });
+      break;
   }
 
   return sorted;
@@ -79,7 +88,7 @@ export function renderBrowse(): void {
   if (countLearning) countLearning.textContent = String(learningCount);
   if (countMastered) countMastered.textContent = String(masteredCount);
 
-  toolbar.querySelectorAll('.filter-pill').forEach(pill => {
+  toolbar.querySelectorAll('.pill').forEach(pill => {
     const filter = (pill as HTMLElement).dataset.filter;
     pill.classList.toggle('active', filter === currentFilter);
   });
@@ -116,6 +125,10 @@ export function renderBrowse(): void {
   emptyEl.classList.remove('visible');
 
   wordList.innerHTML = filtered.map(word => renderCard(word)).join('');
+  // Initialize inertia scroll for example areas
+  wordList.querySelectorAll('[data-syo-inertia]').forEach(el => {
+    if (!(el as any)._syoInertia) (el as any)._syoInertia = (window as any).Sayo?.inertiaScroll?.init(el);
+  });
 }
 
 function renderCard(word: FavoriteWord): string {
@@ -128,7 +141,7 @@ function renderCard(word: FavoriteWord): string {
   let meaningHtml: string;
   if (word.translation.partsOfSpeech?.length) {
     meaningHtml = word.translation.partsOfSpeech.map(p =>
-      `<span class="syo-tag pos-tag">${escapeHtml(p.type)}</span>${escapeHtml(p.meanings.join('；'))}`
+      `<span class="pos-tag">${escapeHtml(p.type)}</span>${escapeHtml(p.meanings.join('；'))}`
     ).join('<br>');
   } else {
     meaningHtml = escapeHtml(word.translation.text);
@@ -137,33 +150,133 @@ function renderCard(word: FavoriteWord): string {
   const phonetic = word.translation.phonetic ? `/${escapeHtml(word.translation.phonetic)}/` : '';
   const hostname = word.sourceUrl ? extractHostname(word.sourceUrl) : '';
 
+  // Star button
+  const starIcon = word.starred ? Icons.starFilled : Icons.star;
+  const starClass = word.starred ? 'star-btn starred' : 'star-btn';
+  const starTitle = word.starred ? '取消星标' : '星标';
+
+  // Next review date
+  let nextReviewHtml = '';
+  if (word.learned) {
+    nextReviewHtml = '<span class="next-review mastered">已掌握</span>';
+  } else if (word.nextReviewAt === 0) {
+    nextReviewHtml = '<span class="next-review new-word">新词</span>';
+  } else {
+    const now = Date.now();
+    const isDue = word.nextReviewAt <= now;
+    const d = new Date(word.nextReviewAt);
+    const dateStr = `${d.getMonth() + 1}月${d.getDate()}日`;
+    nextReviewHtml = `<span class="next-review${isDue ? ' due' : ''}">下次复习：${dateStr}</span>`;
+  }
+
+  // Note indicator
+  const noteIndicator = word.note
+    ? `<span class="note-indicator" title="有备注">${ico(Icons.note)}</span>`
+    : '';
+
+  // Examples — horizontal inertia scroll
+  let examplesHtml = '';
+  const examples = word.translation.examples?.length ? word.translation.examples : [];
+  const hasContext = !!word.context;
+  const hasExamples = examples.length > 0;
+
+  if (hasContext || hasExamples) {
+    const sourceLabel = word.translation.source || '例句';
+    examplesHtml = '<div class="card-examples">';
+    examplesHtml += `<div class="ctx-source-label">${escapeHtml(sourceLabel)} · 例句</div>`;
+    examplesHtml += '<div class="syo-inertia examples-scroll" data-syo-inertia>';
+    if (hasContext) {
+      examplesHtml += `<article class="syo-card example-card"><div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(sourceLabel)} · 原文</h3></div><p class="syo-card-desc">${escapeHtml(word.context!)}</p></article>`;
+    }
+    if (hasExamples) {
+      for (const ex of examples) {
+        examplesHtml += `<article class="syo-card example-card"><div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(ex.original)}</h3></div><p class="syo-card-desc">${escapeHtml(ex.translated)}</p></article>`;
+      }
+    }
+    examplesHtml += '</div></div>';
+  }
+
+  // Note area
+  let noteHtml = '';
+  if (word.note) {
+    noteHtml = `<div class="card-note has-note" data-word-id="${escapeHtml(word.id)}">
+      <span class="note-text">${escapeHtml(word.note)}</span>
+      <button class="btn-icon btn-icon--sm edit-note-btn" title="编辑备注">${ico(Icons.gear)}</button>
+    </div>`;
+  } else {
+    noteHtml = `<div class="card-note" data-word-id="${escapeHtml(word.id)}">
+      <span class="note-placeholder">添加备注…</span>
+    </div>`;
+  }
+
   return `<div class="syo-card word-card${word.starred ? ' starred' : ''}" data-id="${escapeHtml(word.id)}">
     <div class="card-body">
       <div class="syo-flex card-head" style="gap:8px">
         <span class="syo-tag-dot${status === 'mastered' ? ' syo-tag-dot--success' : status === 'learning' ? ' syo-tag-dot--warning' : ''} status-dot ${status}"></span>
-        <button class="syo-btn syo-btn--ghost act-btn star-btn${word.starred ? ' starred' : ''}" data-action="star" title="${word.starred ? '取消星标' : '星标'}">${ico(word.starred ? Icons.starFilled : Icons.star)}</button>
-        <span class="word">${escapeHtml(word.word)}</span>
+        <span class="word">${escapeHtml(word.word)}${noteIndicator}</span>
         ${phonetic ? `<span class="phon">${phonetic}</span>` : ''}
         <div class="card-actions">
-          <button class="syo-btn syo-btn--ghost act-btn delete-btn" title="删除">${ico(Icons.trash)}</button>
+          <button class="btn-icon btn-icon--sm act-btn speak-btn" title="发音" data-action="speak" data-word="${escapeHtml(word.word)}">${ico(Icons.speaker)}</button>
+          <button class="btn-icon btn-icon--sm act-btn ${starClass}" title="${starTitle}" data-action="star">${ico(starIcon)}</button>
+          <button class="btn-icon btn-icon--sm act-btn delete-btn" title="删除">${ico(Icons.trash)}</button>
         </div>
       </div>
       <div class="meanings">${meaningHtml}</div>
-      ${word.context ? `<div class="card-context" tabindex="0" role="button" data-expanded="false">${escapeHtml(word.context)}<svg class="ctx-chevron" width="12" height="12" viewBox="0 0 12 12"><path d="M3 5l3 3 3-3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>` : ''}
+      ${examplesHtml}
+      ${noteHtml}
       <div class="card-meta">
         <span class="src-dot ${sourceDotClass(word.translation.sourceId)}" title="${escapeHtml(word.translation.source)}"></span>
         <span>${escapeHtml(word.translation.source)}</span>
         ${hostname ? `<a class="src-link" href="${escapeHtml(word.sourceUrl)}" target="_blank">${ico(Icons.link)}${escapeHtml(hostname)}</a>` : ''}
+        ${nextReviewHtml}
         <span class="card-mastery" style="color:${masteryColor}">${mastery}%</span>
-        <button class="act-btn curve-toggle" title="查看记忆曲线" style="margin-left:auto">${ico(Icons.play)}</button>
-      </div>
-      <div class="card-curve" style="display:none">
-        ${word.reviewHistory.length >= 2
-          ? `<svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;max-height:200px">${renderCurveSvg(word)}</svg>`
-          : '<div style="text-align:center;padding:16px 0;color:var(--syo-fg-muted);font-size:12px">完成至少 2 次复习后显示记忆曲线</div>'}
       </div>
     </div>
   </div>`;
+}
+
+// ── Note editing ──
+
+function startNoteEdit(noteEl: HTMLElement, wordId: string): void {
+  noteEl.classList.add('editing');
+  const existingNote = noteEl.querySelector('.note-text')?.textContent ?? '';
+  noteEl.innerHTML = `<textarea class="note-textarea" rows="2" placeholder="添加备注…">${escapeHtml(existingNote)}</textarea>
+    <div class="note-actions">
+      <button class="syo-btn syo-btn--sm note-save-btn">保存</button>
+      <button class="syo-btn syo-btn--sm note-cancel-btn">取消</button>
+    </div>`;
+
+  const textarea = noteEl.querySelector('.note-textarea') as HTMLTextAreaElement;
+  textarea.focus();
+  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+  const save = async () => {
+    const newNote = textarea.value.trim();
+    try {
+      await chrome.runtime.sendMessage({ type: 'UPDATE_NOTE', wordId, note: newNote });
+      const { words } = getState();
+      const w = words.find(w => w.id === wordId);
+      if (w) w.note = newNote;
+    } catch { /* */ }
+    renderBrowse();
+  };
+
+  const cancel = () => {
+    renderBrowse();
+  };
+
+  noteEl.querySelector('.note-save-btn')?.addEventListener('click', save);
+  noteEl.querySelector('.note-cancel-btn')?.addEventListener('click', cancel);
+
+  // Save on Enter (but allow Shift+Enter for newline)
+  textarea.addEventListener('keydown', (ev: KeyboardEvent) => {
+    if (ev.key === 'Enter' && !ev.shiftKey) {
+      ev.preventDefault();
+      save();
+    } else if (ev.key === 'Escape') {
+      cancel();
+    }
+  });
 }
 
 // ── Event handlers (stored for cleanup) ──
@@ -176,7 +289,7 @@ let searchHandler: ((e: Event) => void) | null = null;
 export function mountBrowse(): void {
   toolbarClick = (e: Event) => {
     const target = e.target as HTMLElement;
-    const pill = target.closest('.filter-pill') as HTMLElement | null;
+    const pill = target.closest('.pill') as HTMLElement | null;
     if (pill?.dataset.filter) {
       currentFilter = pill.dataset.filter;
       renderBrowse();
@@ -198,17 +311,7 @@ export function mountBrowse(): void {
     if (!card?.dataset.id) return;
     const id = card.dataset.id;
 
-    if (target.closest('.star-btn')) {
-      const btn = target.closest('.star-btn') as HTMLElement;
-      const newStarred = !btn.classList.contains('starred');
-      try {
-        await chrome.runtime.sendMessage({ type: 'STAR_WORD', wordId: id, starred: newStarred });
-      } catch { /* */ }
-      await loadWords();
-      renderBrowse();
-      return;
-    }
-
+    // Delete button
     if (target.closest('.delete-btn')) {
       const ok = await Sayo.dialog.confirm({
         title: '删除单词',
@@ -227,27 +330,39 @@ export function mountBrowse(): void {
       return;
     }
 
-    if (target.closest('.card-context')) {
-      const ctx = target.closest('.card-context') as HTMLElement | null;
-      if (ctx && (e.type === 'click' || (e.type === 'keydown' && (e as KeyboardEvent).key === 'Enter'))) {
-        const expanded = ctx.dataset.expanded === 'true';
-        ctx.dataset.expanded = String(!expanded);
-        ctx.classList.toggle('expanded', !expanded);
+    // Star button
+    if (target.closest('.star-btn')) {
+      const { words } = getState();
+      const word = words.find(w => w.id === id);
+      if (!word) return;
+      const newStarred = !word.starred;
+      try {
+        await chrome.runtime.sendMessage({ type: 'STAR_WORD', wordId: id, starred: newStarred });
+        word.starred = newStarred;
+        renderBrowse();
+      } catch { /* */ }
+      return;
+    }
+
+    // Speak button
+    if (target.closest('.speak-btn')) {
+      const btn = target.closest('.speak-btn') as HTMLElement | null;
+      const word = btn?.dataset.word;
+      if (word) {
+        chrome.runtime.sendMessage({ type: 'SPEAK', text: word, lang: 'en' });
       }
       return;
     }
 
-    if (target.closest('.curve-toggle')) {
-      const toggle = target.closest('.curve-toggle') as HTMLElement | null;
-      const cardEl = target.closest('.word-card') as HTMLElement | null;
-      const curve = cardEl?.querySelector('.card-curve') as HTMLElement | null;
-      if (toggle && curve) {
-        const isOpen = curve.style.display !== 'none';
-        curve.style.display = isOpen ? 'none' : '';
-        toggle.classList.toggle('expanded', !isOpen);
-      }
+    // Note area — toggle edit mode
+    if (target.closest('.card-note') || target.closest('.edit-note-btn')) {
+      const noteEl = card.querySelector('.card-note') as HTMLElement | null;
+      if (!noteEl) return;
+      if (noteEl.classList.contains('editing')) return;
+      startNoteEdit(noteEl, id);
       return;
     }
+
   };
 
   searchHandler = (e: Event) => {
@@ -266,7 +381,6 @@ export function mountBrowse(): void {
   const wordList = document.getElementById('word-list');
   if (wordList) {
     wordList.addEventListener('click', wordListClick);
-    wordList.addEventListener('keydown', wordListClick);
   }
 
   const searchEl = document.getElementById('search-input');
@@ -289,7 +403,6 @@ export function unmountBrowse(): void {
   const wordList = document.getElementById('word-list');
   if (wordList && wordListClick) {
     wordList.removeEventListener('click', wordListClick);
-    wordList.removeEventListener('keydown', wordListClick);
   }
 
   const searchEl = document.getElementById('search-input');

@@ -6,6 +6,10 @@
 <title>生词本 — 划词翻译</title>
 <link rel="stylesheet" href="/sayo.css">
 <link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="./learn.css">
+<link rel="stylesheet" href="./browse.css">
+<link rel="stylesheet" href="./stats.css">
+<link rel="stylesheet" href="./settings.css">
 <script src="/sayo.js"></script>
 </head>
 <body>
@@ -14,7 +18,7 @@
     <button class="nav-tab active" data-panel="learn" role="tab" aria-selected="true">学习</button>
     <button class="nav-tab" data-panel="browse" role="tab" aria-selected="false">词库</button>
     <button class="nav-tab" data-panel="stats" role="tab" aria-selected="false">统计</button>
-    <button class="nav-gear syo-btn syo-btn--ghost" id="btn-settings" style="margin-left:auto" title="设置">
+    <button class="nav-gear btn-icon btn-icon--md" id="btn-settings" title="设置">
       <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
     </button>
   </nav>
@@ -31,13 +35,15 @@
         <div class="fc-front" id="fc-front">
           <div class="fc-word" id="fc-word"></div>
           <div class="fc-phon" id="fc-phon"></div>
+          <button class="btn-icon btn-icon--lg btn-icon--round fc-speak-btn" id="btn-speak" title="发音">
+            <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
+          </button>
           <div class="fc-hint" id="fc-hint">点击卡片或按空格键显示释义</div>
-          <div class="fc-key-hint" id="fc-key-hint">Space/Enter 翻面 · 1 不认识 · 2 模糊 · 3 认识 · 4 简单</div>
         </div>
         <div class="fc-back" id="fc-back">
           <div class="fc-word-back" id="fc-word-back"></div>
           <div class="fc-phon-back" id="fc-phon-back"></div>
-          <button class="syo-btn fc-speak-btn fc-speak-btn-back" id="btn-speak" title="发音">
+          <button class="btn-icon btn-icon--lg btn-icon--round fc-speak-btn fc-speak-btn-back" id="btn-speak-back" title="发音">
             <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
           </button>
           <div class="fc-pos-row" id="fc-pos"></div>
@@ -49,26 +55,26 @@
       </div>
       </div>
       <div class="rating-row hidden" id="rating-row">
-        <div class="syo-flex" style="gap:10px;justify-content:center">
-          <button class="syo-btn rate-btn again" id="btn-again"><kbd>1</kbd> 不认识</button>
-          <button class="syo-btn rate-btn hard"  id="btn-hard"><kbd>2</kbd> 模糊</button>
-          <button class="syo-btn rate-btn good"  id="btn-good"><kbd>3</kbd> 认识</button>
-          <button class="syo-btn rate-btn easy"  id="btn-easy"><kbd>4</kbd> 简单</button>
+        <div class="rating-actions">
+          <button class="syo-btn rate-btn" id="btn-again">不认识</button>
+          <button class="syo-btn rate-btn" id="btn-hard">模糊</button>
+          <button class="syo-btn rate-btn" id="btn-good">认识</button>
+          <button class="syo-btn rate-btn" id="btn-easy">简单</button>
         </div>
         <details class="fc-tips">
           <summary>评分说明</summary>
           <div class="fc-tips-grid">
-            <div class="fc-tips-item again"><span class="fc-tips-grade"><kbd>1</kbd> 不认识</span><span class="fc-tips-desc">完全没想起来。新词退回重学，旧词缩短间隔再次出现。</span></div>
-            <div class="fc-tips-item hard"><span class="fc-tips-grade"><kbd>2</kbd> 模糊</span><span class="fc-tips-desc">有点印象但不确定。新词重复当前步骤，旧词小幅延长间隔。</span></div>
-            <div class="fc-tips-item good"><span class="fc-tips-grade"><kbd>3</kbd> 认识</span><span class="fc-tips-desc">正常回忆，有一定信心。新词进入确认步骤，旧词正常延长间隔。</span></div>
-            <div class="fc-tips-item easy"><span class="fc-tips-grade"><kbd>4</kbd> 简单</span><span class="fc-tips-desc">立刻认出，毫不费力。直接毕业，下次间隔大幅延长。</span></div>
+            <div class="fc-tips-item"><span class="fc-tips-grade">不认识</span><span class="fc-tips-desc">完全没想起来。新词退回重学，旧词缩短间隔再次出现。</span></div>
+            <div class="fc-tips-item"><span class="fc-tips-grade">模糊</span><span class="fc-tips-desc">有点印象但不确定。新词重复当前步骤，旧词小幅延长间隔。</span></div>
+            <div class="fc-tips-item"><span class="fc-tips-grade">认识</span><span class="fc-tips-desc">正常回忆，有一定信心。新词进入确认步骤，旧词正常延长间隔。</span></div>
+            <div class="fc-tips-item"><span class="fc-tips-grade">简单</span><span class="fc-tips-desc">立刻认出，毫不费力。直接毕业，下次间隔大幅延长。</span></div>
           </div>
         </details>
       </div>
     </div>
     <div class="review-done" id="review-done">
       <div class="done-icon">
-        <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:56px;height:56px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
+        <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>
       </div>
       <div class="done-title" id="done-title">今日复习完成</div>
       <div class="done-desc" id="done-desc"></div>
@@ -82,14 +88,15 @@
   <!-- ═══ BROWSE PANEL ═══ -->
   <div class="panel" id="panel-browse">
     <div class="browse-toolbar" id="browse-toolbar">
-      <div class="toolbar-row" style="display:flex;gap:10px;align-items:center">
-        <div class="search-wrap" style="flex:1">
+      <div class="toolbar-row">
+        <div class="search-wrap">
           <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-          <input class="syo-input search-input" id="search-input" placeholder="搜索单词或释义">
+          <input class="toolbar-input search-input" id="search-input" placeholder="搜索单词或释义">
         </div>
-        <select class="syo-select sort-select" id="sort-select">
+        <select class="toolbar-select sort-select" id="sort-select">
           <option value="newest">最新添加</option>
-          <option value="starred">星标优先</option>
+          <option value="starred-first">星标优先</option>
+          <option value="next-review">下次复习</option>
           <option value="oldest">最早添加</option>
           <option value="alpha-asc">A → Z</option>
           <option value="alpha-desc">Z → A</option>
@@ -97,11 +104,11 @@
           <option value="mastery">掌握度</option>
         </select>
       </div>
-      <div class="syo-flex filter-pills" style="gap:8px;flex-wrap:wrap" id="filter-pills">
-        <button class="syo-tag filter-pill active" data-filter="all">全部 <span id="count-all">0</span></button>
-        <button class="syo-tag filter-pill" data-filter="new">新词 <span id="count-new">0</span></button>
-        <button class="syo-tag filter-pill" data-filter="learning">学习中 <span id="count-learning">0</span></button>
-        <button class="syo-tag filter-pill" data-filter="mastered">已掌握 <span id="count-mastered">0</span></button>
+      <div class="filter-pills" id="filter-pills">
+        <button class="pill active" data-filter="all">全部 <span id="count-all">0</span></button>
+        <button class="pill" data-filter="new">新词 <span id="count-new">0</span></button>
+        <button class="pill" data-filter="learning">学习中 <span id="count-learning">0</span></button>
+        <button class="pill" data-filter="mastered">已掌握 <span id="count-mastered">0</span></button>
       </div>
     </div>
     <div id="word-list"></div>
@@ -117,11 +124,11 @@
   <!-- ═══ STATS PANEL ═══ -->
   <div class="panel" id="panel-stats">
     <div id="stats-overview">
-      <div class="syo-flex stat-row" style="flex-wrap:wrap;gap:24px">
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-total"><div class="skeleton" style="height:28px;width:48px;margin:0 auto"></div></div><div class="syo-stat-label">总词汇</div></div>
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-learning"><div class="skeleton" style="height:28px;width:48px;margin:0 auto"></div></div><div class="syo-stat-label">学习中</div></div>
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-mastered"><div class="skeleton" style="height:28px;width:48px;margin:0 auto"></div></div><div class="syo-stat-label">已掌握</div></div>
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-streak"><div class="skeleton" style="height:28px;width:48px;margin:0 auto"></div></div><div class="syo-stat-label">连续天数</div></div>
+      <div class="stat-row">
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-total"><div class="skeleton skeleton--stat"></div></div><div class="syo-stat-label">总词汇</div></div>
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-learning"><div class="skeleton skeleton--stat"></div></div><div class="syo-stat-label">学习中</div></div>
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-mastered"><div class="skeleton skeleton--stat"></div></div><div class="syo-stat-label">已掌握</div></div>
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-streak"><div class="skeleton skeleton--stat"></div></div><div class="syo-stat-label">连续天数</div></div>
       </div>
       <div class="today-progress">
         <div class="progress-track"><div class="progress-fill" id="today-fill" style="width:0%"></div></div>
@@ -152,11 +159,6 @@
       <div class="syo-section-label section-title">未来 7 天复习预测</div>
       <div class="forecast-list" id="forecast-list"></div>
     </div>
-    <div id="stats-curve">
-      <div class="syo-section-label section-title">记忆曲线</div>
-      <div class="curve-word-select" id="curve-word-select"></div>
-      <div class="curve-svg-wrap" id="curve-svg-wrap"></div>
-    </div>
   </div>
 </div>
 
@@ -165,7 +167,7 @@
 <div class="drawer" id="drawer">
   <div class="drawer-header">
     <h2>设置</h2>
-    <button class="drawer-close-btn" id="drawer-close-btn"><span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></button>
+    <button class="btn-icon btn-icon--sm" id="drawer-close-btn"><span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span></button>
   </div>
   <div class="drawer-body"></div>
   <div class="drawer-footer">

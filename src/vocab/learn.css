@@ -1,0 +1,465 @@
+/* ═══════════════════════════════════════════════════════════════
+   星拾 — 学习面板
+   卡片正反面、评分按钮、进度条、完成态
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Card ───────────────────────────────────────────────────── */
+.fc-card {
+  max-width: 780px;
+  margin: 0 auto;
+  cursor: pointer;
+  perspective: 1200px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  position: relative;
+}
+
+.fc-card::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 110%;
+  height: 110%;
+  background: radial-gradient(ellipse at center, var(--syo-accent) 0%, transparent 70%);
+  opacity: 0;
+  filter: blur(40px);
+  z-index: -1;
+  transition: opacity 500ms var(--syo-ease-out);
+}
+
+.fc-card.revealed::before {
+  opacity: .12;
+}
+
+.fc-card.revealed {
+  cursor: default;
+}
+
+.fc-card-inner {
+  position: relative;
+  width: 100%;
+  transition: transform 500ms var(--syo-ease-out);
+  transform-style: preserve-3d;
+  display: grid;
+}
+
+.fc-card-inner > * {
+  grid-area: 1/1;
+}
+
+.fc-card.revealed .fc-card-inner {
+  transform: rotateY(180deg);
+}
+
+/* ── Flip animation states ──────────────────────────────────── */
+.fc-card-inner.exit-left {
+  transform: translateX(-30px);
+  opacity: 0;
+}
+
+@keyframes enter-right {
+  from { transform: translateX(30px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+.fc-card-inner.enter-right {
+  animation: enter-right 350ms var(--syo-ease-elastic) both;
+}
+
+/* ── Card faces ─────────────────────────────────────────────── */
+.fc-front,
+.fc-back {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: var(--syo-bg-surface);
+  border: 1px solid var(--syo-border);
+  border-radius: var(--syo-radius-lg);
+  padding: 40px 36px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.fc-back {
+  transform: rotateY(180deg);
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 28px 32px 24px;
+  overflow: hidden;
+}
+
+.fc-context {
+  min-width: 0;
+}
+
+/* ── Front face ─────────────────────────────────────────────── */
+.fc-word {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-display);
+  font-weight: 700;
+  color: var(--syo-fg-default);
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  margin-bottom: 8px;
+  user-select: text;
+}
+
+.fc-word.long {
+  font-size: 36px;
+}
+
+.fc-phon {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-lg);
+  color: var(--syo-fg-muted);
+  text-align: center;
+  margin-bottom: 8px;
+  opacity: .65;
+}
+
+.fc-hint {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-micro);
+  color: var(--syo-fg-muted);
+  letter-spacing: .06em;
+  text-align: center;
+  opacity: .35;
+  margin-top: 20px;
+}
+
+/* ── Back face ──────────────────────────────────────────────── */
+.fc-word-back {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--syo-fg-default);
+  text-align: left;
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.fc-word-back.long {
+  font-size: var(--text-lg);
+}
+
+.fc-phon-back {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-lg);
+  color: var(--syo-fg-muted);
+  text-align: left;
+  opacity: .8;
+  margin-bottom: 16px;
+}
+
+.fc-pos-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.fc-meaning {
+  font-size: var(--text-lg);
+  color: var(--syo-fg-default);
+  line-height: 1.75;
+  text-align: left;
+  margin-bottom: 18px;
+}
+
+.fc-meaning-group {
+  margin-bottom: 10px;
+}
+
+.fc-meaning-group:last-child {
+  margin-bottom: 0;
+}
+
+.fc-meaning-pos {
+  display: inline-block;
+  font-size: var(--text-sm);
+  color: var(--syo-accent);
+  font-family: var(--syo-font-mono);
+  margin-right: 6px;
+  font-weight: 600;
+}
+
+.fc-meaning-text {
+  color: var(--syo-fg-default);
+}
+
+.fc-meta {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-micro);
+  color: var(--syo-fg-muted);
+  text-align: left;
+  margin-bottom: 2px;
+}
+
+.fc-session-info {
+  font-family: var(--font-display);
+  font-size: var(--text-micro);
+  color: var(--syo-accent);
+  text-align: left;
+  padding-top: 8px;
+  margin-top: auto;
+  border-top: 1px solid var(--syo-border-muted);
+}
+
+/* ── Speak button ───────────────────────────────────────────── */
+.fc-speak-btn {
+  margin: 4px auto 8px;
+  border-color: var(--syo-border-muted);
+}
+
+.fc-speak-btn:hover {
+  border-color: var(--syo-accent);
+  color: var(--syo-accent);
+}
+
+.fc-speak-btn .ico {
+  font-size: 18px;
+}
+
+.fc-speak-btn-back {
+  margin: 0 0 14px;
+  align-self: flex-start;
+}
+
+.fc-word-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ── Context / examples on back face ────────────────────────── */
+.ctx-source-label {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-micro);
+  color: var(--syo-fg-muted);
+  letter-spacing: .06em;
+  margin-bottom: 8px;
+}
+
+/* Prevent Sayo card hover from overflowing in flashcard back */
+.fc-back .syo-card:hover {
+  transform: none;
+}
+
+/* ── Rating buttons ─────────────────────────────────────────── */
+.rating-row {
+  margin-top: 32px;
+  max-width: 780px;
+  margin-left: auto;
+  margin-right: auto;
+  transition: opacity 300ms var(--syo-ease-out);
+}
+
+.rating-row.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rating-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.syo-btn.rate-btn {
+  flex: 1;
+  max-width: 180px;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--syo-border);
+  border-radius: var(--syo-radius-lg);
+  color: var(--syo-fg-body);
+  font-size: var(--text-base);
+  font-weight: 500;
+  transition: transform 180ms var(--syo-ease-out),
+              background 180ms var(--syo-ease-out),
+              border-color 180ms var(--syo-ease-out),
+              color 180ms var(--syo-ease-out);
+}
+
+.syo-btn.rate-btn:hover {
+  border-color: var(--syo-accent);
+  color: var(--syo-fg-default);
+  background: var(--syo-bg-elevated);
+  transform: scale(1.04);
+}
+
+.syo-btn.rate-btn:active {
+  transform: scale(.96);
+}
+
+/* ── Rating tips ────────────────────────────────────────────── */
+.fc-tips {
+  margin-top: 16px;
+  font-size: var(--text-sm);
+  color: var(--syo-fg-muted);
+}
+
+.fc-tips summary {
+  cursor: pointer;
+  padding: 6px 0;
+  transition: color 180ms;
+}
+
+.fc-tips summary:hover {
+  color: var(--syo-accent);
+}
+
+.fc-tips-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  margin-top: 12px;
+  background: var(--syo-border-muted);
+  border: 1px solid var(--syo-border-muted);
+  border-radius: var(--syo-radius-lg);
+  overflow: hidden;
+}
+
+.fc-tips-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: var(--syo-bg-surface);
+}
+
+.fc-tips-grade {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--syo-accent);
+}
+
+.fc-tips-desc {
+  font-size: var(--text-micro);
+  line-height: 1.55;
+  color: var(--syo-fg-muted);
+}
+
+/* ── Progress bar ───────────────────────────────────────────── */
+.review-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 48px;
+  padding-top: 8px;
+}
+
+.progress-track {
+  flex: 1;
+  height: 4px;
+  background: var(--syo-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--syo-info);
+  border-radius: 2px;
+  transition: width 350ms var(--syo-ease-elastic);
+}
+
+.progress-text {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-sm);
+  color: var(--syo-fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ── Review done state ──────────────────────────────────────── */
+.review-done {
+  display: none;
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.review-done.active {
+  display: block;
+}
+
+.done-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+  color: var(--syo-success);
+}
+
+.done-icon .ico {
+  width: 56px;
+  height: 56px;
+}
+
+.done-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  color: var(--syo-fg-default);
+  margin-bottom: 8px;
+}
+
+.done-desc {
+  font-size: var(--text-base);
+  color: var(--syo-fg-muted);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.syo-btn.back-btn {
+  padding: 10px 24px;
+  gap: 6px;
+  border-color: var(--syo-info);
+  color: var(--syo-info);
+  transition: background 180ms var(--syo-ease-out),
+              color 180ms var(--syo-ease-out),
+              border-color 180ms var(--syo-ease-out),
+              transform 180ms var(--syo-ease-out);
+}
+
+.syo-btn.back-btn:hover {
+  background: var(--syo-info);
+  color: var(--syo-bg-base);
+  transform: none;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .rating-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .syo-btn.rate-btn {
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .fc-word {
+    font-size: 36px;
+  }
+  .fc-word.long {
+    font-size: 24px;
+  }
+  .fc-front,
+  .fc-back {
+    padding: 24px 16px;
+  }
+}

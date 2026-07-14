@@ -41,6 +41,7 @@ export interface FavoriteWord {
   reviewHistory: ReviewRecord[];  // 复习记录，最多 30 条
   learned: boolean;               // 是否已掌握（首次毕业）
   starred: boolean;               // 是否星标
+  note: string;                   // 用户备注
 }
 
 // 翻译历史

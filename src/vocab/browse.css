@@ -1,0 +1,397 @@
+/* ═══════════════════════════════════════════════════════════════
+   星拾 — 词库面板
+   搜索栏、筛选pill、词卡、空态
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Toolbar ────────────────────────────────────────────────── */
+.browse-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.toolbar-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.filter-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.search-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.search-wrap .ico {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--syo-fg-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.search-input {
+  width: 100%;
+  padding-left: 36px;
+}
+
+.sort-select {
+  min-width: 110px;
+  flex-shrink: 0;
+  padding: 10px 32px 10px 12px;
+}
+
+/* ── Word cards ─────────────────────────────────────────────── */
+.syo-card.word-card {
+  margin-bottom: 10px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.syo-card.word-card:hover {
+  transform: none;
+}
+
+.syo-card.word-card.starred {
+  border-left: 2px solid var(--syo-warning);
+}
+
+.card-body {
+  padding: 16px 20px;
+}
+
+.card-head .word {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  word-break: break-word;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-head .phon {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--syo-info);
+}
+
+.card-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.act-btn {
+  transition: transform 180ms var(--syo-ease-out),
+              background 180ms var(--syo-ease-out),
+              border-color 180ms var(--syo-ease-out),
+              color 180ms var(--syo-ease-out);
+}
+
+.act-btn.delete-btn:hover {
+  border-color: var(--syo-danger);
+  color: var(--syo-danger);
+  transform: scale(1.1);
+}
+
+/* ── Star button ────────────────────────────────────────────── */
+.act-btn.star-btn {
+  color: var(--syo-fg-muted);
+}
+
+.act-btn.star-btn:hover {
+  color: var(--syo-warning);
+  border-color: var(--syo-warning);
+  transform: scale(1.1);
+}
+
+.act-btn.star-btn.starred {
+  color: var(--syo-warning);
+}
+
+/* ── Speak button ───────────────────────────────────────────── */
+.act-btn.speak-btn:hover {
+  color: var(--syo-info);
+  border-color: var(--syo-info);
+  transform: scale(1.1);
+}
+
+/* ── Note indicator ─────────────────────────────────────────── */
+.note-indicator {
+  display: inline-flex;
+  align-items: center;
+  color: var(--syo-fg-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.note-indicator .ico {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── Status dots ────────────────────────────────────────────── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.new {
+  background: var(--syo-fg-muted);
+}
+
+/* ── Card content ───────────────────────────────────────────── */
+.card-body .meanings {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.pos-tag {
+  font-size: var(--text-micro);
+  margin-right: 6px;
+  color: var(--syo-accent);
+}
+
+/* ── Examples (inertia scroll) ──────────────────────────────── */
+.card-examples {
+  margin-bottom: 8px;
+}
+
+.ctx-source-label {
+  font-size: var(--text-micro);
+  color: var(--syo-fg-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.examples-scroll {
+  display: flex;
+  gap: 12px;
+  padding-bottom: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.example-card {
+  min-width: 240px;
+  max-width: 280px;
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  padding: 12px 14px;
+  margin-bottom: 0;
+}
+
+.example-card .syo-card-head {
+  margin-bottom: 4px;
+}
+
+.example-card .syo-card-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--syo-fg);
+}
+
+.example-card .syo-card-desc {
+  font-size: var(--text-sm);
+  color: var(--syo-fg-muted);
+  line-height: 1.5;
+}
+
+/* ── Note area ──────────────────────────────────────────────── */
+.card-note {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: var(--syo-radius-sm);
+  background: var(--syo-bg-elevated);
+  cursor: pointer;
+  transition: background 180ms var(--syo-ease-out);
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-note:hover {
+  background: var(--syo-bg-hover);
+}
+
+.card-note.has-note {
+  border-left: 2px solid var(--syo-accent);
+}
+
+.note-placeholder {
+  font-size: var(--text-sm);
+  color: var(--syo-fg-muted);
+  font-style: italic;
+}
+
+.note-text {
+  font-size: var(--text-sm);
+  color: var(--syo-fg);
+  line-height: 1.5;
+  flex: 1;
+  word-break: break-word;
+}
+
+.edit-note-btn {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 180ms var(--syo-ease-out);
+}
+
+.card-note:hover .edit-note-btn {
+  opacity: 1;
+}
+
+/* Note editing state */
+.card-note.editing {
+  flex-direction: column;
+  align-items: stretch;
+  cursor: default;
+  padding: 8px;
+}
+
+.note-textarea {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: var(--text-sm);
+  font-family: var(--syo-font-mono);
+  line-height: 1.5;
+  color: var(--syo-fg);
+  background: var(--syo-bg);
+  border: 1px solid var(--syo-border);
+  border-radius: var(--syo-radius-sm);
+  resize: vertical;
+  outline: none;
+}
+
+.note-textarea:focus {
+  border-color: var(--syo-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--syo-accent) 25%, transparent);
+}
+
+.note-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+/* ── Card meta ──────────────────────────────────────────────── */
+.card-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--syo-border-muted);
+}
+
+.card-meta .src-link {
+  color: var(--syo-info);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: color 180ms;
+}
+
+.card-meta .src-link:hover {
+  color: var(--syo-secondary);
+}
+
+.card-mastery {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-micro);
+  color: var(--syo-success);
+  margin-left: 8px;
+}
+
+/* ── Next review date ───────────────────────────────────────── */
+.next-review {
+  font-size: var(--text-sm);
+  color: var(--syo-fg-muted);
+  margin-left: auto;
+}
+
+.next-review.due {
+  color: var(--syo-warning);
+  font-weight: 500;
+}
+
+.next-review.mastered {
+  color: var(--syo-success);
+}
+
+.next-review.new-word {
+  color: var(--syo-fg-muted);
+}
+
+/* ── Source dot colors ──────────────────────────────────────── */
+.src-dot {
+  width: 6px;
+  height: 6px;
+  display: inline-block;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.src-dot.s-deepseek { background: var(--syo-accent); }
+.src-dot.s-google   { background: var(--syo-success); }
+.src-dot.s-tencent  { background: var(--syo-info); }
+.src-dot.s-baidu    { background: var(--syo-danger); }
+.src-dot.s-deepl    { background: var(--syo-secondary); }
+
+/* ── Empty state ────────────────────────────────────────────── */
+.browse-empty {
+  display: none;
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--syo-fg-muted);
+}
+
+.browse-empty.visible {
+  display: block;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: .6;
+}
+
+.empty-icon .ico {
+  width: 48px;
+  height: 48px;
+}
+
+.empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  color: var(--syo-fg-muted);
+  margin-bottom: 6px;
+}
+
+.empty-desc {
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
