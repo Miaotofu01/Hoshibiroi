@@ -41,7 +41,7 @@ function renderCalendar(stats: FullStatsResponse): void {
   if (!grid) return;
 
   if (stats.calendar.length === 0) {
-    grid.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-muted);font-size:14px;padding:20px 0;text-align:center">暂无数据</div>';
+    grid.innerHTML = '<div style="grid-column:1/-1;color:var(--syo-fg-muted);font-size:14px;padding:20px 0;text-align:center">暂无数据</div>';
     if (monthBar) monthBar.innerHTML = '';
     return;
   }
@@ -118,7 +118,7 @@ function renderForecast(stats: FullStatsResponse): void {
 export function renderCurveSvg(word: FavoriteWord): string {
   const history = word.reviewHistory.slice(-8);
   if (history.length < 2) {
-    return `<text x="300" y="100" text-anchor="middle" fill="var(--fg-muted)" font-size="14">数据不足 — 完成至少 2 次复习后显示曲线</text>`;
+    return `<text x="300" y="100" text-anchor="middle" fill="var(--syo-fg-muted)" font-size="14">数据不足 — 完成至少 2 次复习后显示曲线</text>`;
   }
 
   const w = 600, h = 240, pad = { top: 20, right: 40, bottom: 40, left: 40 };
@@ -141,10 +141,10 @@ export function renderCurveSvg(word: FavoriteWord): string {
   // ── Y-axis: simple 0%/50%/100% ──
   for (const pct of [100, 50, 0]) {
     const y = pad.top + ((100 - pct) / 100) * plotH;
-    elements += `<line x1="${pad.left}" y1="${y}" x2="${w - pad.right}" y2="${y}" stroke="var(--border-muted)" stroke-width="0.5"/>`;
-    elements += `<text x="${pad.left - 6}" y="${y + 4}" text-anchor="end" fill="var(--fg-muted)" font-size="10">${pct}%</text>`;
+    elements += `<line x1="${pad.left}" y1="${y}" x2="${w - pad.right}" y2="${y}" stroke="var(--syo-border-muted)" stroke-width="0.5"/>`;
+    elements += `<text x="${pad.left - 6}" y="${y + 4}" text-anchor="end" fill="var(--syo-fg-muted)" font-size="10">${pct}%</text>`;
   }
-  elements += `<text x="12" y="${pad.top + plotH/2}" text-anchor="middle" fill="var(--fg-muted)" font-size="10" transform="rotate(-90, 12, ${pad.top + plotH/2})">记忆保留率</text>`;
+  elements += `<text x="12" y="${pad.top + plotH/2}" text-anchor="middle" fill="var(--syo-fg-muted)" font-size="10" transform="rotate(-90, 12, ${pad.top + plotH/2})">记忆保留率</text>`;
 
   // ── Build curve segments ──
   const reviewDots: Array<{ x: number; y: number; quality: number; interval: number; date: Date }> = [];
@@ -187,10 +187,10 @@ export function renderCurveSvg(word: FavoriteWord): string {
   }
 
   if (solidD) {
-    elements += `<path d="${solidD}" fill="none" stroke="var(--color-info)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    elements += `<path d="${solidD}" fill="none" stroke="var(--syo-info)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
   }
   if (dashD) {
-    elements += `<path d="${dashD}" fill="none" stroke="var(--color-info)" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.4"/>`;
+    elements += `<path d="${dashD}" fill="none" stroke="var(--syo-info)" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.4"/>`;
   }
 
   // ── X-axis: first & last date ──
@@ -198,20 +198,20 @@ export function renderCurveSvg(word: FavoriteWord): string {
     const d = reviewDots[idx];
     if (!d || (idx > 0 && reviewDots[0].date.toDateString() === d.date.toDateString())) continue;
     const ds = `${d.date.getMonth() + 1}/${d.date.getDate()}`;
-    elements += `<text x="${d.x.toFixed(1)}" y="${pad.top + plotH + 16}" text-anchor="middle" fill="var(--fg-muted)" font-size="10">${ds}</text>`;
+    elements += `<text x="${d.x.toFixed(1)}" y="${pad.top + plotH + 16}" text-anchor="middle" fill="var(--syo-fg-muted)" font-size="10">${ds}</text>`;
   }
 
   // ── Review dots + ALL interval labels ──
   for (let i = 0; i < reviewDots.length; i++) {
     const d = reviewDots[i];
-    const color = d.quality === 5 ? 'var(--color-success)'
-      : d.quality === 3 ? 'var(--color-warning)'
-      : 'var(--color-danger)';
-    elements += `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="5" fill="${color}" stroke="var(--bg-base)" stroke-width="2"/>`;
+    const color = d.quality === 5 ? 'var(--syo-success)'
+      : d.quality === 3 ? 'var(--syo-warning)'
+      : 'var(--syo-danger)';
+    elements += `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="5" fill="${color}" stroke="var(--syo-bg-base)" stroke-width="2"/>`;
     if (d.interval > 0) {
       // Show interval above each dot — this is the progress story
       const ly = d.y - 12;
-      elements += `<text x="${d.x.toFixed(1)}" y="${ly}" text-anchor="middle" fill="var(--fg-muted)" font-size="10">${d.interval}天</text>`;
+      elements += `<text x="${d.x.toFixed(1)}" y="${ly}" text-anchor="middle" fill="var(--syo-fg-muted)" font-size="10">${d.interval}天</text>`;
     }
   }
 
@@ -228,24 +228,24 @@ export function renderCurveSvg(word: FavoriteWord): string {
       // Wider uncertainty band
       const nrHi = Math.min(1, nr * 1.5);
       const nrLo = Math.max(0.02, nr * 0.5);
-      elements += `<rect x="${tx(lastR.timestamp)}" y="${ry(nrHi)}" width="${nx - tx(lastR.timestamp)}" height="${ry(nrLo) - ry(nrHi)}" fill="var(--color-info)" opacity="0.06" rx="4"/>`;
-      elements += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="5" fill="none" stroke="var(--fg-muted)" stroke-width="1.5" stroke-dasharray="3,2"/>`;
+      elements += `<rect x="${tx(lastR.timestamp)}" y="${ry(nrHi)}" width="${nx - tx(lastR.timestamp)}" height="${ry(nrLo) - ry(nrHi)}" fill="var(--syo-info)" opacity="0.06" rx="4"/>`;
+      elements += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="5" fill="none" stroke="var(--syo-fg-muted)" stroke-width="1.5" stroke-dasharray="3,2"/>`;
       const nds = `${new Date(word.nextReviewAt).getMonth() + 1}/${new Date(word.nextReviewAt).getDate()}`;
-      elements += `<text x="${nx.toFixed(1)}" y="${ny - 10}" text-anchor="middle" fill="var(--fg-muted)" font-size="10">下次${nds}</text>`;
+      elements += `<text x="${nx.toFixed(1)}" y="${ny - 10}" text-anchor="middle" fill="var(--syo-fg-muted)" font-size="10">下次${nds}</text>`;
     }
   }
 
   // ── Legend ──
   const legendY = h - 10;
   const items = [
-    { color: 'var(--color-success)', label: '认识' },
-    { color: 'var(--color-warning)', label: '模糊' },
-    { color: 'var(--color-danger)', label: '不认识' },
+    { color: 'var(--syo-success)', label: '认识' },
+    { color: 'var(--syo-warning)', label: '模糊' },
+    { color: 'var(--syo-danger)', label: '不认识' },
   ];
   let lx = pad.left;
   for (const item of items) {
     elements += `<circle cx="${lx + 4}" cy="${legendY}" r="4" fill="${item.color}"/>`;
-    elements += `<text x="${lx + 12}" y="${legendY + 4}" fill="var(--fg-muted)" font-size="11">${item.label}</text>`;
+    elements += `<text x="${lx + 12}" y="${legendY + 4}" fill="var(--syo-fg-muted)" font-size="11">${item.label}</text>`;
     lx += 48;
   }
 
@@ -266,7 +266,7 @@ function renderCurve(): void {
 
   if (historyWords.length === 0) {
     chipContainer.innerHTML = '';
-    svgWrap.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--fg-muted);font-size:14px">完成几次复习后，这里会显示每个词的记忆曲线</div>';
+    svgWrap.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--syo-fg-muted);font-size:14px">完成几次复习后，这里会显示每个词的记忆曲线</div>';
     return;
   }
 
@@ -314,12 +314,12 @@ function renderCurve(): void {
   svgWrap.innerHTML = `<svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
     ${svgContent}
   </svg>
-  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted)">
-    <span>上次复习：<b style="color:var(--fg-default)">${lastQualityLabel}</b></span>
-    <span>当前间隔：<b style="color:var(--fg-default)">${last?.interval ?? '-'} 天</b></span>
-    <span>熟练度：<b style="color:var(--fg-default)">${stabilityLabel}</b></span>
-    <span>下次复习：<b style="color:var(--fg-default)">${nextReview}</b></span>
-    ${trend ? `<span style="color:var(--color-success)">${trend}</span>` : ''}
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-family:var(--font-mono);font-size:12px;color:var(--syo-fg-muted)">
+    <span>上次复习：<b style="color:var(--syo-fg-default)">${lastQualityLabel}</b></span>
+    <span>当前间隔：<b style="color:var(--syo-fg-default)">${last?.interval ?? '-'} 天</b></span>
+    <span>熟练度：<b style="color:var(--syo-fg-default)">${stabilityLabel}</b></span>
+    <span>下次复习：<b style="color:var(--syo-fg-default)">${nextReview}</b></span>
+    ${trend ? `<span style="color:var(--syo-success)">${trend}</span>` : ''}
   </div>`;
 }
 

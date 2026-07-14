@@ -314,7 +314,7 @@ function showDoneState(): void {
     descEl.textContent = '去网页中划词翻译并收藏，积累你的生词本吧 ✨';
     if (iconEl) {
       iconEl.innerHTML = '<span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:56px;height:56px"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>';
-      iconEl.style.color = 'var(--fg-muted)';
+      iconEl.style.color = 'var(--syo-fg-muted)';
     }
   } else {
     // Normal completion — show stats
@@ -340,7 +340,7 @@ function showDoneState(): void {
     descEl.textContent = desc;
     if (iconEl) {
       iconEl.innerHTML = '<span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:56px;height:56px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>';
-      iconEl.style.color = 'var(--color-success)';
+      iconEl.style.color = 'var(--syo-success)';
     }
   }
   loadWords();
