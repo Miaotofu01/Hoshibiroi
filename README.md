@@ -4,20 +4,73 @@
 
 Chrome 扩展 (Manifest V3)。选中文字即时翻译 + FSRS-5 间隔重复生词本。Tokyo Night 暗色主题，自研 [Sayo UI](https://github.com/user/sayo-ui) 组件库。
 
-## 安装
+## 安装到浏览器
+
+### 1. 克隆项目
+
+```bash
+git clone git@github.com:Miaotofu01/Hoshibiroi.git
+cd Hoshibiroi
+```
+
+### 2. 安装依赖
 
 ```bash
 npm install
-npm run build        # → dist/
 ```
 
-打开 `chrome://extensions`，开启"开发者模式"，"加载已解压的扩展程序"选择 `dist/` 目录。
+需要 Node.js ≥ 18。
 
-开发模式（watch + 热重载）：
+### 3. 构建
+
+```bash
+npm run build
+```
+
+构建产物在 `dist/` 目录。
+
+### 4. 加载到 Chrome
+
+1. 打开 Chrome 浏览器，地址栏输入 `chrome://extensions` 回车
+2. 右上角打开 **「开发者模式」** 开关
+3. 点击左上角 **「加载已解压的扩展程序」**
+4. 在弹出的文件选择器中，找到项目里的 `dist/` 文件夹，点击「选择文件夹」
+5. 列表中会出现「划词翻译」扩展卡片，工具栏出现扩展图标 🎉
+
+### 5. 配置翻译源
+
+首次使用建议配置翻译 API：
+
+1. 右键点击工具栏的扩展图标 → **「选项」**（或点击图标 → ⚙️ 设置）
+2. **DeepSeek**（推荐，有免费额度）：
+   - 前往 [platform.deepseek.com](https://platform.deepseek.com) 注册并获取 API Key
+   - 在设置页填入 Key，保存
+3. **Google Translate**：无需配置，开箱即用（需网络能访问 Google 服务）
+4. 其他翻译源（腾讯云 TMT、百度翻译、DeepL）按需配置
+
+### 6. 固定到工具栏
+
+点击 Chrome 工具栏右侧的 🧩 拼图图标，找到 **「划词翻译」**，点击旁边的 📌 图钉固定，方便随时打开生词本。
+
+### 开发模式
+
+边改代码边看效果：
 
 ```bash
 npm run dev
 ```
+
+`dist/` 会自动更新。在 `chrome://extensions` 中找到扩展卡片，点击右下角的 🔄 刷新按钮即可加载最新代码。
+
+### 更新版本
+
+```bash
+git pull
+npm install        # 如有新依赖
+npm run build
+```
+
+然后在 `chrome://extensions` 中点击扩展的 🔄 刷新即可。
 
 ## 核心功能
 
