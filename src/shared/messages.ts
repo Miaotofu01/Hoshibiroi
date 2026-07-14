@@ -111,6 +111,13 @@ export interface UpdateNoteRequest {
   note: string;
 }
 
+export interface UpdateExamplesRequest {
+  type: 'UPDATE_EXAMPLES';
+  wordId: string;
+  context?: string;
+  examples: Array<{ original: string; translated: string }>;
+}
+
 export type WorkerRequest =
   | TranslateRequest
   | SpeakRequest
@@ -131,7 +138,8 @@ export type WorkerRequest =
   | GetFullStatsRequest
   | SaveVocabSettingsRequest
   | StarWordRequest
-  | UpdateNoteRequest;
+  | UpdateNoteRequest
+  | UpdateExamplesRequest;
 
 // ── 响应类型 ──
 
@@ -252,6 +260,11 @@ export interface UpdateNoteResponse {
   note: string;
 }
 
+export interface UpdateExamplesResponse {
+  type: 'EXAMPLES_RESULT';
+  wordId: string;
+}
+
 export type WorkerResponse =
   | TranslateResponse
   | TranslateErrorResponse
@@ -271,7 +284,8 @@ export type WorkerResponse =
   | FullStatsResponse
   | VocabSettingsResponse
   | StarWordResponse
-  | UpdateNoteResponse;
+  | UpdateNoteResponse
+  | UpdateExamplesResponse;
 
 // ── 类型守卫 ──
 
@@ -282,7 +296,7 @@ const RESPONSE_TYPES: WorkerResponse['type'][] = [
   'GRAMMAR_RESULT', 'GRAMMAR_ERROR',
   'REVIEW_RESULT', 'DUE_WORDS_RESULT', 'LEARN_STATS_RESULT',
   'WORD_HISTORY_RESULT', 'FORECAST_RESULT', 'FULL_STATS_RESULT', 'VOCAB_SETTINGS_RESULT',
-  'STAR_RESULT', 'NOTE_RESULT',
+  'STAR_RESULT', 'NOTE_RESULT', 'EXAMPLES_RESULT',
 ];
 
 export function isWorkerResponse(msg: unknown): msg is WorkerResponse {

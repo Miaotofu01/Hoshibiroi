@@ -370,6 +370,21 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
       return { type: 'NOTE_RESULT', wordId: req.wordId, note: req.note };
     }
 
+    case 'UPDATE_EXAMPLES': {
+      const favs = await getFavorites();
+      const word = favs.find(f => f.id === req.wordId);
+      if (!word) return { type: 'EXAMPLES_RESULT', wordId: req.wordId };
+      const updatedTranslation = {
+        ...word.translation,
+        examples: req.examples,
+      };
+      await updateFavorite(req.wordId, {
+        context: req.context,
+        translation: updatedTranslation,
+      });
+      return { type: 'EXAMPLES_RESULT', wordId: req.wordId };
+    }
+
     default:
       return { type: 'TRANSLATE_ERROR', text: '', error: '未知请求类型' };
   }
