@@ -1,4 +1,5 @@
 import type { FavoriteWord } from '../shared/types';
+import { Icons } from '../vocab/utils';
 
 interface StatsData {
   reviewedToday: number;
@@ -65,15 +66,15 @@ async function loadDueAndRecent(): Promise<void> {
     const ctaBtn = document.getElementById('btn-review')!;
     if (dueCount > 0) {
       dueEl.innerHTML = `共 <strong>${dueCount}</strong> 个词待复习`;
-      ctaBtn.textContent = '▶ 开始复习';
+      ctaBtn.innerHTML = `<span class="ico">${Icons.play}</span> 开始复习`;
       ctaBtn.style.opacity = '1';
     } else if (words.length === 0) {
       dueEl.textContent = '收藏单词即可开始';
-      ctaBtn.textContent = '📖 浏览生词本';
+      ctaBtn.innerHTML = `<span class="ico">${Icons.book}</span> 浏览生词本`;
       ctaBtn.style.opacity = '1';
     } else {
       dueEl.textContent = '暂无待复习词汇';
-      ctaBtn.textContent = '📖 浏览生词本';
+      ctaBtn.innerHTML = `<span class="ico">${Icons.book}</span> 浏览生词本`;
       ctaBtn.style.background = 'var(--syo-bg-elevated)';
       ctaBtn.style.color = 'var(--syo-info)';
       ctaBtn.style.border = '1px solid var(--syo-info)';

@@ -202,13 +202,15 @@ function revealCard(): void {
   const ratingRow = document.getElementById('rating-row');
   if (!revealEl || !hintEl || !ratingRow) return;
   revealEl.classList.add('open');
-  hintEl.style.display = 'none';
+  hintEl.style.transition = 'opacity 300ms var(--syo-ease-out)';
+  hintEl.style.opacity = '0';
+  setTimeout(() => { hintEl.style.display = 'none'; }, 300);
   ratingRow.classList.remove('hidden');
   const card = document.getElementById('fc-card');
   if (card) card.classList.add('revealed');
   // Update keyboard hint to post-reveal state (Space now = submit 'known')
   const keyHintEl = document.getElementById('fc-key-hint');
-  if (keyHintEl) keyHintEl.innerHTML = '<kbd>1</kbd>/<kbd>←</kbd> 不认识 · <kbd>2</kbd>/<kbd>↓</kbd> 模糊 · <kbd>3</kbd>/<kbd>→</kbd>/<kbd>Space</kbd> 认识';
+  if (keyHintEl) keyHintEl.innerHTML = '<kbd>Space</kbd>/<kbd>Enter</kbd> 认识 · <kbd>1</kbd> 不认识 · <kbd>2</kbd> 模糊 · <kbd>3</kbd> 认识';
   // Keep speaker button visible so user can hear pronunciation after seeing meaning
 }
 
@@ -231,6 +233,13 @@ async function submitRating(quality: number): Promise<void> {
     if (item.sessionResult.includes('fuzzy') && !item.sessionResult.slice(0, -1).includes('known')) {
       // First time "known" after only "fuzzy" — needs re-confirmation
       insertBack(item, 5);
+      // Show feedback that word needs reconfirmation
+      const sessionInfoEl = document.getElementById('fc-session-info');
+      if (sessionInfoEl) {
+        sessionInfoEl.textContent += ' · 再确认一次';
+        sessionInfoEl.style.color = 'var(--syo-warning)';
+        setTimeout(() => { sessionInfoEl.style.color = ''; }, 2000);
+      }
     } else {
       // Graduate: word mastered this session
       graduatedCount++;
@@ -282,14 +291,14 @@ async function submitRating(quality: number): Promise<void> {
   if (!inner) { submitting = false; return; }
   inner.classList.add('exit-left');
 
-  setTimeout(() => {
+  inner.addEventListener('transitionend', () => {
     currentIndex++;
     inner.classList.remove('exit-left');
     inner.classList.add('enter-right');
     showCard();
     updateProgress();
     setTimeout(() => inner.classList.remove('enter-right'), 350);
-  }, 150);
+  }, { once: true });
 }
 
 function showDoneState(): void {
