@@ -1,5 +1,5 @@
 import type { FavoriteWord } from '../shared/types';
-import { Icons } from '../vocab/utils';
+import { Icons, escapeHtml } from '../vocab/utils';
 
 interface StatsData {
   reviewedToday: number;
@@ -136,12 +136,6 @@ function showFallback(): void {
   document.getElementById('streak-num')!.textContent = '--';
   document.getElementById('reviewed-today')!.textContent = '--';
   document.getElementById('daily-goal')!.textContent = '--';
-}
-
-function escapeHtml(s: string): string {
-  const el = document.createElement('span');
-  el.textContent = s;
-  return el.innerHTML;
 }
 
 // ── Tab navigation helper ──

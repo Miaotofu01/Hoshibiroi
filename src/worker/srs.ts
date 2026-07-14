@@ -1,114 +1,390 @@
-import type { FavoriteWord } from '../shared/types';
-
 /**
- * Ebbinghaus 遗忘曲线 SRS
+ * FSRS-5 DSR (Difficulty, Stability, Retrievability) Scheduler
  *
- * 记忆保留率模型：R(t) = e^(-t / S)
- *   t = 距上次复习的天数
- *   S = 记忆稳定性（天），表示记忆衰减到 37% 所需时间
+ * Based on the Free Spaced Repetition Scheduler by Jarrett Ye (LMSherlock),
+ * published at https://github.com/open-spaced-repetition/fsrs
  *
- * 调度策略：下次复习安排在 R(t) ≈ 0.9 时
- *   t_next = -ln(0.9) × S ≈ 0.105 × S
+ * Three-component memory model:
+ *   D (Difficulty):  inherent complexity of the item, range [1, 10]
+ *   S (Stability):   days for retrievability to drop from 100% → 90%
+ *   R (Retrievability): probability of recall at a given moment
  *
- * 稳定性增长：成功回忆后 S 按指数增长；遗忘后 S 重置
- *
- * quality: 1/3/5  (不认识/模糊/认识)
+ * Grades (4-level, Anki-compatible):
+ *   1 = Again — forgot completely
+ *   2 = Hard  — remembered with significant difficulty
+ *   3 = Good  — remembered normally
+ *   4 = Easy  — remembered effortlessly
  */
 
-export interface SRSUpdate {
+// ═══════════════════════════════════════════════
+//  FSRS-5 Default Parameters (19 weights)
+//  Optimized from billions of real-world reviews.
+//  Source: https://github.com/open-spaced-repetition/fsrs
+// ═══════════════════════════════════════════════
+
+const W = Object.freeze([
+  0.40255,   // w0:  init stability after Again (S₀₁)
+  1.18385,   // w1:  init stability after Hard  (S₀₂)
+  3.173,     // w2:  init stability after Good  (S₀₃)
+  15.69105,  // w3:  init stability after Easy  (S₀₄)
+  7.1949,    // w4:  D₀(1) — init difficulty when first rating is Again
+  0.5345,    // w5:  difficulty decay rate in initial D formula
+  1.4604,    // w6:  difficulty delta magnitude
+  0.0046,    // w7:  mean reversion weight for difficulty
+  0.80,      // w8:  stability increase scale factor (tuned for language learning)
+  0.18,      // w9:  stability increase decay exponent (stronger saturation)
+  1.30,      // w10: stability increase R-dependence (spacing effect)
+  1.9395,    // w11: post-lapse stability scale
+  0.11,      // w12: post-lapse stability D exponent
+  0.29605,   // w13: post-lapse stability S exponent
+  2.2698,    // w14: post-lapse stability R exponent
+  0.40,      // w15: Hard penalty multiplier (was 0.23, less harsh now)
+  2.9898,    // w16: Easy bonus multiplier (grade=4)
+  0.51655,   // w17: short-term stability grade scale
+  0.6621,    // w18: short-term stability grade offset
+] as const);
+
+// ═══════════════════════════════════════════════
+//  Forgetting Curve (FSRS-4.5 / FSRS-5)
+//  R(t, S) = (1 + FACTOR × t / S)^DECAY
+//  When t = S, R = 0.9 (definition of stability)
+// ═══════════════════════════════════════════════
+
+const DECAY = -0.5;
+const FACTOR = 19 / 81; // ≈ 0.234568
+
+// ═══════════════════════════════════════════════
+//  Tunable Defaults
+// ═══════════════════════════════════════════════
+
+export const DEFAULT_RETENTION = 0.92;
+const MAX_INTERVAL = 90;  // max interval in days — language learners don't need year-long gaps
+
+// ═══════════════════════════════════════════════
+//  Types
+// ═══════════════════════════════════════════════
+
+export interface SRSState {
+  difficulty: number;
+  stability: number;
   reviewCount: number;
   lastReviewedAt: number;
   nextReviewAt: number;
-  easeFactor: number;  // 复用为 stability (记忆稳定性，单位: 天)
 }
 
-// 初始稳定性：第一次成功复习后，记忆稳定约 1 天
-const INITIAL_STABILITY = 1.0;
-// 目标保留率
-const TARGET_RETENTION = 0.9;
-// -ln(0.9) ≈ 0.10536
-const DECAY_FACTOR = -Math.log(TARGET_RETENTION);
+// ═══════════════════════════════════════════════
+//  Core Formulas
+// ═══════════════════════════════════════════════
 
 /**
- * 根据复习质量计算稳定性增长系数
- *
- * 认识(q=5)：S 增长 2.0-2.5×，记忆巩固显著
- * 模糊(q=3)：S 增长 1.3×，记忆有一定加强
- * 不认识(q=1)：S 重置为初始值，记忆归零
+ * Initial stability after the FIRST EVER review.
+ * S₀(G) = w_{G-1}
  */
-function stabilityGrowth(quality: number, prevStability: number): number {
-  if (quality >= 5) {
-    // 好回忆 → 稳定性快速增长
-    // 稳定性越高，增长越谨慎（避免过度自信）
-    const damp = Math.max(0.6, 1.0 - Math.log10(Math.max(1, prevStability)) * 0.15);
-    return prevStability * (1.5 + damp);
-  }
-  if (quality >= 3) {
-    // 模糊回忆 → 稳定性小幅增长
-    return prevStability * 1.2;
-  }
-  // 不认识 → 重置
-  return INITIAL_STABILITY;
+export function initStability(grade: number): number {
+  return W[grade - 1]!;
 }
 
-export function sm2(word: FavoriteWord, quality: number): SRSUpdate {
-  const now = Date.now();
-  const q = quality; // 1, 3, or 5
+/**
+ * Initial difficulty after the FIRST EVER review.
+ * D₀(G) = w₄ − e^{w₅ × (G−1)} + 1
+ */
+export function initDifficulty(grade: number): number {
+  const raw = W[4]! - Math.exp(W[5]! * (grade - 1)) + 1;
+  return clamp(1, 10, raw);
+}
 
-  let stability: number;
-  let interval: number;
-  let reviewCount: number;
+/**
+ * Retrievability at time `elapsedDays` since last review.
+ * R(t, S) = (1 + FACTOR × t / S)^DECAY
+ */
+export function retrievability(elapsedDays: number, stability: number): number {
+  if (stability <= 0) return 0;
+  if (elapsedDays <= 0) return 1;
+  return Math.pow(1 + FACTOR * elapsedDays / stability, DECAY);
+}
 
-  if (q < 3) {
-    // ── 不认识：记忆重置 ──
-    stability = INITIAL_STABILITY;
-    interval = 1;
-    reviewCount = 0;
-  } else {
-    // ── 记住了：稳定性增长 ──
-    const prevStability = word.easeFactor > 0 ? word.easeFactor : INITIAL_STABILITY;
+/**
+ * Next interval from stability and desired retention.
+ * Solves R(I, S) = r for I:
+ *   I(r, S) = S / FACTOR × (r^{1/DECAY} − 1)
+ */
+export function nextInterval(stability: number, desiredRetention: number): number {
+  const r = clamp(0.7, 0.99, desiredRetention);
+  const raw = stability / FACTOR * (Math.pow(r, 1 / DECAY) - 1);
+  return Math.max(1, Math.min(MAX_INTERVAL, Math.round(raw)));
+}
 
-    if (word.reviewCount === 0) {
-      // 第一次成功复习
-      stability = INITIAL_STABILITY;
+/**
+ * Update difficulty after a review.
+ *
+ * Step 1: ΔD(G) = −w₆ × (G − 3)
+ *   Again(G=1): +2×w₆  (large increase)
+ *   Hard(G=2):  +w₆     (small increase)
+ *   Good(G=3):  0       (no change)
+ *   Easy(G=4):  −w₆    (decrease)
+ *
+ * Step 2: Linear damping — as D → 10, updates get smaller
+ *   D′ = D + ΔD × (10 − D) / 9
+ *
+ * Step 3: Mean reversion toward D₀(Easy) to prevent "ease hell"
+ *   D″ = w₇ × D₀(4) + (1 − w₇) × D′
+ */
+export function nextDifficulty(D: number, grade: number): number {
+  const deltaD = -W[6]! * (grade - 3);
+  // Linear damping
+  const dPrime = D + deltaD * (10 - D) / 9;
+  // Mean reversion toward D₀(Easy)
+  const d0Easy = initDifficulty(4);
+  const dNew = W[7]! * d0Easy + (1 - W[7]!) * dPrime;
+  return clamp(1, 10, dNew);
+}
+
+/**
+ * New stability after a SUCCESSFUL recall (grade ≥ 2).
+ *
+ * SInc = 1 + e^{w₈} × (11 − D) × S^{−w₉} × (e^{w₁₀×(1−R)} − 1)
+ *          × hardPenalty(if G=2) × easyBonus(if G=4)
+ *
+ * Key properties:
+ *   - Larger D → smaller SInc (harder material stabilizes slower)
+ *   - Larger S → smaller SInc (diminishing returns, stability saturates)
+ *   - Lower R → larger SInc (spacing effect — reviewing when almost forgotten
+ *     gives a bigger stability boost, but converges to an upper limit)
+ *   - SInc ≥ 1 always (stability never decreases on success)
+ */
+export function nextRecallStability(
+  D: number,
+  S: number,
+  R: number,
+  grade: number,
+): number {
+  const hardPenalty = grade === 2 ? W[15]! : 1;
+  const easyBonus = grade === 4 ? W[16]! : 1;
+
+  const SInc =
+    1 +
+    Math.exp(W[8]!) *
+      (11 - D) *
+      Math.pow(S, -W[9]!) *
+      (Math.exp(W[10]! * (1 - R)) - 1) *
+      hardPenalty *
+      easyBonus;
+
+  return S * Math.max(1, SInc);
+}
+
+/**
+ * New stability after FORGETTING (grade = 1).
+ *
+ * S′ = min(w₁₁ × D^{−w₁₂} × ((S+1)^{w₁₃} − 1) × e^{w₁₄×(1−R)},  S)
+ *
+ * The min(…, S) ensures post-lapse stability can never exceed
+ * pre-lapse stability. A word you've known well (high S) will keep
+ * more residual stability than a word you barely learned.
+ */
+export function nextForgetStability(D: number, S: number, R: number): number {
+  const sNew =
+    W[11]! *
+    Math.pow(D, -W[12]!) *
+    (Math.pow(S + 1, W[13]!) - 1) *
+    Math.exp(W[14]! * (1 - R));
+
+  return Math.min(sNew, S);
+}
+
+/**
+ * Short-term stability update for same-day reviews.
+ * S′ = S × e^{w₁₇ × (G − 3 + w₁₈)}
+ *
+ * For Good(G=3):  S′ = S × e^{w₁₇ × w₁₈}
+ * For Easy(G=4):  S′ = S × e^{w₁₇ × (1 + w₁₈)}
+ * For Hard(G=2):  S′ = S × e^{w₁₇ × (w₁₈ − 1)}
+ */
+export function nextShortTermStability(S: number, grade: number): number {
+  return S * Math.exp(W[17]! * (grade - 3 + W[18]!));
+}
+
+// ═══════════════════════════════════════════════
+//  Main Scheduler
+// ═══════════════════════════════════════════════
+
+interface ScheduleInput {
+  /** Current difficulty, or 0 if this is the first review */
+  difficulty: number;
+  /** Current stability (stored in easeFactor), or 0 if first review */
+  stability: number;
+  /** Current review count */
+  reviewCount: number;
+  /** Timestamp of last review, or 0 if never reviewed */
+  lastReviewedAt: number;
+  /** Whether this review is on the same calendar day as the last one */
+  isSameDay: boolean;
+}
+
+/**
+ * Compute the next SRS state for a word after a review.
+ *
+ * This is the main entry point. It handles:
+ *   - First-ever review (initial D and S)
+ *   - Successful recall (D update + stability growth)
+ *   - Forgetting (D update + stability reset with residual)
+ *   - Same-day reviews (short-term stability formula)
+ */
+export function schedule(
+  input: ScheduleInput,
+  grade: number,
+  now: number,
+  desiredRetention: number = DEFAULT_RETENTION,
+): SRSState {
+  const prevD = input.difficulty > 0 ? input.difficulty : 5.0;
+  const elapsedDays =
+    input.lastReviewedAt > 0
+      ? (now - input.lastReviewedAt) / 86_400_000
+      : 0;
+  const R =
+    input.lastReviewedAt > 0
+      ? retrievability(elapsedDays, input.stability)
+      : 1;
+
+  let newD: number;
+  let newS: number;
+  let newCount: number;
+
+  if (grade === 1) {
+    // ── Forgot (Again) ──
+    newD = nextDifficulty(prevD, 1);
+
+    if (input.reviewCount === 0) {
+      // First review was a fail — use Again initial stability
+      newS = initStability(1);
     } else {
-      stability = stabilityGrowth(q, prevStability);
+      // Post-lapse stability: residual from prior mastery
+      newS = nextForgetStability(prevD, input.stability, R);
     }
 
-    reviewCount = word.reviewCount + 1;
+    newCount = 0; // reset review count on lapse
+  } else {
+    // ── Success (Hard / Good / Easy) ──
+    newD = nextDifficulty(prevD, grade);
 
-    // interval = -ln(target) * stability (Ebbinghaus 核心公式)
-    // 乘以 10 使间隔长度实用化（1 天稳定性 ≈ 1 天间隔）
-    interval = Math.max(1, Math.round(DECAY_FACTOR * 10 * stability));
+    if (input.reviewCount === 0 && input.lastReviewedAt > 0) {
+      // Post-lapse recovery: reviewCount was reset by a prior Again,
+      // but this card has history. Build on the penalized stability
+      // instead of treating it as a first-ever review.
+      if (input.isSameDay) {
+        newS = nextShortTermStability(input.stability, grade);
+      } else {
+        newS = nextRecallStability(newD, input.stability, R, grade);
+      }
+    } else if (input.reviewCount === 0) {
+      // Genuine first-ever success — no prior reviews
+      newS = initStability(grade);
+    } else if (input.isSameDay && input.lastReviewedAt > 0) {
+      // Same-day review: short-term formula
+      newS = nextShortTermStability(input.stability, grade);
+    } else {
+      // Normal review: full stability growth formula
+      newS = nextRecallStability(newD, input.stability, R, grade);
+    }
 
-    // 限制最大间隔为 365 天
-    interval = Math.min(365, interval);
+    newCount = input.reviewCount + 1;
   }
 
+  const interval = nextInterval(newS, desiredRetention);
+
   return {
-    reviewCount,
+    difficulty: newD,
+    stability: newS,
+    reviewCount: newCount,
     lastReviewedAt: now,
-    nextReviewAt: now + interval * 86400000,
-    easeFactor: stability, // 复用字段存储 stability
+    nextReviewAt: now + interval * 86_400_000,
   };
 }
 
+// ═══════════════════════════════════════════════
+//  Legacy compatibility
+// ═══════════════════════════════════════════════
+
 /**
- * 计算当前记忆保留率 R(t) = e^(-t / S)
- * t = 距离上次复习的天数
- * S = 稳定性
+ * Normalize old quality values to the new 4-grade system.
+ *
+ * Old system:  1 = 不认识, 3 = 模糊, 5 = 认识
+ * New system:  1 = Again, 2 = Hard, 3 = Good, 4 = Easy
+ *
+ * Old → New mapping:
+ *   5 (认识) → 3 (Good)
+ *   3 (模糊) → 2 (Hard)
+ *   1 (不认识) → 1 (Again)
  */
-export function retention(word: FavoriteWord): number {
-  if (word.lastReviewedAt === 0 || word.easeFactor <= 0) return 0;
-  const t = (Date.now() - word.lastReviewedAt) / 86400000; // days
-  return Math.exp(-t / word.easeFactor);
+export function normalizeQuality(oldQuality: number): number {
+  if (oldQuality === 5) return 3;  // old "known" → Good
+  if (oldQuality === 3) return 2;  // old "fuzzy" → Hard
+  if (oldQuality >= 1 && oldQuality <= 4) return oldQuality; // already new
+  return 1; // fallback
 }
 
 /**
- * 计算历史某个时间点的记忆保留率
+ * Legacy SM-2 compatibility wrapper around FSRS-5 schedule().
+ *
+ * Called by worker/index.ts to compute the next review state for a word.
+ * Accepts a FavoriteWord-like object and a quality score (old 1/3/5 or new 1-4),
+ * normalizes it, then delegates to schedule().
+ *
+ * Returns a patch object suitable for spreading into updateFavorite().
  */
-export function retentionAt(timestamp: number, reviewTimestamp: number, stability: number): number {
-  const t = (timestamp - reviewTimestamp) / 86400000;
+export function sm2(
+  word: { easeFactor: number; reviewCount: number; lastReviewedAt: number },
+  quality: number,
+): {
+  easeFactor: number;
+  reviewCount: number;
+  lastReviewedAt: number;
+  nextReviewAt: number;
+} {
+  const grade = normalizeQuality(quality);
+  const now = Date.now();
+  const isSameDay =
+    word.lastReviewedAt > 0 &&
+    new Date(word.lastReviewedAt).toDateString() === new Date(now).toDateString();
+
+  const state = schedule(
+    {
+      difficulty: 0, // not persisted on FavoriteWord; schedule() defaults to 5.0
+      stability: word.easeFactor || 0,
+      reviewCount: word.reviewCount,
+      lastReviewedAt: word.lastReviewedAt,
+      isSameDay,
+    },
+    grade,
+    now,
+  );
+
+  return {
+    easeFactor: state.stability,
+    reviewCount: state.reviewCount,
+    lastReviewedAt: state.lastReviewedAt,
+    nextReviewAt: state.nextReviewAt,
+  };
+}
+
+// ═══════════════════════════════════════════════
+//  Utilities
+// ═══════════════════════════════════════════════
+
+function clamp(lo: number, hi: number, v: number): number {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+/**
+ * Compute memory retention at a specific past timestamp.
+ * Used by the stats panel for retention curves.
+ */
+export function retentionAt(
+  timestamp: number,
+  reviewTimestamp: number,
+  stability: number,
+): number {
+  const t = (timestamp - reviewTimestamp) / 86_400_000;
   if (t < 0) return 1;
-  return Math.exp(-t / Math.max(0.1, stability));
+  return retrievability(t, Math.max(0.01, stability));
 }

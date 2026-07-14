@@ -1,39 +1,64 @@
-/* Sayo UI tokens — Primer Dark (for Shadow DOM isolation) */
+/* ═══════════════════════════════════════════════════════════════
+   Shadow DOM Token Mirror
+   ═══════════════════════════════════════════════════════════════
+
+   Shadow DOM 无法继承外层页面的 CSS 变量，因此必须在此处定义一份
+   Sayo UI token 副本供 Shadow DOM 内组件使用。
+
+   ⚠️ 修改 sayo.css 的 token 值时，务必同步更新此文件。
+   ═══════════════════════════════════════════════════════════════ */
 
 :host {
-  --syo-bg-base: #0d1117;
-  --syo-bg-surface: #161b22;
+  /* Backgrounds */
+  --syo-bg-base:     #0d1117;
+  --syo-bg-surface:  #161b22;
   --syo-bg-elevated: #1c2129;
-  --syo-border: #30363d;
+
+  /* Borders */
+  --syo-border:       #30363d;
   --syo-border-muted: #21262d;
+
+  /* Foregrounds */
   --syo-fg-default: #e6edf3;
-  --syo-fg-body: #c9d1d9;
-  --syo-fg-muted: #8b949e;
-  --syo-blue: #58a6ff;
-  --syo-green: #3fb950;
+  --syo-fg-body:    #c9d1d9;
+  --syo-fg-muted:   #8b949e;
+
+  /* Functional colors */
+  --syo-blue:   #58a6ff;
+  --syo-green:  #3fb950;
   --syo-yellow: #d29922;
-  --syo-red: #f85149;
+  --syo-red:    #f85149;
   --syo-purple: #bc8cff;
-  --syo-cyan: #79c0ff;
-  --syo-info: var(--syo-blue);
-  --syo-success: var(--syo-green);
-  --syo-warning: var(--syo-yellow);
-  --syo-danger: var(--syo-red);
-  --syo-accent: var(--syo-purple);
+  --syo-cyan:   #79c0ff;
+
+  /* Semantic roles */
+  --syo-info:      var(--syo-blue);
+  --syo-success:   var(--syo-green);
+  --syo-warning:   var(--syo-yellow);
+  --syo-danger:    var(--syo-red);
+  --syo-accent:    var(--syo-purple);
   --syo-secondary: var(--syo-cyan);
+
+  /* Radii */
   --syo-radius-sm: 4px;
   --syo-radius-md: 6px;
   --syo-radius-lg: 8px;
+
+  /* Easing */
   --syo-ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --syo-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --syo-ease-out:     cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Typography */
   --font-display: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: "Fira Code", "FiraCode Nerd Font", "SF Mono", "Cascadia Code", "JetBrains Mono", monospace;
-  --font-size-sm: 12px;
+  --font-mono:    "Fira Code", "FiraCode Nerd Font", "SF Mono", "Cascadia Code", "JetBrains Mono", monospace;
+
+  /* Font sizes (dynamic — controlled by fontScale slider via shadow-view.ts) */
+  --font-size-sm:   12px;
   --font-size-base: 14px;
-  --font-size-lg: 16px;
+  --font-size-lg:   16px;
 }
 
-/* Global reset (Shadow DOM only) */
+/* ── Shadow DOM reset ────────────────────────────────────────── */
 * {
   margin: 0;
   padding: 0;
@@ -50,8 +75,13 @@ button {
   transition: color 150ms var(--syo-ease-out), background 150ms var(--syo-ease-out);
 }
 
-svg { display: block; }
+svg {
+  display: block;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }

@@ -1,0 +1,116 @@
+/* ═══════════════════════════════════════════════════════════════
+   星拾 — 设置抽屉
+   overlay、drawer、表单
+   ═══════════════════════════════════════════════════════════════ */
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .5);
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms var(--syo-ease-out);
+}
+
+.drawer-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100%;
+  z-index: 101;
+  background: var(--syo-bg-surface);
+  border-left: 1px solid var(--syo-border);
+  transform: translateX(100%);
+  transition: transform 350ms var(--syo-ease-elastic);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.drawer.open {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--syo-border);
+}
+
+.drawer-header h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  color: var(--syo-fg-default);
+  letter-spacing: .04em;
+}
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.setting-section {
+  margin-bottom: 24px;
+}
+
+.setting-section-title {
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--syo-fg-muted);
+  letter-spacing: .04em;
+  margin-bottom: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--syo-border-muted);
+}
+
+.setting-group {
+  margin-bottom: 14px;
+}
+
+.setting-label {
+  display: block;
+  font-size: var(--text-sm);
+  margin-bottom: 6px;
+}
+
+.setting-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.setting-btn.danger {
+  color: var(--syo-danger);
+  border-color: var(--syo-danger);
+}
+
+.drawer-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--syo-border);
+}
+
+.save-btn {
+  width: 100%;
+  padding: 12px;
+  font-family: var(--syo-font-mono);
+  font-size: var(--text-sm);
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .drawer {
+    width: 100%;
+  }
+}
