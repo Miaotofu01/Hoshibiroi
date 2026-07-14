@@ -370,19 +370,20 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
       return { type: 'NOTE_RESULT', wordId: req.wordId, note: req.note };
     }
 
-    case 'UPDATE_EXAMPLES': {
+    case 'UPDATE_NOTE_CARDS': {
       const favs = await getFavorites();
       const word = favs.find(f => f.id === req.wordId);
-      if (!word) return { type: 'EXAMPLES_RESULT', wordId: req.wordId };
+      if (!word) return { type: 'NOTE_CARDS_RESULT', wordId: req.wordId };
+      const examples = req.cards.map(c => ({ original: c.title, translated: c.content }));
       const updatedTranslation = {
         ...word.translation,
-        examples: req.examples,
+        examples,
       };
       await updateFavorite(req.wordId, {
         context: req.context,
         translation: updatedTranslation,
       });
-      return { type: 'EXAMPLES_RESULT', wordId: req.wordId };
+      return { type: 'NOTE_CARDS_RESULT', wordId: req.wordId };
     }
 
     default:

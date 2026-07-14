@@ -169,48 +169,48 @@ function renderCard(word: FavoriteWord): string {
     nextReviewHtml = `<span class="next-review${isDue ? ' due' : ''}">下次复习：${dateStr}</span>`;
   }
 
-  // Examples — horizontal inertia scroll with edit/delete
-  let examplesHtml = '';
+  // Note cards — horizontal inertia scroll with edit/delete
+  let cardsHtml = '';
   const examples = word.translation.examples?.length ? word.translation.examples : [];
   const hasContext = !!word.context;
-  const hasExamples = examples.length > 0;
+  const hasCards = examples.length > 0;
 
-  const sourceLabel = word.translation.source || '例句';
-  examplesHtml = '<div class="card-examples">';
-  examplesHtml += `<div class="ctx-source-label">${escapeHtml(sourceLabel)} · 例句</div>`;
-  examplesHtml += '<div class="syo-inertia examples-scroll" data-syo-inertia>';
+  cardsHtml = '<div class="card-note-cards">';
+  cardsHtml += '<div class="nc-section-label">备注卡片</div>';
+  cardsHtml += '<div class="syo-inertia nc-scroll" data-syo-inertia>';
   if (hasContext) {
-    examplesHtml += `<article class="syo-card example-card" data-example-idx="-1">
-      <div class="ex-card-inner">
+    const sourceLabel = word.translation.source || '来源';
+    cardsHtml += `<article class="syo-card nc-card" data-card-idx="-1" draggable="true">
+      <div class="nc-card-inner">
         <div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(sourceLabel)} · 原文</h3></div>
         <p class="syo-card-desc">${escapeHtml(word.context!)}</p>
       </div>
-      <div class="ex-card-actions">
-        <button class="btn-icon btn-icon--xs edit-ex-btn" title="编辑" data-action="edit-example" data-example-idx="-1">${ico(Icons.gear)}</button>
-        <button class="btn-icon btn-icon--xs del-ex-btn" title="删除" data-action="del-example" data-example-idx="-1">${ico(Icons.x)}</button>
+      <div class="nc-card-actions">
+        <button class="btn-icon btn-icon--xs nc-edit-btn" title="编辑" data-action="edit-card" data-card-idx="-1">${ico(Icons.gear)}</button>
+        <button class="btn-icon btn-icon--xs nc-del-btn" title="删除" data-action="del-card" data-card-idx="-1">${ico(Icons.x)}</button>
       </div>
     </article>`;
   }
-  if (hasExamples) {
+  if (hasCards) {
     for (let i = 0; i < examples.length; i++) {
       const ex = examples[i];
-      examplesHtml += `<article class="syo-card example-card" data-example-idx="${i}">
-        <div class="ex-card-inner">
+      cardsHtml += `<article class="syo-card nc-card" data-card-idx="${i}" draggable="true">
+        <div class="nc-card-inner">
           <div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(ex.original)}</h3></div>
           <p class="syo-card-desc">${escapeHtml(ex.translated)}</p>
         </div>
-        <div class="ex-card-actions">
-          <button class="btn-icon btn-icon--xs edit-ex-btn" title="编辑" data-action="edit-example" data-example-idx="${i}">${ico(Icons.gear)}</button>
-          <button class="btn-icon btn-icon--xs del-ex-btn" title="删除" data-action="del-example" data-example-idx="${i}">${ico(Icons.x)}</button>
+        <div class="nc-card-actions">
+          <button class="btn-icon btn-icon--xs nc-edit-btn" title="编辑" data-action="edit-card" data-card-idx="${i}">${ico(Icons.gear)}</button>
+          <button class="btn-icon btn-icon--xs nc-del-btn" title="删除" data-action="del-card" data-card-idx="${i}">${ico(Icons.x)}</button>
         </div>
       </article>`;
     }
   }
-  // Add example button
-  examplesHtml += `<article class="syo-card example-card example-card--add" data-action="add-example">
-    <div class="add-ex-placeholder">${ico(Icons.copy)}<span>添加例句</span></div>
+  // Add card button
+  cardsHtml += `<article class="syo-card nc-card nc-card--add" data-action="add-card">
+    <div class="nc-add-placeholder">${ico(Icons.copy)}<span>添加备注</span></div>
   </article>`;
-  examplesHtml += '</div></div>';
+  cardsHtml += '</div></div>';
 
   return `<div class="syo-card word-card${word.starred ? ' starred' : ''}" data-id="${escapeHtml(word.id)}">
     <div class="card-body">
@@ -225,7 +225,7 @@ function renderCard(word: FavoriteWord): string {
         </div>
       </div>
       <div class="meanings">${meaningHtml}</div>
-      ${examplesHtml}
+      ${cardsHtml}
       <div class="card-meta">
         <span class="src-dot ${sourceDotClass(word.translation.sourceId)}" title="${escapeHtml(word.translation.source)}"></span>
         <span>${escapeHtml(word.translation.source)}</span>
@@ -237,65 +237,66 @@ function renderCard(word: FavoriteWord): string {
   </div>`;
 }
 
-// ── Example editing ──
+// ── Note card editing ──
 
-async function saveExamples(wordId: string, context: string | undefined, examples: Array<{ original: string; translated: string }>): Promise<void> {
+async function saveNoteCards(wordId: string, context: string | undefined, cards: Array<{ title: string; content: string }>): Promise<void> {
   try {
-    await chrome.runtime.sendMessage({ type: 'UPDATE_EXAMPLES', wordId, context, examples });
+    await chrome.runtime.sendMessage({ type: 'UPDATE_NOTE_CARDS', wordId, context, cards });
     const { words } = getState();
     const w = words.find(w => w.id === wordId);
     if (w) {
       w.context = context;
-      w.translation.examples = examples;
+      w.translation.examples = cards.map(c => ({ original: c.title, translated: c.content }));
     }
   } catch { /* */ }
 }
 
-function showExampleDialog(wordId: string, type: 'add' | 'edit-context' | 'edit-example', existing?: { original: string; translated: string }): void {
+function showNoteCardDialog(wordId: string, type: 'add' | 'edit-context' | 'edit-card', existing?: { title: string; content: string }): void {
   const isContext = type === 'edit-context';
   const isAdd = type === 'add';
-  const title = isAdd ? '添加例句' : isContext ? '编辑原文上下文' : '编辑例句';
+  const dialogTitle = isAdd ? '添加备注卡片' : isContext ? '编辑原文上下文' : '编辑备注卡片';
 
   const overlay = document.createElement('div');
-  overlay.className = 'ex-dialog-overlay';
-  overlay.innerHTML = `<div class="ex-dialog">
-    <h4>${title}</h4>
-    <label>原文<input class="ex-input" id="ex-original" value="${escapeHtml(existing?.original ?? '')}" placeholder="${isContext ? '原文上下文' : '原文句子'}"></label>
-    ${isContext ? '' : `<label>译文<input class="ex-input" id="ex-translated" value="${escapeHtml(existing?.translated ?? '')}" placeholder="中文翻译"></label>`}
-    <div class="ex-dialog-actions">
-      <button class="syo-btn syo-btn--sm" id="ex-cancel">取消</button>
-      <button class="syo-btn syo-btn--sm syo-btn--primary" id="ex-save">保存</button>
+  overlay.className = 'nc-dialog-overlay';
+  overlay.innerHTML = `<div class="nc-dialog">
+    <h4>${dialogTitle}</h4>
+    <label>标题<input class="nc-input" id="nc-title" value="${escapeHtml(existing?.title ?? '')}" placeholder="${isContext ? '原文上下文' : '标题'}"></label>
+    ${isContext ? '' : `<label>内容<input class="nc-input" id="nc-content" value="${escapeHtml(existing?.content ?? '')}" placeholder="内容"></label>`}
+    <div class="nc-dialog-actions">
+      <button class="syo-btn syo-btn--sm" id="nc-cancel">取消</button>
+      <button class="syo-btn syo-btn--sm syo-btn--primary" id="nc-save">保存</button>
     </div>
   </div>`;
   document.body.appendChild(overlay);
 
   const close = () => overlay.remove();
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  overlay.querySelector('#ex-cancel')?.addEventListener('click', close);
+  overlay.querySelector('#nc-cancel')?.addEventListener('click', close);
   // Focus first input
-  setTimeout(() => (overlay.querySelector('#ex-original') as HTMLInputElement)?.focus(), 50);
+  setTimeout(() => (overlay.querySelector('#nc-title') as HTMLInputElement)?.focus(), 50);
 
-  overlay.querySelector('#ex-save')?.addEventListener('click', async () => {
-    const original = (overlay.querySelector('#ex-original') as HTMLInputElement).value.trim();
-    if (!original) return;
+  overlay.querySelector('#nc-save')?.addEventListener('click', async () => {
+    const title = (overlay.querySelector('#nc-title') as HTMLInputElement).value.trim();
+    if (!title) return;
 
     const { words } = getState();
     const word = words.find(w => w.id === wordId);
     if (!word) { close(); return; }
 
     if (isContext) {
-      await saveExamples(wordId, original, word.translation.examples ?? []);
+      const cards = (word.translation.examples ?? []).map(e => ({ title: e.original, content: e.translated }));
+      await saveNoteCards(wordId, title, cards);
     } else {
-      const translated = (overlay.querySelector('#ex-translated') as HTMLInputElement).value.trim();
-      if (!translated) return;
-      const examples = [...(word.translation.examples ?? [])];
+      const content = (overlay.querySelector('#nc-content') as HTMLInputElement).value.trim();
+      if (!content) return;
+      const cards = (word.translation.examples ?? []).map(e => ({ title: e.original, content: e.translated }));
       if (isAdd) {
-        examples.push({ original, translated });
+        cards.push({ title, content });
       } else {
-        const idx = examples.findIndex(e => e.original === existing!.original);
-        if (idx >= 0) examples[idx] = { original, translated };
+        const idx = cards.findIndex(c => c.title === existing!.title);
+        if (idx >= 0) cards[idx] = { title, content };
       }
-      await saveExamples(wordId, word.context, examples);
+      await saveNoteCards(wordId, word.context, cards);
     }
     close();
     renderBrowse();
@@ -306,12 +307,21 @@ function showExampleDialog(wordId: string, type: 'add' | 'edit-context' | 'edit-
   });
 }
 
+// ── Drag state ──
+
+let dragCardIdx: number | null = null;
+let dragWordId: string | null = null;
+
 // ── Event handlers (stored for cleanup) ──
 
 let toolbarClick: ((e: Event) => void) | null = null;
 let toolbarChange: ((e: Event) => void) | null = null;
 let wordListClick: ((e: Event) => void) | null = null;
 let searchHandler: ((e: Event) => void) | null = null;
+let dragStartHandler: ((e: DragEvent) => void) | null = null;
+let dragOverHandler: ((e: DragEvent) => void) | null = null;
+let dragEndHandler: ((e: DragEvent) => void) | null = null;
+let dropHandler: ((e: DragEvent) => void) | null = null;
 
 export function mountBrowse(): void {
   toolbarClick = (e: Event) => {
@@ -381,42 +391,43 @@ export function mountBrowse(): void {
       return;
     }
 
-    // Add example
-    if (target.closest('[data-action="add-example"]')) {
-      showExampleDialog(id, 'add');
+    // Add note card
+    if (target.closest('[data-action="add-card"]')) {
+      showNoteCardDialog(id, 'add');
       return;
     }
 
-    // Edit example
-    const editBtn = target.closest('[data-action="edit-example"]') as HTMLElement | null;
+    // Edit note card
+    const editBtn = target.closest('[data-action="edit-card"]') as HTMLElement | null;
     if (editBtn) {
-      const idx = parseInt(editBtn.dataset.exampleIdx ?? '');
+      const idx = parseInt(editBtn.dataset.cardIdx ?? '');
       const { words } = getState();
       const word = words.find(w => w.id === id);
       if (!word) return;
       if (idx === -1) {
-        showExampleDialog(id, 'edit-context', { original: word.context ?? '', translated: '' });
+        showNoteCardDialog(id, 'edit-context', { title: word.context ?? '', content: '' });
       } else {
         const ex = word.translation.examples?.[idx];
-        if (ex) showExampleDialog(id, 'edit-example', ex);
+        if (ex) showNoteCardDialog(id, 'edit-card', { title: ex.original, content: ex.translated });
       }
       return;
     }
 
-    // Delete example
-    const delBtn = target.closest('[data-action="del-example"]') as HTMLElement | null;
+    // Delete note card
+    const delBtn = target.closest('[data-action="del-card"]') as HTMLElement | null;
     if (delBtn) {
-      const idx = parseInt(delBtn.dataset.exampleIdx ?? '');
+      const idx = parseInt(delBtn.dataset.cardIdx ?? '');
       const { words } = getState();
       const word = words.find(w => w.id === id);
       if (!word) return;
       if (idx === -1) {
         // Remove context
-        await saveExamples(id, undefined, word.translation.examples ?? []);
+        const cards = (word.translation.examples ?? []).map(e => ({ title: e.original, content: e.translated }));
+        await saveNoteCards(id, undefined, cards);
       } else {
-        const examples = [...(word.translation.examples ?? [])];
-        examples.splice(idx, 1);
-        await saveExamples(id, word.context, examples);
+        const cards = (word.translation.examples ?? []).map(e => ({ title: e.original, content: e.translated }));
+        cards.splice(idx, 1);
+        await saveNoteCards(id, word.context, cards);
       }
       renderBrowse();
       return;
@@ -446,6 +457,70 @@ export function mountBrowse(): void {
   if (searchEl) {
     searchEl.addEventListener('input', searchHandler);
   }
+
+  // Drag-to-reorder note cards
+  dragStartHandler = (e: DragEvent) => {
+    const card = (e.target as HTMLElement).closest('.nc-card[data-card-idx]') as HTMLElement | null;
+    if (!card) return;
+    const wordCard = card.closest('.word-card') as HTMLElement | null;
+    if (!wordCard?.dataset.id) return;
+    dragCardIdx = parseInt(card.dataset.cardIdx ?? '');
+    dragWordId = wordCard.dataset.id;
+    card.classList.add('nc-dragging');
+    e.dataTransfer!.effectAllowed = 'move';
+    e.dataTransfer!.setData('text/plain', '');
+  };
+
+  dragOverHandler = (e: DragEvent) => {
+    e.preventDefault();
+    const card = (e.target as HTMLElement).closest('.nc-card[data-card-idx]') as HTMLElement | null;
+    if (!card || dragCardIdx === null) return;
+    const wordCard = card.closest('.word-card') as HTMLElement | null;
+    if (wordCard?.dataset.id !== dragWordId) return;
+    e.dataTransfer!.dropEffect = 'move';
+    card.classList.add('nc-drag-over');
+  };
+
+  dragEndHandler = () => {
+    wordList?.querySelectorAll('.nc-dragging, .nc-drag-over').forEach(el => {
+      el.classList.remove('nc-dragging', 'nc-drag-over');
+    });
+    dragCardIdx = null;
+    dragWordId = null;
+  };
+
+  dropHandler = async (e: DragEvent) => {
+    e.preventDefault();
+    const card = (e.target as HTMLElement).closest('.nc-card[data-card-idx]') as HTMLElement | null;
+    if (!card || dragCardIdx === null || !dragWordId) return;
+    const wordCard = card.closest('.word-card') as HTMLElement | null;
+    if (wordCard?.dataset.id !== dragWordId) return;
+
+    const targetIdx = parseInt(card.dataset.cardIdx ?? '');
+    if (targetIdx === dragCardIdx) { dragEndHandler!(); return; }
+
+    const { words } = getState();
+    const word = words.find(w => w.id === dragWordId);
+    if (!word) { dragEndHandler!(); return; }
+
+    const cards = (word.translation.examples ?? []).map(e => ({ title: e.original, content: e.translated }));
+    // Context card (idx -1) can't be involved in reorder with regular cards
+    if (dragCardIdx === -1 || targetIdx === -1) { dragEndHandler!(); return; }
+
+    const [moved] = cards.splice(dragCardIdx, 1);
+    cards.splice(targetIdx, 0, moved);
+
+    await saveNoteCards(dragWordId, word.context, cards);
+    dragEndHandler!();
+    renderBrowse();
+  };
+
+  if (wordList) {
+    wordList.addEventListener('dragstart', dragStartHandler);
+    wordList.addEventListener('dragover', dragOverHandler);
+    wordList.addEventListener('dragend', dragEndHandler);
+    wordList.addEventListener('drop', dropHandler);
+  }
 }
 
 export function unmountBrowse(): void {
@@ -469,11 +544,24 @@ export function unmountBrowse(): void {
     searchEl.removeEventListener('input', searchHandler);
   }
 
+  if (wordList && dragStartHandler && dragOverHandler && dragEndHandler && dropHandler) {
+    wordList.removeEventListener('dragstart', dragStartHandler);
+    wordList.removeEventListener('dragover', dragOverHandler);
+    wordList.removeEventListener('dragend', dragEndHandler);
+    wordList.removeEventListener('drop', dropHandler);
+  }
+
   if (searchTimer) clearTimeout(searchTimer);
   searchTimer = null;
 
+  dragCardIdx = null;
+  dragWordId = null;
   toolbarClick = null;
   toolbarChange = null;
   wordListClick = null;
   searchHandler = null;
+  dragStartHandler = null;
+  dragOverHandler = null;
+  dragEndHandler = null;
+  dropHandler = null;
 }
