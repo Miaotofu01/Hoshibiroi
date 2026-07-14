@@ -417,12 +417,11 @@
   font-family: var(--syo-font-mono);
   font-size: var(--text-micro);
   color: var(--syo-success);
-  margin-left: 8px;
 }
 
 /* ── Next review date ───────────────────────────────────────── */
 .next-review {
-  font-size: var(--text-sm);
+  font-size: var(--text-micro);
   color: var(--syo-fg-muted);
   margin-left: auto;
 }
