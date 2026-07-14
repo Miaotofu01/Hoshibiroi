@@ -1,49 +1,127 @@
-# 划词翻译 (Translate Extension)
+# 星拾 (Hoshibiroi) — 划词翻译 · 间隔复习
 
-Chrome MV3 划词翻译插件。Tokyo Night 暗色主题。
+<p align="center">网页上捡星星一样收集词汇，用科学的方法记住它们。</p>
 
-## 安装（开发模式）
+Chrome 扩展 (Manifest V3)。选中文字即时翻译 + FSRS-5 间隔重复生词本。Tokyo Night 暗色主题，自研 [Sayo UI](https://github.com/user/sayo-ui) 组件库。
 
-1. `npm install && npm run build`
-2. 打开 `chrome://extensions`，开启「开发者模式」
-3. 点击「加载已解压的扩展程序」，选择 `dist/` 目录
+## 安装
 
-## 使用
+```bash
+npm install
+npm run build        # → dist/
+```
 
-1. 在任意网页选中英文/中文文字
-2. 点击选区旁边的 🔤 按钮（或按 `Alt+T`）
-3. 浮动弹窗显示翻译，可展开侧边栏查看详情
+打开 `chrome://extensions`，开启"开发者模式"，"加载已解压的扩展程序"选择 `dist/` 目录。
 
-## 配置翻译源
+开发模式（watch + 热重载）：
 
-点击工具栏图标 → ⚙️ 设置，或右键图标 → 选项：
-- **DeepSeek**：默认启用，需填入 API Key（https://platform.deepseek.com）
-- **Google Translate**：无需 API Key，但需要代理
-- **腾讯云 TMT / 百度翻译**：国内直连，需申请 API Key
-- **DeepL**：质量最高，需 API Key
+```bash
+npm run dev
+```
+
+## 核心功能
+
+### 划词翻译
+
+- 在任意网页选中文字 → 弹出翻译气泡
+- 支持 中/英/日/韩/法/德/西 互译
+- 多翻译源：DeepSeek、Google Translate、腾讯云 TMT、百度翻译、DeepL
+- 快捷键 `Alt+T` 翻译、`Alt+R` 朗读、`Esc` 关闭
+
+### 生词本 · 间隔复习
+
+收藏的词汇进入生词本，用 FSRS-5 算法安排复习：
+
+- **学习面板** — 闪卡式复习，评分 Again / Hard / Good / Easy，即时反馈
+- **词库面板** — 浏览、搜索、筛选、管理全部词汇
+- **统计面板** — 日历热力图、学习趋势、掌握度分布
+
+### 词库面板 · 词汇管理
+
+| 功能 | 说明 |
+|------|------|
+| 星标 | 重点词标记，金色左边框，星标优先排序 |
+| 备注卡片 | 自定义增删改拖拽排序，标题+内容结构 |
+| 发音 | 卡片上直接点击喇叭按钮朗读 |
+| 排序 | 最新/最早/A→Z/星标优先/下次复习/掌握度 |
+| 筛选 | 全部/新词/学习中/已掌握 |
+| 搜索 | 覆盖单词、释义、词性含义 |
+| 例句 | 原文上下文 + 翻译例句，横向滚动浏览 |
+| 到期日 | 显示下次复习日期，今天到期的橙色高亮 |
 
 ## 快捷键
 
-- `Alt+T` — 翻译选中文字
-- `Alt+R` — 朗读原文
-- `Esc` — 关闭弹窗
+| 快捷键 | 功能 |
+|--------|------|
+| `Alt+T` | 翻译选中文字 |
+| `Alt+R` | 朗读原文 |
+| `Esc` | 关闭弹窗 |
+| 学习页 `1/2/3/4` | Again / Hard / Good / Easy |
+
+## 架构
+
+```
+网页 (content script)        Service Worker         生词本页面
+═══════════════════         ══════════════         ════════════
+src/content/index.ts  ──→  src/worker/       ←──  src/vocab/
+  Shadow DOM 注入            handlers/               panels/learn.ts
+  划词弹泡                    review.ts              panels/browse.ts
+  收藏单词                    stats.ts               panels/stats.ts
+                              storage.ts
+                              srs.ts  FSRS-5
+                              translate.ts
+```
+
+**消息协议**：`src/shared/messages.ts` 定义所有 content↔worker↔vocab 通信类型。
+
+## FSRS-5 记忆调度
+
+默认参数针对语言学习调校，详见 `docs/srs-strategy.md`：
+
+- 新词学习阶段 (step 1→2) 失败不扣分，只影响前端队列
+- Lapse 后恢复基于残余 stability，不完全重置
+- 最大间隔 90 天
+- 毕业后标记 `learned: true`
 
 ## 技术栈
 
-TypeScript + Vite + Lit + vite-plugin-web-extension
+TypeScript + Vite + [vite-plugin-web-extension](https://github.com/aklinker1/vite-plugin-web-extension) + [Sayo UI](https://github.com/user/sayo-ui)
 
----
+## 目录结构
 
-## 手动测试清单（未自动执行）
+```
+src/
+  content/       # Content script — 划词监听、Shadow DOM 弹泡
+    index.ts
+  worker/        # Service Worker — 消息路由、FSRS、翻译 API
+    index.ts
+    srs.ts
+    storage.ts
+    translate.ts
+    handlers/    # 按功能拆分的消息处理
+  vocab/         # 生词本页面
+    index.html / index.ts
+    panels/      # learn / browse / stats 三个面板
+    state.ts
+    utils.ts     # escapeHtml, calcMastery, SVG 图标
+    *.css        # 每个面板独立 CSS
+  popup/         # 工具栏弹窗
+  options/       # 设置页面
+  shared/        # 共享类型与消息协议
+    types.ts
+    messages.ts
+tests/
+  srs.test.ts    # FSRS 调度器黑盒测试（19 项）
+docs/
+  srs-strategy.md
+```
 
-构建完成后，在 `chrome://extensions` 中加载 `dist/` 目录，然后逐项测试：
+## 测试
 
-1. [ ] 打开任意英文网页，选中一个单词 → 应出现 🔤 触发按钮
-2. [ ] 点击 🔤 → 应出现翻译弹窗（Google Translate 默认可用）
-3. [ ] 点击弹窗中的 🎵 → 应听到发音
-4. [ ] 点击 📖 展开详情 → 应出现侧边栏
-5. [ ] 点击侧边栏外 / Esc → 应关闭
-6. [ ] 点击工具栏图标 → 应出现 Popup
-7. [ ] 点击 Popup 中的 ⚙️ 设置 → 应打开 Options 页面
-8. [ ] 在 Options 中配置 DeepSeek API key → 保存 → 翻译应优先使用 DeepSeek
-9. [ ] 选中中文文字 → 应翻译成英文
+```bash
+npx vitest run tests/srs.test.ts
+```
+
+## 许可
+
+MIT
