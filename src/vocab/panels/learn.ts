@@ -136,7 +136,7 @@ function showCard(): void {
   revealEl.classList.remove('open');
   // Update keyboard hint to pre-reveal state
   const keyHintEl = document.getElementById('fc-key-hint');
-  if (keyHintEl) keyHintEl.textContent = 'Space/Enter 翻面 · 1 不认识 · 2 模糊 · 3 认识';
+  if (keyHintEl) keyHintEl.innerHTML = '<kbd>Space</kbd>/<kbd>Enter</kbd> 翻面 · <kbd>1</kbd> 不认识 · <kbd>2</kbd> 模糊 · <kbd>3</kbd> 认识';
   ratingRow.classList.add('hidden');
   const card = document.getElementById('fc-card');
   if (card) card.classList.remove('revealed');
@@ -208,7 +208,7 @@ function revealCard(): void {
   if (card) card.classList.add('revealed');
   // Update keyboard hint to post-reveal state (Space now = submit 'known')
   const keyHintEl = document.getElementById('fc-key-hint');
-  if (keyHintEl) keyHintEl.textContent = '1/← 不认识 · 2/↓ 模糊 · 3/→/Space 认识';
+  if (keyHintEl) keyHintEl.innerHTML = '<kbd>1</kbd>/<kbd>←</kbd> 不认识 · <kbd>2</kbd>/<kbd>↓</kbd> 模糊 · <kbd>3</kbd>/<kbd>→</kbd>/<kbd>Space</kbd> 认识';
   // Keep speaker button visible so user can hear pronunciation after seeing meaning
 }
 
@@ -311,7 +311,7 @@ function showDoneState(): void {
   if (totalUnique === 0) {
     // Empty state — no words to review
     titleEl.textContent = '没有待复习的单词';
-    descEl.textContent = '去网页中划词翻译并收藏，积累你的生词本吧 ✨';
+    descEl.innerHTML = '去网页中划词翻译并收藏，积累你的生词本吧 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" style="vertical-align:middle"><path d="M8 1l1.5 4.5L14 6l-3.5 3L11.5 14 8 11l-3.5 3L5.5 9 2 6l4.5-.5L8 1z"/></svg>';
     if (iconEl) {
       iconEl.innerHTML = '<span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:56px;height:56px"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>';
       iconEl.style.color = 'var(--syo-fg-muted)';
@@ -327,17 +327,16 @@ function showDoneState(): void {
     // Add streak info from fullStats if available
     const { fullStats } = getState();
     if (fullStats && fullStats.streak > 0) {
-      desc += `
-连续打卡 ${fullStats.streak} 天`;
+      desc += '<br>连续打卡 ' + fullStats.streak + ' 天';
       const remaining = Math.max(0, (fullStats.dailyGoal || 20) - fullStats.reviewedToday);
       if (remaining > 0) {
-        desc += ` · 今日目标还差 ${remaining} 词`;
+        desc += ' · 今日目标还差 ' + remaining + ' 词';
       } else {
-        desc += ` · 今日目标已达成 🎉`;
+        desc += ' · 今日目标已达成 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align:middle;color:var(--syo-success)"><circle cx="8" cy="8" r="7"/><path d="M5 8.5l2 2 4-4"/></svg>';
       }
     }
 
-    descEl.textContent = desc;
+    descEl.innerHTML = desc;
     if (iconEl) {
       iconEl.innerHTML = '<span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:56px;height:56px"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></span>';
       iconEl.style.color = 'var(--syo-success)';

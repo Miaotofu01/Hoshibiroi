@@ -151,7 +151,7 @@ function renderCard(word: FavoriteWord): string {
         </div>
       </div>
       <div class="meanings">${meaningHtml}</div>
-      ${word.context ? `<div class="card-context" data-expanded="false">${escapeHtml(word.context)}</div>` : ''}
+      ${word.context ? `<div class="card-context" data-expanded="false">${escapeHtml(word.context)}<svg class="ctx-chevron" width="12" height="12" viewBox="0 0 12 12"><path d="M3 5l3 3 3-3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>` : ''}
       <div class="card-meta">
         <span class="syo-tag-dot ${(() => { const sc = sourceDotClass(word.translation.sourceId); return SOURCE_SYO_MAP[sc] || ''; })()} src-dot ${sourceDotClass(word.translation.sourceId)}" title="${escapeHtml(word.translation.source)}"></span>
         <span>${escapeHtml(word.translation.source)}</span>

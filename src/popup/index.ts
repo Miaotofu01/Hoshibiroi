@@ -72,7 +72,7 @@ async function loadDueAndRecent(): Promise<void> {
       ctaBtn.textContent = '📖 浏览生词本';
       ctaBtn.style.opacity = '1';
     } else {
-      dueEl.textContent = '暂无待复习词汇 ✨';
+      dueEl.textContent = '暂无待复习词汇';
       ctaBtn.textContent = '📖 浏览生词本';
       ctaBtn.style.background = 'var(--syo-bg-elevated)';
       ctaBtn.style.color = 'var(--syo-info)';
