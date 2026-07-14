@@ -7,11 +7,11 @@ const CSS = `
   :host {
     position: fixed; top: 0; right: 0; width: 380px; max-width: 100vw; height: 100vh;
     z-index: 2147483647;
-    background: var(--bg-primary);
-    border-left: 1px solid var(--border);
+    background: var(--syo-bg-base);
+    border-left: 1px solid var(--syo-border);
     box-shadow: -8px 0 40px rgba(0,0,0,.45);
-    font-family: var(--font-family);
-    color: var(--text-primary);
+    font-family: var(--font-display);
+    color: var(--syo-fg-default);
     overflow-y: auto;
     animation: slideIn .25s ease;
     opacity: var(--card-opacity, 1);
@@ -26,77 +26,77 @@ const CSS = `
   .brand {
     display: flex; align-items: center; gap: 8px;
     font-family: var(--font-mono); font-size: var(--font-size-sm); letter-spacing: .16em; text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--syo-fg-muted);
   }
-  .brand svg { width: 14px; height: 14px; color: var(--color-info); }
+  .brand svg { width: 14px; height: 14px; color: var(--syo-info); }
   .closebtn {
     width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
-    border-radius: var(--radius-sm); border: 1px solid var(--border);
-    background: transparent; color: var(--text-secondary); cursor: pointer; transition: var(--transition);
+    border-radius: var(--syo-radius-sm); border: 1px solid var(--syo-border);
+    background: transparent; color: var(--syo-fg-body); cursor: pointer; transition: color .15s var(--syo-ease-out), background .15s var(--syo-ease-out);
   }
-  .closebtn:hover { background: var(--color-info-red); border-color: var(--color-info-red); color: #1a1b26; }
+  .closebtn:hover { background: var(--syo-danger); border-color: var(--syo-danger); color: #1a1b26; }
   .closebtn svg { width: 14px; height: 14px; }
 
   .headword { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 4px; }
-  .headword .w { font-family: var(--font-mono); font-size: var(--font-size-xl, 26px); font-weight: 600; color: var(--text-primary); word-break: break-word; line-height: 1.15; }
+  .headword .w { font-family: var(--font-mono); font-size: var(--font-size-xl, 26px); font-weight: 600; color: var(--syo-fg-default); word-break: break-word; line-height: 1.15; }
   .play {
     flex-shrink: 0; width: 30px; height: 30px; margin-bottom: 3px;
     display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 50%; border: 1px solid var(--border);
-    background: transparent; color: var(--color-info); cursor: pointer; transition: var(--transition);
+    border-radius: 50%; border: 1px solid var(--syo-border);
+    background: transparent; color: var(--syo-info); cursor: pointer; transition: color .15s var(--syo-ease-out), background .15s var(--syo-ease-out);
   }
-  .play:hover { background: var(--color-info); color: #1a1b26; }
+  .play:hover { background: var(--syo-info); color: #1a1b26; }
   .play svg { width: 15px; height: 15px; }
-  .phonline { font-family: var(--font-mono); font-size: var(--font-size-base); color: var(--text-muted); margin-bottom: 24px; }
+  .phonline { font-family: var(--font-mono); font-size: var(--font-size-base); color: var(--syo-fg-muted); margin-bottom: 24px; }
 
   .sect { margin-bottom: 22px; }
   .sect .lbl {
     display: flex; align-items: center; gap: 8px;
     font-family: var(--font-mono); font-size: var(--font-size-sm); letter-spacing: .16em; text-transform: uppercase;
-    color: var(--text-muted); margin-bottom: 11px;
+    color: var(--syo-fg-muted); margin-bottom: 11px;
   }
-  .sect .lbl::after { content: ''; flex: 1; height: 1px; background: var(--border-soft); }
+  .sect .lbl::after { content: ''; flex: 1; height: 1px; background: var(--syo-border-muted); }
 
   .pos { display: flex; gap: 10px; margin-bottom: 9px; align-items: baseline; }
   .pos .t {
-    flex-shrink: 0; font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--color-accent);
+    flex-shrink: 0; font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--syo-accent);
     background: rgba(187,154,247,.1); border: 1px solid rgba(187,154,247,.2);
     padding: 1px 7px; border-radius: 5px;
   }
-  .pos .m { font-size: var(--font-size-base); line-height: 1.5; color: var(--text-primary); }
+  .pos .m { font-size: var(--font-size-base); line-height: 1.5; color: var(--syo-fg-default); }
 
   .ex {
-    border-left: 2px solid var(--color-info-green); background: var(--bg-secondary);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 14px; margin-bottom: 9px;
+    border-left: 2px solid var(--syo-success); background: var(--syo-bg-surface);
+    border-radius: 0 var(--syo-radius-sm) var(--syo-radius-sm) 0; padding: 10px 14px; margin-bottom: 9px;
   }
-  .ex .o { font-size: var(--font-size-base); color: var(--text-primary); margin-bottom: 4px; line-height: 1.5; }
-  .ex .tr { font-size: var(--font-size-sm); color: var(--text-secondary); line-height: 1.5; }
+  .ex .o { font-size: var(--font-size-base); color: var(--syo-fg-default); margin-bottom: 4px; line-height: 1.5; }
+  .ex .tr { font-size: var(--font-size-sm); color: var(--syo-fg-body); line-height: 1.5; }
 
   .srctabs { display: flex; gap: 6px; flex-wrap: wrap; }
   .srctab {
     font-family: var(--font-mono); font-size: var(--font-size-sm); padding: 5px 11px; border-radius: 6px;
-    background: transparent; border: 1px solid transparent; color: var(--text-muted);
-    cursor: pointer; transition: var(--transition);
+    background: transparent; border: 1px solid transparent; color: var(--syo-fg-muted);
+    cursor: pointer; transition: color .15s var(--syo-ease-out), background .15s var(--syo-ease-out);
   }
-  .srctab:hover { background: var(--bg-hover); color: var(--text-secondary); }
-  .srctab.active { background: rgba(158,206,106,.14); color: var(--color-info-green); border-color: rgba(158,206,106,.3); }
+  .srctab:hover { background: var(--syo-bg-elevated); color: var(--syo-fg-body); }
+  .srctab.active { background: rgba(158,206,106,.14); color: var(--syo-success); border-color: rgba(158,206,106,.3); }
   .srctab.loading { opacity: .5; cursor: default; }
 
   .pfoot {
-    margin-top: auto; padding-top: 18px; border-top: 1px solid var(--border-soft);
+    margin-top: auto; padding-top: 18px; border-top: 1px solid var(--syo-border-muted);
     display: flex; gap: 8px;
   }
   .fbtn {
     flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    height: 36px; border-radius: var(--radius-sm);
-    background: var(--bg-secondary); border: 1px solid var(--border);
-    color: var(--text-secondary); font-family: var(--font-family); font-size: var(--font-size-base);
-    cursor: pointer; transition: var(--transition);
+    height: 36px; border-radius: var(--syo-radius-sm);
+    background: var(--syo-bg-surface); border: 1px solid var(--syo-border);
+    color: var(--syo-fg-body); font-family: var(--font-display); font-size: var(--font-size-base);
+    cursor: pointer; transition: color .15s var(--syo-ease-out), background .15s var(--syo-ease-out);
   }
-  .fbtn:hover { background: var(--bg-hover); color: var(--text-primary); }
-  .fbtn.on { color: var(--color-info-yellow); border-color: rgba(224,175,104,.4); }
-  .fbtn.on svg { fill: var(--color-info-yellow); }
-  .fbtn.copied { color: var(--color-info-green); border-color: rgba(158,206,106,.4); }
+  .fbtn:hover { background: var(--syo-bg-elevated); color: var(--syo-fg-default); }
+  .fbtn.on { color: var(--syo-warning); border-color: rgba(224,175,104,.4); }
+  .fbtn.on svg { fill: var(--syo-warning); }
+  .fbtn.copied { color: var(--syo-success); border-color: rgba(158,206,106,.4); }
   .fbtn svg { width: 15px; height: 15px; }
 `;
 
@@ -163,26 +163,26 @@ export class SidePanel extends ShadowView {
 
       ${this._grammarLoading ? html`<div class="sect">
         <div class="lbl">语法分析</div>
-        <div style="color:var(--text-muted);font-family:var(--font-mono);font-size:var(--font-size-sm);padding:8px 0">分析中…</div>
+        <div style="color:var(--syo-fg-muted);font-family:var(--font-mono);font-size:var(--font-size-sm);padding:8px 0">分析中…</div>
       </div>` : this._grammarError ? html`<div class="sect">
         <div class="lbl">语法分析</div>
-        <div style="color:var(--color-info-red);font-size:var(--font-size-sm)">${this._grammarError}</div>
+        <div style="color:var(--syo-danger);font-size:var(--font-size-sm)">${this._grammarError}</div>
       </div>` : this._grammar ? html`<div class="sect">
         <div class="lbl">语法分析</div>
-        <div class="gram-structure" style="margin-bottom:12px;font-size:var(--font-size-base);line-height:1.6;color:var(--text-primary)">${this._grammar.structure}</div>
+        <div class="gram-structure" style="margin-bottom:12px;font-size:var(--font-size-base);line-height:1.6;color:var(--syo-fg-default)">${this._grammar.structure}</div>
         <div class="gram-tokens" style="margin-bottom:10px">
           ${this._grammar.tokens.map(tk => html`
             <div style="display:flex;align-items:baseline;gap:8px;padding:3px 0;font-size:var(--font-size-sm)">
-              <span style="font-family:var(--font-mono);color:var(--text-primary);font-weight:600;min-width:40px">${tk.word}</span>
-              <span style="font-family:var(--font-mono);font-size:10px;color:var(--color-accent);background:rgba(187,154,247,.1);border:1px solid rgba(187,154,247,.2);padding:1px 5px;border-radius:4px">${tk.pos}</span>
-              ${tk.lemma && tk.lemma !== tk.word ? html`<span style="color:var(--text-muted);font-size:11px">(${tk.lemma})</span>` : nothing}
-              <span style="color:var(--text-secondary);margin-left:auto">${tk.role}</span>
+              <span style="font-family:var(--font-mono);color:var(--syo-fg-default);font-weight:600;min-width:40px">${tk.word}</span>
+              <span style="font-family:var(--font-mono);font-size:10px;color:var(--syo-accent);background:rgba(187,154,247,.1);border:1px solid rgba(187,154,247,.2);padding:1px 5px;border-radius:4px">${tk.pos}</span>
+              ${tk.lemma && tk.lemma !== tk.word ? html`<span style="color:var(--syo-fg-muted);font-size:11px">(${tk.lemma})</span>` : nothing}
+              <span style="color:var(--syo-fg-body);margin-left:auto">${tk.role}</span>
             </div>`)}
         </div>
         ${this._grammar.grammarPoints.length > 0 ? html`
           <div style="display:flex;flex-direction:column;gap:6px">
             ${this._grammar.grammarPoints.map(gp => html`
-              <div style="background:var(--bg-secondary);border-left:2px solid var(--color-accent);padding:6px 10px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:var(--font-size-sm);color:var(--text-secondary);line-height:1.5">${gp}</div>`)}
+              <div style="background:var(--syo-bg-surface);border-left:2px solid var(--syo-accent);padding:6px 10px;border-radius:0 var(--syo-radius-sm) var(--syo-radius-sm) 0;font-size:var(--font-size-sm);color:var(--syo-fg-body);line-height:1.5">${gp}</div>`)}
           </div>` : nothing}
       </div>` : nothing}
 
