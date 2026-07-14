@@ -4,50 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>生词本 — 划词翻译</title>
+<link rel="stylesheet" href="/sayo.css">
 <style>
 :root {
-  /* Sayo UI tokens — Primer Dark */
-  --syo-bg-base: #0d1117;
-  --syo-bg-surface: #161b22;
-  --syo-bg-elevated: #1c2129;
-  --syo-bg-selection: rgba(31,111,235,0.2);
-  --syo-border: #30363d;
-  --syo-border-muted: #21262d;
-  --syo-fg-default: #e6edf3;
-  --syo-fg-body: #c9d1d9;
-  --syo-fg-muted: #8b949e;
-  --syo-red: #f85149;
-  --syo-orange: #f0883e;
-  --syo-yellow: #d29922;
-  --syo-green: #3fb950;
-  --syo-teal: #39d353;
-  --syo-cyan: #79c0ff;
-  --syo-blue: #58a6ff;
-  --syo-purple: #bc8cff;
-  --syo-pink: #d2a8ff;
-  --syo-danger: var(--syo-red);
-  --syo-warning: var(--syo-yellow);
-  --syo-success: var(--syo-green);
-  --syo-info: var(--syo-blue);
-  --syo-accent: var(--syo-purple);
-  --syo-secondary: var(--syo-cyan);
-  --syo-special: var(--syo-orange);
-  --syo-subtle: var(--syo-teal);
-  --syo-font-sans: "Inter","Noto Sans SC",-apple-system,BlinkMacSystemFont,sans-serif;
-  --syo-font-mono: "Fira Code","SF Mono","Cascadia Code","JetBrains Mono",monospace;
-  --syo-font-size: 15px;
-  --syo-line-height: 1.65;
-  --syo-space-1: 4px; --syo-space-2: 8px; --syo-space-3: 12px;
-  --syo-space-4: 16px; --syo-space-5: 20px; --syo-space-6: 24px;
-  --syo-space-8: 32px; --syo-space-10: 40px; --syo-space-12: 48px;
-  --syo-radius-sm: 4px; --syo-radius-md: 6px; --syo-radius-lg: 8px;
-  --syo-radius-full: 999px;
-  --syo-ease-elastic: cubic-bezier(0.34,1.56,0.64,1);
-  --syo-ease-out: cubic-bezier(0.4,0,0.2,1);
-  --syo-ease-spring: cubic-bezier(0.25,0.46,0.45,0.94);
-  --syo-trans-color: color 180ms var(--syo-ease-out);
-  --syo-trans-spring: transform 250ms var(--syo-ease-elastic),border-color 200ms var(--syo-ease-out),background 200ms var(--syo-ease-out);
-  --syo-trans-active: transform 100ms var(--syo-ease-out);
   /* Project-specific: font stacks with Chinese font separation */
   --font-display: "Inter","Noto Sans SC",-apple-system,BlinkMacSystemFont,sans-serif;
   --font-body: "Noto Sans SC","Inter",-apple-system,BlinkMacSystemFont,sans-serif;
@@ -58,15 +17,11 @@
   --text-xl: 20px;
   --text-display: 56px;
 }
-*{margin:0;padding:0;box-sizing:border-box}
-::selection{background:var(--syo-bg-selection);color:var(--syo-fg-default)}body{
-  background:var(--syo-bg-base);color:var(--syo-fg-body);
+body{
   font-family:var(--font-body);font-size:16px;
-  line-height:1.65;min-height:100vh;
-  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  min-height:100vh;
 }
-.container{max-width:860px;margin:0 auto;padding:36px 24px 80px}
-:focus-visible{outline:2px solid var(--syo-info);outline-offset:2px}
+.container{padding:36px 24px 80px}
 .ico{width:1em;height:1em;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .ico svg{width:100%;height:100%;display:block}
 
@@ -449,21 +404,6 @@
 }
 .save-btn:hover{opacity:.9}
 .save-btn:active{opacity:.75;transform:scale(.98)}
-
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-thumb{background:var(--syo-border);border-radius:3px}
-::-webkit-scrollbar-track{background:transparent}
-
-/* ── Reduced motion ── */
-
-.reveal{opacity:0;transform:translateY(20px);transition:opacity 500ms var(--syo-ease-out),transform 500ms var(--syo-ease-elastic)}
-.reveal.visible{opacity:1;transform:translateY(0)}
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation-duration:0ms!important;animation-delay:0ms!important;transition-duration:0ms!important}
-  .reveal{opacity:1;transform:none}
-}
 </style>
 <script src="/sayo.js"></script>
 </head>
