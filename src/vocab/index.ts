@@ -29,7 +29,7 @@ function switchPanel(panel: string): void {
   nextTab?.setAttribute('aria-selected', 'true');
   panelRenderers[panel]?.mount();
   panelRenderers[panel]?.render();
-  if (panel === 'learn' || panel === 'stats') {
+  if (panel === 'learn' || panel === 'browse' || panel === 'stats') {
     Sayo.cursor.init({ accentR: 88, accentG: 166, accentB: 255 });
     Sayo.trail.init();
   } else {
@@ -73,7 +73,7 @@ async function init(): Promise<void> {
   renderLearn(); renderBrowse(); renderStats(); renderSettings();
   panelRenderers[currentPanel]?.mount();
   mountSettings();
-  if (currentPanel === 'learn' || currentPanel === 'stats') {
+  if (currentPanel === 'learn' || currentPanel === 'browse' || currentPanel === 'stats') {
     Sayo.cursor.init({ accentR: 88, accentG: 166, accentB: 255 });
     Sayo.trail.init();
   }
