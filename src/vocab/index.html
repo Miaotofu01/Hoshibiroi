@@ -128,71 +128,26 @@ body{
   position:absolute;left:12px;top:50%;transform:translateY(-50%);
   font-size:14px;color:var(--syo-fg-muted);pointer-events:none;z-index:1;
 }
-.search-input{
-  width:100%;padding:10px 14px 10px 36px;border-radius:var(--syo-radius-md);
-  border:1px solid var(--syo-border);background:var(--syo-bg-surface);
-  color:var(--syo-fg-default);font-family:var(--syo-font-mono);font-size:var(--text-sm);
-  outline:none;transition:border-color 180ms var(--syo-ease-out);
-}
-.search-input::placeholder{color:var(--syo-fg-muted)}
-.search-input:focus{border-color:var(--syo-info)}
+.search-input{padding-left:36px}
 
-.sort-select{
-  padding:10px 32px 10px 12px;border-radius:var(--syo-radius-md);
-  border:1px solid var(--syo-border);background:var(--syo-bg-surface);
-  color:var(--syo-fg-body);font-family:var(--syo-font-mono);font-size:var(--text-sm);
-  cursor:pointer;outline:none;appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238b949e'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 10px center;
-  transition:border-color 180ms var(--syo-ease-out);
-}
-.sort-select:focus{border-color:var(--syo-info)}
+.sort-select{padding:10px 32px 10px 12px}
 
-.filter-pills{display:flex;gap:8px;flex-wrap:wrap}
-.filter-pill{
-  padding:5px 14px;border-radius:20px;border:1px solid var(--syo-border);
-  background:transparent;color:var(--syo-fg-muted);font-size:var(--text-sm);
-  font-family:var(--font-display);cursor:pointer;transition:all 180ms var(--syo-ease-out);
-}
-.filter-pill:hover{border-color:var(--syo-fg-muted);color:var(--syo-fg-body)}.filter-pill:active{transform:scale(.95)}
+.filter-pill{padding:5px 14px;font-size:var(--text-sm)}
 .filter-pill.active{background:var(--syo-info);color:#fff;border-color:var(--syo-info)}
 
-.word-card{
-  background:var(--syo-bg-surface);border:1px solid var(--syo-border);
-  border-radius:var(--syo-radius-md);margin-bottom:10px;overflow:hidden;
-  transition:border-color 180ms var(--syo-ease-out),transform .2s var(--syo-ease-out);
-}
-.word-card:hover{border-color:var(--syo-info);background:var(--syo-bg-elevated);transform:translateY(-2px) scale(1.02)}
+.word-card{margin-bottom:10px;overflow:hidden}
 .card-body{padding:16px 20px}
-.card-head{display:flex;align-items:center;gap:10px;margin-bottom:6px}
-.card-head .word{
-  font-family:var(--syo-font-mono);font-size:var(--text-lg);font-weight:600;
-  color:var(--syo-fg-default);word-break:break-word;line-height:1.2;
-}
-.card-head .phon{font-family:var(--syo-font-mono);font-size:var(--text-sm);color:var(--syo-fg-muted);white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.card-head .word{font-family:var(--syo-font-mono);font-size:var(--text-lg);font-weight:600;word-break:break-word}
+.card-head .phon{font-family:var(--syo-font-mono);font-size:var(--text-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-actions{margin-left:auto;display:flex;gap:4px;flex-shrink:0}
-.act-btn{
-  width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;
-  border-radius:var(--syo-radius-sm);border:1px solid var(--syo-border);
-  background:transparent;color:var(--syo-fg-muted);cursor:pointer;
-  font-size:14px;text-decoration:none;transition:all 180ms var(--syo-ease-out);
-}
-.act-btn:hover{background:var(--syo-bg-elevated);border-color:var(--syo-fg-muted);color:var(--syo-fg-body)}.act-btn:active{transform:scale(.92)}
+.act-btn{width:28px;height:28px;font-size:14px}
 .act-btn.copy-btn.copied{border-color:var(--syo-success);color:var(--syo-success)}
 .act-btn.delete-btn:hover{border-color:var(--syo-danger);color:var(--syo-danger);transform:scale(1.1)}
 
-.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.status-dot.mastered{background:var(--syo-success)}
-.status-dot.learning{background:var(--syo-warning)}
-.status-dot.new{background:var(--syo-fg-muted)}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 
-.card-body .meanings{font-size:var(--text-base);color:var(--syo-fg-body);margin-bottom:8px;line-height:1.5}
-.pos-tag{
-  flex-shrink:0;font-family:var(--syo-font-mono);font-size:var(--text-micro);
-  color:var(--syo-accent);background:rgba(188,140,255,.1);
-  border:1px solid rgba(188,140,255,.2);padding:1px 6px;border-radius:var(--syo-radius-sm);
-  margin-right:6px;
-}
+.card-body .meanings{margin-bottom:8px;line-height:1.5}
+.pos-tag{font-size:var(--text-micro);margin-right:6px}
 .card-context{
   border-left:2px solid var(--syo-warning);background:var(--syo-bg-elevated);
   padding:8px 12px;border-radius:0 var(--syo-radius-sm) var(--syo-radius-sm) 0;
@@ -204,7 +159,6 @@ body{
 .card-context.expanded{-webkit-line-clamp:unset}
 .card-meta{
   display:flex;gap:12px;flex-wrap:wrap;align-items:center;
-  font-family:var(--syo-font-mono);font-size:var(--text-micro);color:var(--syo-fg-muted);
   padding-top:8px;border-top:1px solid var(--syo-border-muted);
 }
 .card-meta .src-link{color:var(--syo-info);text-decoration:none;display:inline-flex;align-items:center;gap:3px;transition:color 180ms}
@@ -218,7 +172,7 @@ body{
   margin-top:12px;padding-top:12px;border-top:1px solid var(--syo-border-muted);
   overflow:hidden;
 }
-.src-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--syo-border);margin-right:2px;flex-shrink:0}
+.src-dot{width:6px;height:6px}
 .src-dot.s-deepseek{background:var(--syo-accent)}
 .src-dot.s-google{background:var(--syo-success)}
 .src-dot.s-tencent{background:var(--syo-info)}
@@ -425,9 +379,9 @@ body{
       <div class="toolbar-row" style="display:flex;gap:10px;align-items:center">
         <div class="search-wrap" style="flex:1">
           <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-          <input class="search-input" id="search-input" placeholder="搜索单词或释义">
+          <input class="syo-input search-input" id="search-input" placeholder="搜索单词或释义">
         </div>
-        <select class="sort-select" id="sort-select">
+        <select class="syo-select sort-select" id="sort-select">
           <option value="newest">最新添加</option>
           <option value="oldest">最早添加</option>
           <option value="alpha-asc">A → Z</option>
@@ -436,11 +390,11 @@ body{
           <option value="mastery">掌握度</option>
         </select>
       </div>
-      <div class="filter-pills" id="filter-pills">
-        <button class="filter-pill active" data-filter="all">全部 <span id="count-all">0</span></button>
-        <button class="filter-pill" data-filter="new">新词 <span id="count-new">0</span></button>
-        <button class="filter-pill" data-filter="learning">学习中 <span id="count-learning">0</span></button>
-        <button class="filter-pill" data-filter="mastered">已掌握 <span id="count-mastered">0</span></button>
+      <div class="syo-flex filter-pills" style="gap:8px;flex-wrap:wrap" id="filter-pills">
+        <button class="syo-tag filter-pill active" data-filter="all">全部 <span id="count-all">0</span></button>
+        <button class="syo-tag filter-pill" data-filter="new">新词 <span id="count-new">0</span></button>
+        <button class="syo-tag filter-pill" data-filter="learning">学习中 <span id="count-learning">0</span></button>
+        <button class="syo-tag filter-pill" data-filter="mastered">已掌握 <span id="count-mastered">0</span></button>
       </div>
     </div>
     <div id="word-list"></div>
