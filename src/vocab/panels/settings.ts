@@ -1,6 +1,5 @@
 import type { VocabSettings } from '../../shared/types';
 import { getState, saveSettings, loadWords } from '../state';
-import { showConfirm } from '../utils';
 import { exportCSV, exportJSON } from '../export';
 
 // ── Field labels ──
@@ -215,11 +214,12 @@ export function mountSettings(): void {
 
   clearHandler = async (e: Event) => {
     e.stopPropagation();
-    const ok = await showConfirm(
-      '清除全部数据',
-      '此操作不可恢复，所有生词和复习记录将被永久删除。',
-      true,
-    );
+    const ok = await Sayo.dialog.confirm({
+      title: '清除全部数据',
+      message: '此操作不可恢复，所有生词和复习记录将被永久删除。',
+      confirmText: '确认清除',
+      cancelText: '取消',
+    });
     if (!ok) return;
 
     const { words } = getState();
