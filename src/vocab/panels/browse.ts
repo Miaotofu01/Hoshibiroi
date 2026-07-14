@@ -147,7 +147,7 @@ function renderCard(word: FavoriteWord): string {
         <span class="word">${escapeHtml(word.word)}</span>
         ${phonetic ? `<span class="phon">${phonetic}</span>` : ''}
         <div class="card-actions">
-          <button class="syo-btn--icon act-btn delete-btn" title="删除">${ico(Icons.trash)}</button>
+          <button class="syo-btn syo-btn--ghost act-btn delete-btn" title="删除">${ico(Icons.trash)}</button>
         </div>
       </div>
       <div class="meanings">${meaningHtml}</div>

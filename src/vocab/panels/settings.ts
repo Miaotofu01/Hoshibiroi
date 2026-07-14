@@ -44,7 +44,7 @@ export function renderSettings(): void {
     (f) =>
       `<label class="syo-checkbox setting-check">
         <input type="checkbox" data-field="front-${f}" ${s.cardFront.includes(f) ? 'checked' : ''}>
-        ${FRONT_LABELS[f]}
+        <span class="syo-checkmark"></span> ${FRONT_LABELS[f]}
       </label>`,
   );
 
@@ -54,7 +54,7 @@ export function renderSettings(): void {
     (f) =>
       `<label class="syo-checkbox setting-check">
         <input type="checkbox" data-field="back-${f}" ${s.cardBack.includes(f) ? 'checked' : ''}>
-        ${BACK_LABELS[f]}
+        <span class="syo-checkmark"></span> ${BACK_LABELS[f]}
       </label>`,
   );
 
@@ -76,7 +76,7 @@ export function renderSettings(): void {
     (lo) =>
       `<label class="syo-radio setting-radio">
         <input type="radio" name="cardLayout" value="${lo}" ${s.cardLayout === lo ? 'checked' : ''}>
-        ${lo === 'minimal' ? '不背单词（单词为主）' : '上下文优先（句子挖空）'}
+        <span class="syo-radiomark"></span> ${lo === 'minimal' ? '不背单词（单词为主）' : '上下文优先（句子挖空）'}
       </label>`,
   );
 
@@ -111,11 +111,11 @@ export function renderSettings(): void {
       <div class="setting-section-title">通知</div>
       <label class="syo-checkbox setting-check">
         <input type="checkbox" id="setting-reminder" ${s.reviewReminder ? 'checked' : ''}>
-        复习提醒
+        <span class="syo-checkmark"></span> 复习提醒
       </label>
       <label class="syo-checkbox setting-check">
         <input type="checkbox" id="setting-celebration" ${s.goalCelebration ? 'checked' : ''}>
-        达标庆祝
+        <span class="syo-checkmark"></span> 达标庆祝
       </label>
     </div>
     <div class="setting-section">
