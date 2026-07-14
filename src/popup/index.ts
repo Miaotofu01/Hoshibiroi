@@ -15,7 +15,6 @@ let recentFavs: FavoriteWord[] = [];
 
 async function init(): Promise<void> {
   await Promise.all([loadStats(), loadDueAndRecent()]);
-  updateCtaIcon();
 }
 
 async function loadStats(): Promise<void> {
@@ -94,17 +93,6 @@ async function loadDueAndRecent(): Promise<void> {
   }
 }
 
-// Update CTA icon to SVG (replaces unicode text)
-function updateCtaIcon(): void {
-  const btn = document.getElementById('btn-review');
-  if (!btn) return;
-  // Remove text prefix nodes, keep only SVG icon
-  const ico = btn.querySelector('.ico');
-  if (ico && !ico.querySelector('svg')) {
-    ico.innerHTML = '<svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
-  }
-}
-
 function renderRecent(isDue: boolean): void {
   const container = document.getElementById('recent-favs')!;
   const titleEl = document.querySelector('.mini-title');
@@ -115,7 +103,7 @@ function renderRecent(isDue: boolean): void {
   }
   container.innerHTML = recentFavs.map(f => {
     const meaning = f.translation.partsOfSpeech?.length
-      ? f.translation.partsOfSpeech.map(p => p.meanings[0]).join('；')
+      ? f.translation.partsOfSpeech.map(p => p.meanings?.[0] ?? '').join('；')
       : f.translation.text;
     return `<div class="mini-word" tabindex="0" role="button" data-word-id="${f.id}">
       <span class="mw">${escapeHtml(f.word)}</span>

@@ -302,6 +302,7 @@ async function submitRating(quality: number): Promise<void> {
 }
 
 function showDoneState(): void {
+  submitting = false;
   const fcArea = document.getElementById('fc-area');
   const ratingRow = document.getElementById('rating-row');
   const progressEl = document.getElementById('review-progress');
