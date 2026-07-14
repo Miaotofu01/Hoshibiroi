@@ -130,20 +130,6 @@
   transform: scale(1.1);
 }
 
-/* ── Note indicator ─────────────────────────────────────────── */
-.note-indicator {
-  display: inline-flex;
-  align-items: center;
-  color: var(--syo-fg-muted);
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
-.note-indicator .ico {
-  width: 14px;
-  height: 14px;
-}
-
 /* ── Status dots ────────────────────────────────────────────── */
 .status-dot {
   width: 8px;
@@ -197,6 +183,7 @@
   scroll-snap-align: start;
   padding: 12px 14px;
   margin-bottom: 0;
+  position: relative;
 }
 
 .example-card .syo-card-head {
@@ -215,85 +202,130 @@
   line-height: 1.5;
 }
 
-/* ── Note area ──────────────────────────────────────────────── */
-.card-note {
-  margin-bottom: 8px;
-  padding: 8px 10px;
-  border-radius: var(--syo-radius-sm);
-  background: var(--syo-bg-elevated);
-  cursor: pointer;
-  transition: background 180ms var(--syo-ease-out);
-  min-height: 34px;
+/* Example card action buttons */
+.ex-card-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.card-note:hover {
-  background: var(--syo-bg-hover);
-}
-
-.card-note.has-note {
-  border-left: 2px solid var(--syo-accent);
-}
-
-.note-placeholder {
-  font-size: var(--text-sm);
-  color: var(--syo-fg-muted);
-  font-style: italic;
-}
-
-.note-text {
-  font-size: var(--text-sm);
-  color: var(--syo-fg);
-  line-height: 1.5;
-  flex: 1;
-  word-break: break-word;
-}
-
-.edit-note-btn {
-  flex-shrink: 0;
+  gap: 2px;
   opacity: 0;
   transition: opacity 180ms var(--syo-ease-out);
 }
 
-.card-note:hover .edit-note-btn {
+.example-card:hover .ex-card-actions {
   opacity: 1;
 }
 
-/* Note editing state */
-.card-note.editing {
-  flex-direction: column;
-  align-items: stretch;
-  cursor: default;
-  padding: 8px;
+.ex-card-actions .btn-icon--xs {
+  width: 22px;
+  height: 22px;
+  padding: 2px;
 }
 
-.note-textarea {
+.ex-card-actions .btn-icon--xs .ico {
+  width: 12px;
+  height: 12px;
+}
+
+.del-ex-btn:hover {
+  color: var(--syo-danger);
+  border-color: var(--syo-danger);
+}
+
+.edit-ex-btn:hover {
+  color: var(--syo-accent);
+  border-color: var(--syo-accent);
+}
+
+/* Add example card */
+.example-card--add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 140px;
+  cursor: pointer;
+  border: 1px dashed var(--syo-border);
+  background: transparent;
+  transition: border-color 180ms, background 180ms;
+}
+
+.example-card--add:hover {
+  border-color: var(--syo-accent);
+  background: var(--syo-bg-elevated);
+}
+
+.add-ex-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--syo-fg-muted);
+  font-size: var(--text-sm);
+}
+
+.add-ex-placeholder .ico {
+  width: 14px;
+  height: 14px;
+}
+
+/* Example dialog overlay */
+.ex-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.ex-dialog {
+  background: var(--syo-bg);
+  border: 1px solid var(--syo-border);
+  border-radius: var(--syo-radius);
+  padding: 20px 24px;
+  min-width: 360px;
+  max-width: 480px;
+  box-shadow: var(--syo-shadow-xl);
+}
+
+.ex-dialog h4 {
+  margin: 0 0 16px;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.ex-dialog label {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--syo-fg-muted);
+  margin-bottom: 10px;
+}
+
+.ex-input {
+  display: block;
   width: 100%;
-  padding: 6px 8px;
+  margin-top: 4px;
+  padding: 8px 10px;
   font-size: var(--text-sm);
   font-family: var(--syo-font-mono);
-  line-height: 1.5;
   color: var(--syo-fg);
   background: var(--syo-bg);
   border: 1px solid var(--syo-border);
   border-radius: var(--syo-radius-sm);
-  resize: vertical;
   outline: none;
 }
 
-.note-textarea:focus {
+.ex-input:focus {
   border-color: var(--syo-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--syo-accent) 25%, transparent);
 }
 
-.note-actions {
+.ex-dialog-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   justify-content: flex-end;
-  margin-top: 6px;
+  margin-top: 16px;
 }
 
 /* ── Card meta ──────────────────────────────────────────────── */

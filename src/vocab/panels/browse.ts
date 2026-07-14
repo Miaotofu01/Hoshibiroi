@@ -169,51 +169,54 @@ function renderCard(word: FavoriteWord): string {
     nextReviewHtml = `<span class="next-review${isDue ? ' due' : ''}">下次复习：${dateStr}</span>`;
   }
 
-  // Note indicator
-  const noteIndicator = word.note
-    ? `<span class="note-indicator" title="有备注">${ico(Icons.note)}</span>`
-    : '';
-
-  // Examples — horizontal inertia scroll
+  // Examples — horizontal inertia scroll with edit/delete
   let examplesHtml = '';
   const examples = word.translation.examples?.length ? word.translation.examples : [];
   const hasContext = !!word.context;
   const hasExamples = examples.length > 0;
 
-  if (hasContext || hasExamples) {
-    const sourceLabel = word.translation.source || '例句';
-    examplesHtml = '<div class="card-examples">';
-    examplesHtml += `<div class="ctx-source-label">${escapeHtml(sourceLabel)} · 例句</div>`;
-    examplesHtml += '<div class="syo-inertia examples-scroll" data-syo-inertia>';
-    if (hasContext) {
-      examplesHtml += `<article class="syo-card example-card"><div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(sourceLabel)} · 原文</h3></div><p class="syo-card-desc">${escapeHtml(word.context!)}</p></article>`;
-    }
-    if (hasExamples) {
-      for (const ex of examples) {
-        examplesHtml += `<article class="syo-card example-card"><div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(ex.original)}</h3></div><p class="syo-card-desc">${escapeHtml(ex.translated)}</p></article>`;
-      }
-    }
-    examplesHtml += '</div></div>';
+  const sourceLabel = word.translation.source || '例句';
+  examplesHtml = '<div class="card-examples">';
+  examplesHtml += `<div class="ctx-source-label">${escapeHtml(sourceLabel)} · 例句</div>`;
+  examplesHtml += '<div class="syo-inertia examples-scroll" data-syo-inertia>';
+  if (hasContext) {
+    examplesHtml += `<article class="syo-card example-card" data-example-idx="-1">
+      <div class="ex-card-inner">
+        <div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(sourceLabel)} · 原文</h3></div>
+        <p class="syo-card-desc">${escapeHtml(word.context!)}</p>
+      </div>
+      <div class="ex-card-actions">
+        <button class="btn-icon btn-icon--xs edit-ex-btn" title="编辑" data-action="edit-example" data-example-idx="-1">${ico(Icons.gear)}</button>
+        <button class="btn-icon btn-icon--xs del-ex-btn" title="删除" data-action="del-example" data-example-idx="-1">${ico(Icons.x)}</button>
+      </div>
+    </article>`;
   }
-
-  // Note area
-  let noteHtml = '';
-  if (word.note) {
-    noteHtml = `<div class="card-note has-note" data-word-id="${escapeHtml(word.id)}">
-      <span class="note-text">${escapeHtml(word.note)}</span>
-      <button class="btn-icon btn-icon--sm edit-note-btn" title="编辑备注">${ico(Icons.gear)}</button>
-    </div>`;
-  } else {
-    noteHtml = `<div class="card-note" data-word-id="${escapeHtml(word.id)}">
-      <span class="note-placeholder">添加备注…</span>
-    </div>`;
+  if (hasExamples) {
+    for (let i = 0; i < examples.length; i++) {
+      const ex = examples[i];
+      examplesHtml += `<article class="syo-card example-card" data-example-idx="${i}">
+        <div class="ex-card-inner">
+          <div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(ex.original)}</h3></div>
+          <p class="syo-card-desc">${escapeHtml(ex.translated)}</p>
+        </div>
+        <div class="ex-card-actions">
+          <button class="btn-icon btn-icon--xs edit-ex-btn" title="编辑" data-action="edit-example" data-example-idx="${i}">${ico(Icons.gear)}</button>
+          <button class="btn-icon btn-icon--xs del-ex-btn" title="删除" data-action="del-example" data-example-idx="${i}">${ico(Icons.x)}</button>
+        </div>
+      </article>`;
+    }
   }
+  // Add example button
+  examplesHtml += `<article class="syo-card example-card example-card--add" data-action="add-example">
+    <div class="add-ex-placeholder">${ico(Icons.copy)}<span>添加例句</span></div>
+  </article>`;
+  examplesHtml += '</div></div>';
 
   return `<div class="syo-card word-card${word.starred ? ' starred' : ''}" data-id="${escapeHtml(word.id)}">
     <div class="card-body">
       <div class="syo-flex card-head" style="gap:8px">
         <span class="syo-tag-dot${status === 'mastered' ? ' syo-tag-dot--success' : status === 'learning' ? ' syo-tag-dot--warning' : ''} status-dot ${status}"></span>
-        <span class="word">${escapeHtml(word.word)}${noteIndicator}</span>
+        <span class="word">${escapeHtml(word.word)}</span>
         ${phonetic ? `<span class="phon">${phonetic}</span>` : ''}
         <div class="card-actions">
           <button class="btn-icon btn-icon--sm act-btn speak-btn" title="发音" data-action="speak" data-word="${escapeHtml(word.word)}">${ico(Icons.speaker)}</button>
@@ -223,7 +226,6 @@ function renderCard(word: FavoriteWord): string {
       </div>
       <div class="meanings">${meaningHtml}</div>
       ${examplesHtml}
-      ${noteHtml}
       <div class="card-meta">
         <span class="src-dot ${sourceDotClass(word.translation.sourceId)}" title="${escapeHtml(word.translation.source)}"></span>
         <span>${escapeHtml(word.translation.source)}</span>
@@ -235,47 +237,72 @@ function renderCard(word: FavoriteWord): string {
   </div>`;
 }
 
-// ── Note editing ──
+// ── Example editing ──
 
-function startNoteEdit(noteEl: HTMLElement, wordId: string): void {
-  noteEl.classList.add('editing');
-  const existingNote = noteEl.querySelector('.note-text')?.textContent ?? '';
-  noteEl.innerHTML = `<textarea class="note-textarea" rows="2" placeholder="添加备注…">${escapeHtml(existingNote)}</textarea>
-    <div class="note-actions">
-      <button class="syo-btn syo-btn--sm note-save-btn">保存</button>
-      <button class="syo-btn syo-btn--sm note-cancel-btn">取消</button>
-    </div>`;
-
-  const textarea = noteEl.querySelector('.note-textarea') as HTMLTextAreaElement;
-  textarea.focus();
-  textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-
-  const save = async () => {
-    const newNote = textarea.value.trim();
-    try {
-      await chrome.runtime.sendMessage({ type: 'UPDATE_NOTE', wordId, note: newNote });
-      const { words } = getState();
-      const w = words.find(w => w.id === wordId);
-      if (w) w.note = newNote;
-    } catch { /* */ }
-    renderBrowse();
-  };
-
-  const cancel = () => {
-    renderBrowse();
-  };
-
-  noteEl.querySelector('.note-save-btn')?.addEventListener('click', save);
-  noteEl.querySelector('.note-cancel-btn')?.addEventListener('click', cancel);
-
-  // Save on Enter (but allow Shift+Enter for newline)
-  textarea.addEventListener('keydown', (ev: KeyboardEvent) => {
-    if (ev.key === 'Enter' && !ev.shiftKey) {
-      ev.preventDefault();
-      save();
-    } else if (ev.key === 'Escape') {
-      cancel();
+async function saveExamples(wordId: string, context: string | undefined, examples: Array<{ original: string; translated: string }>): Promise<void> {
+  try {
+    await chrome.runtime.sendMessage({ type: 'UPDATE_EXAMPLES', wordId, context, examples });
+    const { words } = getState();
+    const w = words.find(w => w.id === wordId);
+    if (w) {
+      w.context = context;
+      w.translation.examples = examples;
     }
+  } catch { /* */ }
+}
+
+function showExampleDialog(wordId: string, type: 'add' | 'edit-context' | 'edit-example', existing?: { original: string; translated: string }): void {
+  const isContext = type === 'edit-context';
+  const isAdd = type === 'add';
+  const title = isAdd ? '添加例句' : isContext ? '编辑原文上下文' : '编辑例句';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'ex-dialog-overlay';
+  overlay.innerHTML = `<div class="ex-dialog">
+    <h4>${title}</h4>
+    <label>原文<input class="ex-input" id="ex-original" value="${escapeHtml(existing?.original ?? '')}" placeholder="${isContext ? '原文上下文' : '原文句子'}"></label>
+    ${isContext ? '' : `<label>译文<input class="ex-input" id="ex-translated" value="${escapeHtml(existing?.translated ?? '')}" placeholder="中文翻译"></label>`}
+    <div class="ex-dialog-actions">
+      <button class="syo-btn syo-btn--sm" id="ex-cancel">取消</button>
+      <button class="syo-btn syo-btn--sm syo-btn--primary" id="ex-save">保存</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+
+  const close = () => overlay.remove();
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector('#ex-cancel')?.addEventListener('click', close);
+  // Focus first input
+  setTimeout(() => (overlay.querySelector('#ex-original') as HTMLInputElement)?.focus(), 50);
+
+  overlay.querySelector('#ex-save')?.addEventListener('click', async () => {
+    const original = (overlay.querySelector('#ex-original') as HTMLInputElement).value.trim();
+    if (!original) return;
+
+    const { words } = getState();
+    const word = words.find(w => w.id === wordId);
+    if (!word) { close(); return; }
+
+    if (isContext) {
+      await saveExamples(wordId, original, word.translation.examples ?? []);
+    } else {
+      const translated = (overlay.querySelector('#ex-translated') as HTMLInputElement).value.trim();
+      if (!translated) return;
+      const examples = [...(word.translation.examples ?? [])];
+      if (isAdd) {
+        examples.push({ original, translated });
+      } else {
+        const idx = examples.findIndex(e => e.original === existing!.original);
+        if (idx >= 0) examples[idx] = { original, translated };
+      }
+      await saveExamples(wordId, word.context, examples);
+    }
+    close();
+    renderBrowse();
+  });
+
+  overlay.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Escape') close();
   });
 }
 
@@ -354,12 +381,44 @@ export function mountBrowse(): void {
       return;
     }
 
-    // Note area — toggle edit mode
-    if (target.closest('.card-note') || target.closest('.edit-note-btn')) {
-      const noteEl = card.querySelector('.card-note') as HTMLElement | null;
-      if (!noteEl) return;
-      if (noteEl.classList.contains('editing')) return;
-      startNoteEdit(noteEl, id);
+    // Add example
+    if (target.closest('[data-action="add-example"]')) {
+      showExampleDialog(id, 'add');
+      return;
+    }
+
+    // Edit example
+    const editBtn = target.closest('[data-action="edit-example"]') as HTMLElement | null;
+    if (editBtn) {
+      const idx = parseInt(editBtn.dataset.exampleIdx ?? '');
+      const { words } = getState();
+      const word = words.find(w => w.id === id);
+      if (!word) return;
+      if (idx === -1) {
+        showExampleDialog(id, 'edit-context', { original: word.context ?? '', translated: '' });
+      } else {
+        const ex = word.translation.examples?.[idx];
+        if (ex) showExampleDialog(id, 'edit-example', ex);
+      }
+      return;
+    }
+
+    // Delete example
+    const delBtn = target.closest('[data-action="del-example"]') as HTMLElement | null;
+    if (delBtn) {
+      const idx = parseInt(delBtn.dataset.exampleIdx ?? '');
+      const { words } = getState();
+      const word = words.find(w => w.id === id);
+      if (!word) return;
+      if (idx === -1) {
+        // Remove context
+        await saveExamples(id, undefined, word.translation.examples ?? []);
+      } else {
+        const examples = [...(word.translation.examples ?? [])];
+        examples.splice(idx, 1);
+        await saveExamples(id, word.context, examples);
+      }
+      renderBrowse();
       return;
     }
 
