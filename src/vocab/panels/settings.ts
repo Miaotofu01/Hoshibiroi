@@ -206,8 +206,8 @@ export function mountSettings(): void {
     const target = e.target as HTMLElement;
     const btn = target.closest('button');
     if (!btn) return;
-    if (btn.id === 'btn-export-csv') { e.stopPropagation(); exportCSV(); }
-    else if (btn.id === 'btn-export-json') { e.stopPropagation(); exportJSON(); }
+    if (btn.id === 'btn-export-csv') { e.stopPropagation(); try { exportCSV(); Sayo.toast.show('CSV 已导出', { type: 'success' }); } catch { Sayo.toast.show('导出失败', { type: 'error' }); } }
+    else if (btn.id === 'btn-export-json') { e.stopPropagation(); try { exportJSON(); Sayo.toast.show('JSON 已导出', { type: 'success' }); } catch { Sayo.toast.show('导出失败', { type: 'error' }); } }
     else if (btn.id === 'btn-clear-all') {
       e.stopPropagation();
       (async () => {
