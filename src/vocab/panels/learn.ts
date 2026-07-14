@@ -1,6 +1,6 @@
 import type { FavoriteWord } from '../../shared/types';
 import { getState, loadWords, loadFullStats } from '../state';
-import { escapeHtml, extractHostname, showToast } from '../utils';
+import { escapeHtml, extractHostname } from '../utils';
 
 interface QueueItem {
   word: FavoriteWord;
@@ -271,7 +271,7 @@ async function submitRating(quality: number): Promise<void> {
     try {
       await chrome.runtime.sendMessage({ type: 'SUBMIT_REVIEW', wordId: item.word.id, quality: submitQuality });
     } catch {
-      showToast('保存失败，请检查扩展是否正常运行');
+      Sayo.toast.show('保存失败，请检查扩展是否正常运行', { type: 'error', duration: 6000 });
       submitting = false;
       return;
     }
