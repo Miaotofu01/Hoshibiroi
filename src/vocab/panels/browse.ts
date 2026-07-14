@@ -312,6 +312,7 @@ function showNoteCardDialog(wordId: string, type: 'add' | 'edit-context' | 'edit
 
 let dragCardIdx: number | null = null;
 let dragWordId: string | null = null;
+let dragFirstRects: Map<string, DOMRect> | null = null;  // FLIP: First positions
 
 // ── Event handlers (stored for cleanup) ──
 
@@ -459,7 +460,7 @@ export function mountBrowse(): void {
     searchEl.addEventListener('input', searchHandler);
   }
 
-  // Drag-to-reorder note cards (only via grip handle)
+  // Drag-to-reorder note cards (only via grip handle, with FLIP animation)
   dragStartHandler = (e: DragEvent) => {
     const grip = (e.target as HTMLElement).closest('.nc-grip[draggable]') as HTMLElement | null;
     if (!grip) return;
@@ -469,6 +470,15 @@ export function mountBrowse(): void {
     if (!wordCard?.dataset.id) return;
     dragCardIdx = parseInt(card.dataset.cardIdx ?? '');
     dragWordId = wordCard.dataset.id;
+
+    // FLIP: record First positions of all sibling cards
+    const allCards = wordCard.querySelectorAll('.nc-card[data-card-idx]');
+    dragFirstRects = new Map();
+    allCards.forEach(c => {
+      const idx = (c as HTMLElement).dataset.cardIdx!;
+      dragFirstRects!.set(idx, c.getBoundingClientRect());
+    });
+
     card.classList.add('nc-dragging');
     e.dataTransfer!.effectAllowed = 'move';
     e.dataTransfer!.setData('text/plain', '');
@@ -476,12 +486,16 @@ export function mountBrowse(): void {
 
   dragOverHandler = (e: DragEvent) => {
     e.preventDefault();
-    const card = (e.target as HTMLElement).closest('.nc-card[data-card-idx]') as HTMLElement | null;
-    if (!card || dragCardIdx === null) return;
-    const wordCard = card.closest('.word-card') as HTMLElement | null;
+    if (dragCardIdx === null) return;
+    const target = (e.target as HTMLElement).closest('.nc-card[data-card-idx]') as HTMLElement | null;
+    if (!target) return;
+    const wordCard = target.closest('.word-card') as HTMLElement | null;
     if (wordCard?.dataset.id !== dragWordId) return;
     e.dataTransfer!.dropEffect = 'move';
-    card.classList.add('nc-drag-over');
+
+    // Clear previous hover, set new one
+    wordCard.querySelectorAll('.nc-drag-over').forEach(el => el.classList.remove('nc-drag-over'));
+    target.classList.add('nc-drag-over');
   };
 
   dragEndHandler = () => {
@@ -490,32 +504,101 @@ export function mountBrowse(): void {
     });
     dragCardIdx = null;
     dragWordId = null;
+    dragFirstRects = null;
   };
 
   dropHandler = async (e: DragEvent) => {
     e.preventDefault();
-    const card = (e.target as HTMLElement).closest('.nc-card[data-card-idx]') as HTMLElement | null;
-    if (!card || dragCardIdx === null || !dragWordId) return;
-    const wordCard = card.closest('.word-card') as HTMLElement | null;
-    if (wordCard?.dataset.id !== dragWordId) return;
+    const targetCard = (e.target as HTMLElement).closest('.nc-card[data-card-idx]') as HTMLElement | null;
+    if (!targetCard || dragCardIdx === null || !dragWordId || !dragFirstRects) {
+      dragEndHandler!();
+      return;
+    }
+    const wordCardElement = targetCard.closest('.word-card') as HTMLElement | null;
+    if (wordCardElement?.dataset.id !== dragWordId) { dragEndHandler!(); return; }
 
-    const targetIdx = parseInt(card.dataset.cardIdx ?? '');
-    if (targetIdx === dragCardIdx) { dragEndHandler!(); return; }
+    const targetIdx = parseInt(targetCard.dataset.cardIdx ?? '');
+    if (targetIdx === dragCardIdx || dragCardIdx === -1 || targetIdx === -1) {
+      dragEndHandler!();
+      return;
+    }
 
     const { words } = getState();
     const word = words.find(w => w.id === dragWordId);
     if (!word) { dragEndHandler!(); return; }
 
-    const cards = (word.translation.examples ?? []).map(e => ({ title: e.original, content: e.translated }));
-    // Context card (idx -1) can't be involved in reorder with regular cards
-    if (dragCardIdx === -1 || targetIdx === -1) { dragEndHandler!(); return; }
+    // ── FLIP animation ──
+    const scrollEl = targetCard.closest('.nc-scroll') as HTMLElement | null;
+    const allCards = Array.from(scrollEl?.querySelectorAll('.nc-card[data-card-idx]') ?? []) as HTMLElement[];
 
-    const [moved] = cards.splice(dragCardIdx, 1);
-    cards.splice(targetIdx, 0, moved);
+    // Swap DOM elements
+    const srcCard = allCards.find(c => parseInt(c.dataset.cardIdx ?? '') === dragCardIdx);
+    const dstCard = allCards.find(c => parseInt(c.dataset.cardIdx ?? '') === targetIdx);
+    if (!srcCard || !dstCard || srcCard === dstCard) { dragEndHandler!(); return; }
 
+    // Remove drag classes before animation
+    allCards.forEach(c => c.classList.remove('nc-dragging', 'nc-drag-over'));
+
+    // Move srcCard next to dstCard in DOM
+    if (dragCardIdx < targetIdx) {
+      dstCard.after(srcCard);
+    } else {
+      dstCard.before(srcCard);
+    }
+
+    // Invert: apply transform from old→new position for all shifted cards
+    const shiftedCards: Array<{ el: HTMLElement; dx: number; dy: number }> = [];
+    allCards.forEach(c => {
+      const idx = c.dataset.cardIdx!;
+      const first = dragFirstRects!.get(idx);
+      if (!first) return;
+      const last = c.getBoundingClientRect();
+      const dx = first.left - last.left;
+      const dy = first.top - last.top;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+        shiftedCards.push({ el: c, dx, dy });
+        c.style.transition = 'none';
+        c.style.transform = `translate(${dx}px, ${dy}px)`;
+        c.style.zIndex = '1';
+      }
+    });
+
+    // Play: animate to identity
+    requestAnimationFrame(() => {
+      shiftedCards.forEach(({ el }) => {
+        el.style.transition = 'transform 250ms var(--syo-ease-out)';
+        el.style.transform = '';
+      });
+    });
+
+    // Clean up after animation
+    setTimeout(() => {
+      shiftedCards.forEach(({ el }) => {
+        el.style.transition = '';
+        el.style.transform = '';
+        el.style.zIndex = '';
+      });
+    }, 300);
+
+    // Update data-card-idx to match new order
+    const reordered = Array.from(scrollEl?.querySelectorAll('.nc-card[data-card-idx]') ?? []) as HTMLElement[];
+    reordered.forEach((c, i) => {
+      c.dataset.cardIdx = String(i);
+      const editBtn = c.querySelector('[data-action="edit-card"]') as HTMLElement | null;
+      const delBtn = c.querySelector('[data-action="del-card"]') as HTMLElement | null;
+      if (editBtn) editBtn.dataset.cardIdx = String(i);
+      if (delBtn) delBtn.dataset.cardIdx = String(i);
+    });
+
+    // Save to backend
+    const cards = reordered.map(c => {
+      const title = c.querySelector('.syo-card-title')?.textContent ?? '';
+      const desc = c.querySelector('.syo-card-desc')?.textContent ?? '';
+      return { title, content: desc };
+    });
     await saveNoteCards(dragWordId, word.context, cards);
+
     dragEndHandler!();
-    renderBrowse();
   };
 
   if (wordList) {
