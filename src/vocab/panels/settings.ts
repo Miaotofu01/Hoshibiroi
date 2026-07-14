@@ -1,6 +1,6 @@
 import type { VocabSettings } from '../../shared/types';
 import { getState, saveSettings, loadWords } from '../state';
-import { showToast } from '../utils';
+import { showToast, showConfirm } from '../utils';
 import { exportCSV, exportJSON } from '../export';
 
 // ── Field labels ──
@@ -73,6 +73,14 @@ export function renderSettings(): void {
     .map((o) => `<option value="${o.value}" ${s.dailyReviewLimit === o.value ? 'selected' : ''}>${o.label}</option>`)
     .join('');
 
+  const layoutRadios = (['minimal', 'context-first'] as const).map(
+    (lo) =>
+      `<label class="setting-radio">
+        <input type="radio" name="cardLayout" value="${lo}" ${s.cardLayout === lo ? 'checked' : ''}>
+        ${lo === 'minimal' ? '不背单词（单词为主）' : '上下文优先（句子挖空）'}
+      </label>`,
+  );
+
   body.innerHTML = `
     <div class="setting-section">
       <div class="setting-section-title">卡片模板</div>
@@ -86,14 +94,7 @@ export function renderSettings(): void {
       </div>
       <div class="setting-group">
         <div class="setting-label">布局风格</div>
-        <label class="setting-radio">
-          <input type="radio" name="layout" data-field="layout-minimal" ${s.cardLayout === 'minimal' ? 'checked' : ''}>
-          不背单词（单词为主）
-        </label>
-        <label class="setting-radio">
-          <input type="radio" name="layout" data-field="layout-context-first" ${s.cardLayout === 'context-first' ? 'checked' : ''}>
-          上下文优先（句子挖空）
-        </label>
+        ${layoutRadios.join('')}
       </div>
     </div>
     <div class="setting-section">
@@ -149,14 +150,6 @@ function readSettingsFromForm(): VocabSettings {
     if (el?.checked) cardBack.push(f);
   }
 
-  // Layout radio
-  const layoutRadio = body.querySelector(
-    '[data-field="layout-context-first"]',
-  ) as HTMLInputElement | null;
-  const cardLayout: VocabSettings['cardLayout'] = layoutRadio?.checked
-    ? 'context-first'
-    : 'minimal';
-
   // Select values
   const newLimitSelect = document.getElementById(
     'setting-new-limit',
@@ -178,6 +171,10 @@ function readSettingsFromForm(): VocabSettings {
   ) as HTMLInputElement | null;
   const reviewReminder = reminderEl?.checked ?? true;
   const goalCelebration = celebrationEl?.checked ?? false;
+
+  // Read cardLayout from radio buttons
+  const layoutEl = body.querySelector('input[name="cardLayout"]:checked') as HTMLInputElement | null;
+  const cardLayout = (layoutEl?.value as 'minimal' | 'context-first') || 'minimal';
 
   return {
     cardFront,
@@ -218,8 +215,12 @@ export function mountSettings(): void {
 
   clearHandler = async (e: Event) => {
     e.stopPropagation();
-    if (!confirm('确定要清除全部生词数据吗？')) return;
-    if (!confirm('此操作不可恢复，确认清除？')) return;
+    const ok = await showConfirm(
+      '清除全部数据',
+      '此操作不可恢复，所有生词和复习记录将被永久删除。',
+      true,
+    );
+    if (!ok) return;
 
     const { words } = getState();
     for (const w of words) {

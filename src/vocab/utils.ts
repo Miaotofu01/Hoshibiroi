@@ -119,3 +119,47 @@ export const Icons: Record<string, string> = {
 export function ico(svgStr: string, cls?: string): string {
   return `<span class="ico${cls ? ' ' + cls : ''}">${svgStr}</span>`;
 }
+
+// ── Confirm modal ──
+
+export function showConfirm(title: string, message: string, danger = false): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('modal-overlay');
+    const titleEl = document.getElementById('modal-title');
+    const descEl = document.getElementById('modal-desc');
+    const cancelBtn = document.getElementById('modal-cancel');
+    const confirmBtn = document.getElementById('modal-confirm');
+    if (!overlay || !titleEl || !descEl || !cancelBtn || !confirmBtn) {
+      resolve(false);
+      return;
+    }
+
+    titleEl.textContent = title;
+    descEl.textContent = message;
+    confirmBtn.classList.toggle('danger', danger);
+
+    function cleanup(result: boolean): void {
+      overlay?.classList.remove('open');
+      cancelBtn?.removeEventListener('click', onCancel);
+      confirmBtn?.removeEventListener('click', onConfirm);
+      overlay?.removeEventListener('click', onOverlay);
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+
+    function onCancel() { cleanup(false); }
+    function onConfirm() { cleanup(true); }
+    function onOverlay(e: Event) {
+      if (e.target === overlay) cleanup(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') cleanup(false);
+    }
+
+    cancelBtn.addEventListener('click', onCancel);
+    confirmBtn.addEventListener('click', onConfirm);
+    overlay.addEventListener('click', onOverlay);
+    document.addEventListener('keydown', onKey);
+    overlay.classList.add('open');
+  });
+}

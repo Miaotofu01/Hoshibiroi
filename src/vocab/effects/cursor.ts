@@ -4,8 +4,7 @@
  * mountCursor() — shows a custom cursor circle, a canvas glow, and a mouse trail.
  * unmountCursor() — tears everything down.
  *
- * Respects prefers-reduced-motion: mountCursor is a no-op when the user
- * has that preference set.
+ * Reduced-motion is handled via CSS media query (display:none for cursor/glow).
  */
 
 const TRAIL_LENGTH = 25;
@@ -27,10 +26,6 @@ let mounted = false;
 let onMove: ((e: MouseEvent) => void) | null = null;
 let onDown: ((e: MouseEvent) => void) | null = null;
 let onUp: ((e: MouseEvent) => void) | null = null;
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
 
 function bindEvents(): void {
   onMove = (e: MouseEvent) => {
@@ -126,7 +121,6 @@ function resizeCanvas(): void {
  */
 export function mountCursor(): void {
   if (mounted) return;
-  if (prefersReducedMotion()) return;
 
   // Cache DOM references
   cursorEl = document.getElementById('custom-cursor');
@@ -146,6 +140,9 @@ export function mountCursor(): void {
 
   // Reset trail
   trail = [];
+
+  // Hide real cursor while custom cursor is active
+  document.body.style.cursor = 'none';
 
   // Bind DOM events
   bindEvents();
@@ -170,6 +167,9 @@ export function unmountCursor(): void {
   // Unbind events
   unbindEvents();
   window.removeEventListener('resize', resizeCanvas);
+
+  // Restore real cursor
+  document.body.style.cursor = '';
 
   // Hide elements
   cursorEl?.classList.remove('active', 'pressing');

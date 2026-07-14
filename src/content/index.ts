@@ -58,6 +58,7 @@ function init(): void {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let lastSelection: { text: string; rect: DOMRect; context: string } | null = null;
   let sources: Array<{ id: string; name: string }> = [];
+  const favoriteCache = new Set<string>();  // local cache to avoid flash on re-translate
 
   // 所有 UI 挂在一个根容器下（各组件内部自带 Shadow DOM）
   const root = document.createElement('div');
@@ -168,8 +169,18 @@ function init(): void {
     sendToWorker(req)
       .then(res => {
         if (res.type === 'TRANSLATE_RESULT') {
-          popupBubble.show(lastSelection!.text, res.translation, rect, langSig(res.from, res.to));
+          popupBubble.show(lastSelection!.text, res.translation, rect, langSig(res.from, res.to), favoriteCache.has(lastSelection!.text));
           popupBubble.setSources(sources, res.translation.sourceId ?? '');
+          // Check if word is already favorited
+          sendToWorker({ type: 'GET_FAVORITES' } as WorkerRequest)
+            .then(favRes => {
+              if (favRes.type === 'FAVORITES_RESULT') {
+                const words = (favRes as any).words as Array<{word: string}> | undefined;
+                const isFav = words?.some(w => w.word === lastSelection!.text) ?? false;
+                popupBubble.setFavorited(isFav);
+              }
+            })
+            .catch(() => {});
         } else if (res.type === 'TRANSLATE_ERROR') {
           popupBubble.setError(res.error, rect);
         }
@@ -211,7 +222,15 @@ function init(): void {
     const detail = (e as CustomEvent).detail;
     sendToWorker(toggleFavoriteRequest(detail.word, detail.translation, window.location.href, lastSelection?.context))
       .then(res => {
-        if (res.type === 'FAVORITE_RESULT') sidePanel.setFavorited(res.added);
+        if (res.type === 'FAVORITE_RESULT') {
+          popupBubble.setFavorited(res.added);
+          sidePanel.setFavorited(res.added);
+          // Brief toast-like feedback via the popup bubble
+          popupBubble.showToast(res.added ? '已收藏' : '已取消收藏');
+          // Update local cache
+          if (res.added) favoriteCache.add(detail.word);
+          else favoriteCache.delete(detail.word);
+        }
       })
       .catch(() => {});
   }

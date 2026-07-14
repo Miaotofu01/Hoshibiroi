@@ -1,6 +1,7 @@
 import type { FavoriteWord } from '../../shared/types';
-import { getState, loadWords } from '../state';
-import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, Icons, ico, showToast } from '../utils';
+import { getState, loadWords, loadFullStats } from '../state';
+import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, Icons, ico, showToast, showConfirm } from '../utils';
+import { renderCurveSvg } from './stats';
 
 // ── Module-level state ──
 
@@ -85,10 +86,24 @@ export function renderBrowse(): void {
   }
 
   const filtered = getFiltered();
+  const hasSearchOrFilter = searchQuery.trim() !== '' || currentFilter !== 'all';
 
   if (filtered.length === 0) {
     wordList.innerHTML = '';
     emptyEl.classList.add('visible');
+    // Distinguish 'no words at all' vs 'no results from filter/search'
+    const emptyTitle = emptyEl.querySelector('.empty-title');
+    const emptyDesc = emptyEl.querySelector('.empty-desc');
+    if (words.length === 0) {
+      if (emptyTitle) emptyTitle.textContent = '还没有收藏词汇';
+      if (emptyDesc) emptyDesc.textContent = '在任意网页选中文字翻译后，点击收藏即可加入生词本。';
+    } else if (hasSearchOrFilter) {
+      if (emptyTitle) emptyTitle.textContent = '没有匹配的词汇';
+      if (emptyDesc) emptyDesc.textContent = '试试调整搜索词或筛选条件。';
+    } else {
+      if (emptyTitle) emptyTitle.textContent = '还没有收藏词汇';
+      if (emptyDesc) emptyDesc.textContent = '在任意网页选中文字翻译后，点击收藏即可加入生词本。';
+    }
     return;
   }
   emptyEl.classList.remove('visible');
@@ -100,8 +115,8 @@ function renderCard(word: FavoriteWord): string {
   const status = wordStatus(word);
   const mastery = calcMastery(word);
   let masteryColor = 'var(--fg-muted)';
-  if (mastery >= 80) masteryColor = 'var(--accent-success)';
-  else if (mastery >= 40) masteryColor = 'var(--accent-warning)';
+  if (mastery >= 80) masteryColor = 'var(--color-success)';
+  else if (mastery >= 40) masteryColor = 'var(--color-warning)';
 
   let meaningHtml: string;
   if (word.translation.partsOfSpeech?.length) {
@@ -122,17 +137,22 @@ function renderCard(word: FavoriteWord): string {
         <span class="word">${escapeHtml(word.word)}</span>
         ${phonetic ? `<span class="phon">${phonetic}</span>` : ''}
         <div class="card-actions">
-          <button class="act-btn copy-btn" title="复制单词">${ico(Icons.copy)}</button>
           <button class="act-btn delete-btn" title="删除">${ico(Icons.trash)}</button>
         </div>
       </div>
       <div class="meanings">${meaningHtml}</div>
       ${word.context ? `<div class="card-context" data-expanded="false">${escapeHtml(word.context)}</div>` : ''}
       <div class="card-meta">
-        <span class="src-dot ${sourceDotClass(word.translation.sourceId)}"></span>
+        <span class="src-dot ${sourceDotClass(word.translation.sourceId)}" title="${escapeHtml(word.translation.source)}"></span>
         <span>${escapeHtml(word.translation.source)}</span>
         ${hostname ? `<a class="src-link" href="${escapeHtml(word.sourceUrl)}" target="_blank">${ico(Icons.link)}${escapeHtml(hostname)}</a>` : ''}
         <span class="card-mastery" style="color:${masteryColor}">${mastery}%</span>
+        <button class="act-btn curve-toggle" title="查看记忆曲线" style="margin-left:auto">${ico(Icons.play)}</button>
+      </div>
+      <div class="card-curve" style="display:none">
+        ${word.reviewHistory.length >= 2
+          ? `<svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;max-height:200px">${renderCurveSvg(word)}</svg>`
+          : '<div style="text-align:center;padding:16px 0;color:var(--fg-muted);font-size:12px">完成至少 2 次复习后显示记忆曲线</div>'}
       </div>
     </div>
   </div>`;
@@ -171,24 +191,15 @@ export function mountBrowse(): void {
     const id = card.dataset.id;
 
     if (target.closest('.delete-btn')) {
-      if (!confirm('确定删除这个单词吗？')) return;
+      const ok = await showConfirm('删除单词', '确定要删除这个单词吗？', true);
+      if (!ok) return;
       try {
         await chrome.runtime.sendMessage({ type: 'REMOVE_FAVORITE', wordId: id });
       } catch { /* */ }
       await loadWords();
+      await loadFullStats();
       renderBrowse();
-      return;
-    }
-
-    if (target.closest('.copy-btn')) {
-      const { words } = getState();
-      const word = words.find(w => w.id === id);
-      if (word) {
-        try {
-          await navigator.clipboard.writeText(word.word);
-          showToast('已复制');
-        } catch { /* */ }
-      }
+      showToast('已删除');
       return;
     }
 
@@ -199,13 +210,28 @@ export function mountBrowse(): void {
         ctx.dataset.expanded = String(!expanded);
         ctx.classList.toggle('expanded', !expanded);
       }
+      return;
+    }
+
+    if (target.closest('.curve-toggle')) {
+      const toggle = target.closest('.curve-toggle') as HTMLElement | null;
+      const cardEl = target.closest('.word-card') as HTMLElement | null;
+      const curve = cardEl?.querySelector('.card-curve') as HTMLElement | null;
+      if (toggle && curve) {
+        const isOpen = curve.style.display !== 'none';
+        curve.style.display = isOpen ? 'none' : '';
+        toggle.classList.toggle('expanded', !isOpen);
+      }
+      return;
     }
   };
 
+  let searchTimer: ReturnType<typeof setTimeout> | null = null;
   searchHandler = (e: Event) => {
     const input = e.target as HTMLInputElement;
     searchQuery = input.value;
-    renderBrowse();
+    if (searchTimer) clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => renderBrowse(), 200);
   };
 
   const toolbar = document.getElementById('browse-toolbar');

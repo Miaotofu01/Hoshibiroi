@@ -10,7 +10,7 @@ const CSS = `
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: 20px;
-    color: var(--accent);
+    color: var(--color-info);
     box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.02);
     cursor: pointer;
     transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
@@ -18,7 +18,7 @@ const CSS = `
   }
   .trigger:hover {
     transform: translateY(-1px) scale(1.03);
-    border-color: var(--accent);
+    border-color: var(--color-info);
     box-shadow: 0 6px 18px rgba(0,0,0,.4), 0 0 0 3px rgba(122,162,247,.15);
   }
   .trigger svg { width: 15px; height: 15px; }

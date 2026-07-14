@@ -1,7 +1,6 @@
 import type { FavoriteWord } from '../../shared/types';
 import type { FullStatsResponse } from '../../shared/messages';
 import { getState } from '../state';
-import { formatDate } from '../utils';
 
 // ── Module-level state ──
 
@@ -31,18 +30,35 @@ function renderOverview(stats: FullStatsResponse): void {
 
   const remaining = Math.max(0, stats.dailyGoal - stats.reviewedToday);
   textEl.textContent =
-    `今日 ${stats.reviewedToday}/${stats.dailyGoal} 目标 · 已复习 ${stats.reviewedToday} 个 · 还剩 ${remaining} 个`;
+    `今日已复习 ${stats.reviewedToday} 个 · 目标 ${stats.dailyGoal} 个 · 还剩 ${remaining} 个`;
 }
 
-// ── Calendar Heatmap ──
+// ── Calendar Heatmap (GitHub-style: columns=weeks, rows=days) ──
 
 function renderCalendar(stats: FullStatsResponse): void {
   const grid = document.getElementById('calendar-grid');
+  const monthBar = document.getElementById('calendar-months');
   if (!grid) return;
 
+  if (stats.calendar.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;color:var(--fg-muted);font-size:14px;padding:20px 0;text-align:center">暂无数据</div>';
+    if (monthBar) monthBar.innerHTML = '';
+    return;
+  }
+
+  const firstDate = new Date(stats.calendar[0].date + 'T00:00:00');
+  const startDay = firstDate.getDay(); // 0=Sun
+  const offset = (startDay + 6) % 7;   // days to skip before Monday
+
   const cells: string[] = [];
-  for (let i = 0; i < stats.calendar.length; i++) {
-    const day = stats.calendar[i];
+
+  // Empty placeholder cells for day-of-week alignment
+  for (let i = 0; i < offset; i++) {
+    cells.push('<span class="calendar-cell empty"></span>');
+  }
+
+  // Data cells
+  for (const day of stats.calendar) {
     let level = '';
     if (day.count >= 10) level = 'level-3';
     else if (day.count >= 5) level = 'level-2';
@@ -52,17 +68,23 @@ function renderCalendar(stats: FullStatsResponse): void {
     );
   }
 
-  // Align first column to Monday
-  if (stats.calendar.length > 0) {
-    const firstDate = new Date(stats.calendar[0].date + 'T00:00:00');
-    const dayOfWeek = firstDate.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-    const offset = (dayOfWeek + 6) % 7; // 0=Mon through 6=Sun
-    for (let i = 0; i < offset; i++) {
-      cells.unshift('<span class="calendar-cell" style="opacity:0"></span>');
-    }
-  }
-
   grid.innerHTML = cells.join('');
+
+  // Month labels
+  if (monthBar) {
+    const months: string[] = [];
+    let currentMonth = -1;
+    for (let i = 0; i < stats.calendar.length; i++) {
+      const d = new Date(stats.calendar[i].date + 'T00:00:00');
+      if (d.getMonth() !== currentMonth) {
+        currentMonth = d.getMonth();
+        const weekIndex = Math.floor((i + offset) / 7);
+        months.push(`<span style="grid-column:${weekIndex + 1}">${d.getMonth() + 1}月</span>`);
+      }
+    }
+    monthBar.innerHTML = months.join('');
+    monthBar.style.display = '';
+  }
 }
 
 // ── Forecast Bars ──
@@ -93,72 +115,138 @@ function renderForecast(stats: FullStatsResponse): void {
 
 // ── SVG Memory Curve ──
 
-function renderCurveSvg(word: FavoriteWord): string {
+export function renderCurveSvg(word: FavoriteWord): string {
   const history = word.reviewHistory.slice(-8);
   if (history.length < 2) {
-    return '<text x="300" y="110" text-anchor="middle" fill="var(--fg-muted)" font-size="14">数据不足</text>';
+    return `<text x="300" y="100" text-anchor="middle" fill="var(--fg-muted)" font-size="14">数据不足 — 完成至少 2 次复习后显示曲线</text>`;
   }
 
-  const w = 600, h = 200, pad = { top: 20, right: 40, bottom: 30, left: 40 };
+  const w = 600, h = 240, pad = { top: 20, right: 40, bottom: 40, left: 40 };
   const plotW = w - pad.left - pad.right;
   const plotH = h - pad.top - pad.bottom;
 
-  // Calculate mastery for each review
-  const points: Array<{ x: number; y: number; quality: number }> = [];
-  for (let i = 0; i < history.length; i++) {
-    const base = history[i].quality === 5 ? 95 : history[i].quality === 3 ? 70 : 30;
-    points.push({
-      x: pad.left + (i / (history.length - 1)) * plotW,
-      y: pad.top + plotH - (base / 100) * plotH,
-      quality: history[i].quality,
-    });
-  }
+  const tMin = history[0].timestamp;
+  const tMax = Math.max(history[history.length - 1].timestamp, word.nextReviewAt || 0);
+  const tRange = (tMax - tMin) || 86400000;
 
-  // Forecast: 2 future points
-  const last = history[history.length - 1];
-  const lastBase = last.quality === 5 ? 95 : last.quality === 3 ? 70 : 30;
-  for (let i = 0; i < 2; i++) {
-    const decayMastery = Math.max(5, lastBase - (i + 1) * (100 - lastBase) * 0.3);
-    points.push({
-      x: pad.left + ((history.length - 1 + (i + 1) * 0.5) / (history.length - 1)) * plotW,
-      y: pad.top + plotH - (decayMastery / 100) * plotH,
-      quality: -1, // forecast marker
-    });
+  function tx(ts: number): number { return pad.left + ((ts - tMin) / tRange) * plotW; }
+  function ry(r: number): number { return pad.top + plotH - (r * plotH); }
+  function estStability(interval: number): number { return Math.max(0.3, interval / 1.05); }
+  function postRetention(q: number): number {
+    return q === 5 ? 0.95 : q === 3 ? 0.80 : 0.25;
   }
 
   let elements = '';
 
-  // Y-axis grid + labels
-  for (let i = 0; i <= 4; i++) {
-    const y = pad.top + (i / 4) * plotH;
+  // ── Y-axis: simple 0%/50%/100% ──
+  for (const pct of [100, 50, 0]) {
+    const y = pad.top + ((100 - pct) / 100) * plotH;
     elements += `<line x1="${pad.left}" y1="${y}" x2="${w - pad.right}" y2="${y}" stroke="var(--border-muted)" stroke-width="0.5"/>`;
-    elements += `<text x="${pad.left - 8}" y="${y + 4}" text-anchor="end" fill="var(--fg-muted)" font-size="10">${100 - i * 25}%</text>`;
+    elements += `<text x="${pad.left - 6}" y="${y + 4}" text-anchor="end" fill="var(--fg-muted)" font-size="10">${pct}%</text>`;
+  }
+  elements += `<text x="12" y="${pad.top + plotH/2}" text-anchor="middle" fill="var(--fg-muted)" font-size="10" transform="rotate(-90, 12, ${pad.top + plotH/2})">记忆保留率</text>`;
+
+  // ── Build curve segments ──
+  const reviewDots: Array<{ x: number; y: number; quality: number; interval: number; date: Date }> = [];
+  let solidD = '';
+  let dashD = '';
+
+  for (let i = 0; i < history.length; i++) {
+    const r = history[i];
+    const rt = postRetention(r.quality);
+    const revX = tx(r.timestamp);
+    const revY = ry(rt);
+    const S = estStability(r.interval);
+
+    reviewDots.push({ x: revX, y: revY, quality: r.quality, interval: r.interval, date: new Date(r.timestamp) });
+
+    const nextTs = i < history.length - 1 ? history[i + 1].timestamp
+      : (word.nextReviewAt > Date.now() ? word.nextReviewAt : 0);
+    if (nextTs <= r.timestamp || S <= 0) continue;
+
+    const endX = tx(nextTs);
+    const tDays = (nextTs - r.timestamp) / 86400000;
+    const endRet = Math.max(0.05, rt * Math.exp(-tDays / S));
+    const endY = ry(endRet);
+
+    const dx = endX - revX;
+    const dy = endY - revY;
+    const cp1x = revX + dx * 0.25;
+    const cp1y = revY + dy * 0.15;
+    const cp2x = revX + dx * 0.65;
+    const cp2y = revY + dy * 0.85;
+
+    const isForecast = i === history.length - 1 && word.nextReviewAt > Date.now();
+    if (isForecast) {
+      if (!dashD) dashD = `M ${revX.toFixed(1)} ${revY.toFixed(1)}`;
+      dashD += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${endX.toFixed(1)} ${endY.toFixed(1)}`;
+    } else {
+      if (!solidD) solidD = `M ${revX.toFixed(1)} ${revY.toFixed(1)}`;
+      solidD += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${endX.toFixed(1)} ${endY.toFixed(1)}`;
+    }
   }
 
-  // Solid polyline for real data
-  const realPts = points.filter(p => p.quality >= 0);
-  if (realPts.length > 1) {
-    const d = realPts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-    elements += `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`;
+  if (solidD) {
+    elements += `<path d="${solidD}" fill="none" stroke="var(--color-info)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  if (dashD) {
+    elements += `<path d="${dashD}" fill="none" stroke="var(--color-info)" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.4"/>`;
   }
 
-  // Dashed polyline for forecast
-  const forecastPts = points.filter(p => p.quality < 0);
-  if (forecastPts.length > 0 && realPts.length > 0) {
-    const lastReal = realPts[realPts.length - 1];
-    const allForecast = [lastReal, ...forecastPts];
-    const d = allForecast.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-    elements += `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.5"/>`;
+  // ── X-axis: first & last date ──
+  for (const idx of [0, history.length - 1]) {
+    const d = reviewDots[idx];
+    if (!d || (idx > 0 && reviewDots[0].date.toDateString() === d.date.toDateString())) continue;
+    const ds = `${d.date.getMonth() + 1}/${d.date.getDate()}`;
+    elements += `<text x="${d.x.toFixed(1)}" y="${pad.top + plotH + 16}" text-anchor="middle" fill="var(--fg-muted)" font-size="10">${ds}</text>`;
   }
 
-  // Colored dots
-  for (const p of points) {
-    const color = p.quality === 5 ? 'var(--accent-success)'
-      : p.quality === 3 ? 'var(--accent-warning)'
-      : p.quality === 1 ? 'var(--accent-danger)'
-      : 'var(--fg-muted)';
-    const r = p.quality < 0 ? 3 : 5;
-    elements += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${color}" stroke="var(--bg-base)" stroke-width="1.5"/>`;
+  // ── Review dots + ALL interval labels ──
+  for (let i = 0; i < reviewDots.length; i++) {
+    const d = reviewDots[i];
+    const color = d.quality === 5 ? 'var(--color-success)'
+      : d.quality === 3 ? 'var(--color-warning)'
+      : 'var(--color-danger)';
+    elements += `<circle cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="5" fill="${color}" stroke="var(--bg-base)" stroke-width="2"/>`;
+    if (d.interval > 0) {
+      // Show interval above each dot — this is the progress story
+      const ly = d.y - 12;
+      elements += `<text x="${d.x.toFixed(1)}" y="${ly}" text-anchor="middle" fill="var(--fg-muted)" font-size="10">${d.interval}天</text>`;
+    }
+  }
+
+  // ── Forecast: shaded uncertainty band ──
+  if (word.nextReviewAt > Date.now() && history.length > 0) {
+    const lastR = history[history.length - 1];
+    const lastS = estStability(lastR.interval);
+    const lastRt = postRetention(lastR.quality);
+    const nx = tx(word.nextReviewAt);
+    if (nx < w - pad.right) {
+      const t = (word.nextReviewAt - lastR.timestamp) / 86400000;
+      const nr = Math.max(0.05, lastRt * Math.exp(-t / lastS));
+      const ny = ry(nr);
+      // Wider uncertainty band
+      const nrHi = Math.min(1, nr * 1.5);
+      const nrLo = Math.max(0.02, nr * 0.5);
+      elements += `<rect x="${tx(lastR.timestamp)}" y="${ry(nrHi)}" width="${nx - tx(lastR.timestamp)}" height="${ry(nrLo) - ry(nrHi)}" fill="var(--color-info)" opacity="0.06" rx="4"/>`;
+      elements += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="5" fill="none" stroke="var(--fg-muted)" stroke-width="1.5" stroke-dasharray="3,2"/>`;
+      const nds = `${new Date(word.nextReviewAt).getMonth() + 1}/${new Date(word.nextReviewAt).getDate()}`;
+      elements += `<text x="${nx.toFixed(1)}" y="${ny - 10}" text-anchor="middle" fill="var(--fg-muted)" font-size="10">下次${nds}</text>`;
+    }
+  }
+
+  // ── Legend ──
+  const legendY = h - 10;
+  const items = [
+    { color: 'var(--color-success)', label: '认识' },
+    { color: 'var(--color-warning)', label: '模糊' },
+    { color: 'var(--color-danger)', label: '不认识' },
+  ];
+  let lx = pad.left;
+  for (const item of items) {
+    elements += `<circle cx="${lx + 4}" cy="${legendY}" r="4" fill="${item.color}"/>`;
+    elements += `<text x="${lx + 12}" y="${legendY + 4}" fill="var(--fg-muted)" font-size="11">${item.label}</text>`;
+    lx += 48;
   }
 
   return elements;
@@ -178,11 +266,11 @@ function renderCurve(): void {
 
   if (historyWords.length === 0) {
     chipContainer.innerHTML = '';
-    svgWrap.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--fg-muted);font-size:14px">暂无复习数据</div>';
+    svgWrap.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--fg-muted);font-size:14px">完成几次复习后，这里会显示每个词的记忆曲线</div>';
     return;
   }
 
-  // Default to first (most recently reviewed) if none selected or previous selection gone
+  // Default to first if none selected or previous selection gone
   if (!selectedWordId || !historyWords.some(w => w.id === selectedWordId)) {
     selectedWordId = historyWords[0].id;
   }
@@ -197,15 +285,42 @@ function renderCurve(): void {
   if (!selected) return;
 
   const svgContent = renderCurveSvg(selected);
-  const lastInterval = selected.reviewHistory[selected.reviewHistory.length - 1]?.interval ?? '-';
-  const nextReview = selected.nextReviewAt > 0 ? formatDate(selected.nextReviewAt) : '-';
+  const history = selected.reviewHistory;
+  const last = history[history.length - 1];
+  const nextReview = selected.nextReviewAt > 0
+    ? new Date(selected.nextReviewAt).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
+    : '-';
+  const lastQualityLabel = last?.quality === 5 ? '认识' : last?.quality === 3 ? '模糊' : '不认识';
 
-  svgWrap.innerHTML = `<svg viewBox="0 0 600 220" xmlns="http://www.w3.org/2000/svg">
+  // Trend: are intervals getting longer? (good sign)
+  let trend = '';
+  if (history.length >= 3) {
+    const recent = history.slice(-3);
+    const intervals = recent.map(r => r.interval).filter(Boolean);
+    if (intervals.length >= 2 && intervals.every((v, i) => i === 0 || v >= intervals[i - 1])) {
+      trend = ' · 间隔增长中 ↑';
+    }
+  }
+
+  // Convert easeFactor to a user-friendly mastery indicator
+  const ef = selected.easeFactor;
+  let stabilityLabel: string;
+  if (ef <= 0) stabilityLabel = '-';
+  else if (ef < 1.5) stabilityLabel = '初级';
+  else if (ef < 2.5) stabilityLabel = '稳定';
+  else if (ef < 5.0) stabilityLabel = '熟练';
+  else stabilityLabel = '精通';
+
+  svgWrap.innerHTML = `<svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
     ${svgContent}
-    <text x="${600 - 40}" y="${220 - 8}" text-anchor="end" fill="var(--fg-muted)" font-size="10">
-      EF: ${selected.easeFactor.toFixed(2)} · 间隔: ${lastInterval}天 · 下次: ${nextReview}
-    </text>
-  </svg>`;
+  </svg>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted)">
+    <span>上次复习：<b style="color:var(--fg-default)">${lastQualityLabel}</b></span>
+    <span>当前间隔：<b style="color:var(--fg-default)">${last?.interval ?? '-'} 天</b></span>
+    <span>熟练度：<b style="color:var(--fg-default)">${stabilityLabel}</b></span>
+    <span>下次复习：<b style="color:var(--fg-default)">${nextReview}</b></span>
+    ${trend ? `<span style="color:var(--color-success)">${trend}</span>` : ''}
+  </div>`;
 }
 
 // ── Exports ──
