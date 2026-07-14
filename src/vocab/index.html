@@ -26,36 +26,17 @@ body{
 .ico svg{width:100%;height:100%;display:block}
 
 /* ── Navigation ── */
-.nav{display:flex;align-items:center;gap:0;margin-bottom:28px;border-bottom:1px solid var(--syo-border)}
-.nav-tab{
-  padding:10px 20px;font-family:var(--syo-font-mono);font-size:var(--text-sm);
-  letter-spacing:.04em;color:var(--syo-fg-muted);background:none;border:none;
-  border-bottom:2px solid transparent;cursor:pointer;
-  transition:color 180ms var(--syo-ease-out),border-color 180ms var(--syo-ease-out);
-  display:inline-flex;align-items:center;gap:6px;
-}
-.nav-tab:hover{color:var(--syo-fg-body)}.nav-tab:active{transform:scale(.95)}
+.nav-tab{font-family:var(--syo-font-mono);font-size:var(--text-sm);letter-spacing:.04em;gap:6px}
+.nav-tab:active{transform:scale(.95)}
 .nav-tab.active{color:var(--syo-info);border-bottom-color:var(--syo-info)}
-.nav-spacer{flex:1}
-.nav-gear{
-  width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;
-  background:none;border:1px solid transparent;border-radius:var(--syo-radius-md);
-  color:var(--syo-fg-muted);cursor:pointer;font-size:18px;transition:all 180ms var(--syo-ease-out);
-}
-.nav-gear:hover{color:var(--syo-fg-default);border-color:var(--syo-border);transform:scale(1.1)}.nav-gear:active{transform:scale(.9)}
+.nav-gear{width:34px;height:34px;font-size:18px}
 
 /* ── Panel ── */
 .panel{display:none}
 .panel.active{display:block}
 
 /* ═══════════════════════  LEARN PANEL  ═══════════════════════ */
-.fc-card{
-  background:var(--syo-bg-surface);border:1px solid var(--syo-border);
-  border-radius:var(--syo-radius-lg);padding:48px 40px 36px;
-  max-width:600px;margin:0 auto;
-  box-shadow:0 4px 24px rgba(0,0,0,.3);
-  transition:border-color 180ms var(--syo-ease-out),box-shadow .2s var(--syo-ease-out);
-}
+.fc-card{padding:48px 40px 36px;max-width:600px;margin:0 auto}
 .fc-card.revealed{border-color:var(--syo-border-muted);box-shadow:0 4px 32px rgba(0,0,0,.4)}
 .fc-card-inner{transition:transform 180ms var(--syo-ease-out),opacity 180ms var(--syo-ease-out)}
 .fc-word{
@@ -65,14 +46,7 @@ body{
 }
 .fc-word.long{font-size:36px}
 .fc-phon{font-family:var(--syo-font-mono);font-size:var(--text-base);color:var(--syo-fg-muted);text-align:center;margin-bottom:8px}
-.fc-speak-btn{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:32px;height:32px;border-radius:50%;border:1px solid var(--syo-border);
-  background:transparent;color:var(--syo-fg-muted);cursor:pointer;
-  margin:0 auto 8px;transition:all 180ms var(--syo-ease-out);
-}
-.fc-speak-btn:hover{color:var(--syo-info);border-color:var(--syo-info);transform:scale(1.12);transition:all 180ms var(--syo-ease-elastic)}
-.fc-speak-btn:active{transform:scale(.92)}
+.fc-speak-btn{width:32px;height:32px;border-radius:50%;margin:0 auto 8px}
 .fc-word-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
 .fc-key-hint{
   text-align:center;font-family:var(--syo-font-mono);font-size:var(--text-micro);
@@ -96,12 +70,7 @@ body{
 }
 .fc-card-inner.enter-right{animation:enter-right 350ms var(--syo-ease-elastic) both}
 
-.fc-pos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px}
-.fc-pos .pos-tag{
-  font-family:var(--syo-font-mono);font-size:var(--text-sm);
-  color:var(--syo-accent);background:rgba(188,140,255,.1);
-  border:1px solid rgba(188,140,255,.2);padding:1px 6px;border-radius:var(--syo-radius-sm);
-}
+.pos-tag{font-size:var(--text-micro);margin-right:6px}
 .fc-meaning{font-size:var(--text-lg);color:var(--syo-fg-default);line-height:1.6;text-align:center;margin-bottom:16px}
 .fc-context{
   border-left:2px solid var(--syo-warning);background:var(--syo-bg-surface);
@@ -119,15 +88,9 @@ body{
 .progress-text{font-family:var(--syo-font-mono);font-size:var(--text-sm);color:var(--syo-fg-muted);white-space:nowrap}
 
 /* rating */
-.rating-row{display:flex;gap:12px;justify-content:center;margin-top:32px;transition:opacity 300ms var(--syo-ease-out)}
+.rating-row{margin-top:32px;transition:opacity 300ms var(--syo-ease-out)}
 .rating-row.hidden{opacity:0;pointer-events:none}
-.rate-btn{
-  flex:1;max-width:180px;padding:14px 0;border-radius:var(--syo-radius-md);
-  border:1px solid var(--syo-border);background:var(--syo-bg-surface);
-  cursor:pointer;font-family:var(--syo-font-sans);font-size:var(--text-lg);
-  font-weight:500;transition:all .25s var(--syo-ease-out);text-align:center;
-  color:var(--syo-fg-muted);position:relative;overflow:hidden;
-}
+.rate-btn{flex:1;max-width:180px;padding:14px 0}
 .rate-btn:hover{transform:scale(1.06)}
 .rate-btn:active{transform:scale(.96)}
 .rate-btn.unknown{color:var(--syo-fg-body);border-left:3px solid transparent}
@@ -155,14 +118,8 @@ body{
 .done-icon{font-size:56px;margin-bottom:16px;color:var(--syo-success)}
 .done-title{font-family:var(--font-display);font-size:var(--text-xl);color:var(--syo-fg-default);margin-bottom:8px}
 .done-desc{font-size:var(--text-base);color:var(--syo-fg-muted);line-height:1.6;margin-bottom:24px}
-.back-btn{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:10px 24px;border-radius:var(--syo-radius-md);
-  border:1px solid var(--syo-info);background:transparent;
-  color:var(--syo-info);font-family:var(--font-display);font-size:var(--text-sm);
-  cursor:pointer;transition:all 180ms var(--syo-ease-out);
-}
-.back-btn:hover{background:var(--syo-info);color:var(--syo-bg-base)}.back-btn:active{transform:scale(.95)}
+.back-btn{padding:10px 24px;gap:6px;border-color:var(--syo-info);color:var(--syo-info)}
+.back-btn:hover{background:var(--syo-info);color:var(--syo-bg-base)}
 
 /* ═══════════════════════  BROWSE PANEL  ═══════════════════════ */
 .browse-toolbar{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
@@ -409,12 +366,11 @@ body{
 </head>
 <body>
 <div id="app" class="container">
-  <nav class="nav">
-    <button class="nav-tab active" data-panel="learn">学习</button>
-    <button class="nav-tab" data-panel="browse">词库</button>
-    <button class="nav-tab" data-panel="stats">统计</button>
-    <div class="nav-spacer"></div>
-    <button class="nav-gear" id="btn-settings" title="设置">
+  <nav class="syo-nav">
+    <button class="syo-tab nav-tab active" data-panel="learn">学习</button>
+    <button class="syo-tab nav-tab" data-panel="browse">词库</button>
+    <button class="syo-tab nav-tab" data-panel="stats">统计</button>
+    <button class="nav-gear syo-btn--icon" id="btn-settings" style="margin-left:auto" title="设置">
       <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
     </button>
   </nav>
@@ -426,17 +382,17 @@ body{
       <span class="progress-text" id="progress-text">0/0</span>
     </div>
     <div id="fc-area">
-      <div class="fc-card" id="fc-card">
+      <div class="syo-card fc-card" id="fc-card">
       <div class="fc-card-inner" id="fc-inner">
         <div class="fc-word" id="fc-word"></div>
         <div class="fc-phon" id="fc-phon"></div>
-        <button class="fc-speak-btn" id="btn-speak" title="发音">
+        <button class="syo-btn fc-speak-btn" id="btn-speak" title="发音">
           <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></span>
         </button>
         <div class="fc-hint" id="fc-hint">点击卡片或按空格键显示释义</div>
         <div class="fc-key-hint" id="fc-key-hint">Space/Enter 翻面 · 1 不认识 · 2 模糊 · 3 认识</div>
         <div class="fc-reveal" id="fc-reveal">
-          <div class="fc-pos" id="fc-pos"></div>
+          <div class="syo-flex syo-gap-2 fc-pos" style="justify-content:center;flex-wrap:wrap" id="fc-pos"></div>
           <div class="fc-meaning" id="fc-meaning"></div>
           <div class="fc-context" id="fc-context"></div>
           <div class="fc-meta" id="fc-meta"></div>
@@ -444,10 +400,10 @@ body{
         </div>
       </div>
       </div>
-      <div class="rating-row hidden" id="rating-row">
-        <button class="rate-btn unknown" id="btn-unknown">不认识</button>
-        <button class="rate-btn fuzzy" id="btn-fuzzy">模糊</button>
-        <button class="rate-btn known" id="btn-known">认识</button>
+      <div class="syo-flex rating-row hidden" style="gap:12px;justify-content:center" id="rating-row">
+        <button class="syo-btn rate-btn unknown" id="btn-unknown">不认识</button>
+        <button class="syo-btn rate-btn fuzzy" id="btn-fuzzy">模糊</button>
+        <button class="syo-btn rate-btn known" id="btn-known">认识</button>
       </div>
     </div>
     <div class="review-done" id="review-done">
@@ -456,7 +412,7 @@ body{
       </div>
       <div class="done-title" id="done-title">今日复习完成</div>
       <div class="done-desc" id="done-desc"></div>
-      <button class="back-btn" id="back-to-browse">
+      <button class="syo-btn back-btn" id="back-to-browse">
         <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></span>
         返回词库
       </button>
