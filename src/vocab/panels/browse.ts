@@ -127,7 +127,7 @@ export function renderBrowse(): void {
   wordList.innerHTML = filtered.map(word => renderCard(word)).join('');
   // Initialize inertia scroll for example areas
   wordList.querySelectorAll('[data-syo-inertia]').forEach(el => {
-    if (!(el as any)._syoInertia) (el as any)._syoInertia = (window as any).Sayo?.inertiaScroll?.init(el, { friction: 0.85 });
+    if (!(el as any)._syoInertia) (el as any)._syoInertia = (window as any).Sayo?.inertiaScroll?.init(el, { friction: 0.95 });
   });
 }
 
