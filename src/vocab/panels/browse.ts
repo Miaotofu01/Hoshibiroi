@@ -1,6 +1,6 @@
 import type { FavoriteWord } from '../../shared/types';
 import { getState, loadWords, loadFullStats } from '../state';
-import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, Icons, ico, showConfirm } from '../utils';
+import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, Icons, ico } from '../utils';
 import { renderCurveSvg } from './stats';
 
 // ── Module-level state ──
@@ -191,7 +191,12 @@ export function mountBrowse(): void {
     const id = card.dataset.id;
 
     if (target.closest('.delete-btn')) {
-      const ok = await showConfirm('删除单词', '确定要删除这个单词吗？', true);
+      const ok = await Sayo.dialog.confirm({
+        title: '删除单词',
+        message: '确定要删除这个单词吗？',
+        confirmText: '删除',
+        cancelText: '取消',
+      });
       if (!ok) return;
       try {
         await chrome.runtime.sendMessage({ type: 'REMOVE_FAVORITE', wordId: id });
