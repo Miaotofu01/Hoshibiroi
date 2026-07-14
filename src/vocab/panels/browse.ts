@@ -8,6 +8,7 @@ import { renderCurveSvg } from './stats';
 let currentFilter = 'all';
 let currentSort = 'newest';
 let searchQuery = '';
+let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ── Filtering & sorting ──
 
@@ -231,7 +232,6 @@ export function mountBrowse(): void {
     }
   };
 
-  let searchTimer: ReturnType<typeof setTimeout> | null = null;
   searchHandler = (e: Event) => {
     const input = e.target as HTMLInputElement;
     searchQuery = input.value;
@@ -278,6 +278,9 @@ export function unmountBrowse(): void {
   if (searchEl && searchHandler) {
     searchEl.removeEventListener('input', searchHandler);
   }
+
+  if (searchTimer) clearTimeout(searchTimer);
+  searchTimer = null;
 
   toolbarClick = null;
   toolbarChange = null;

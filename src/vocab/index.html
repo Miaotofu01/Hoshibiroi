@@ -96,7 +96,7 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
 .review-progress{display:flex;align-items:center;gap:12px;margin-bottom:48px;padding-top:8px}
 .progress-track{flex:1;height:4px;background:var(--syo-border);border-radius:2px;overflow:hidden}
 .progress-fill{height:100%;background:var(--syo-info);border-radius:2px;transition:width 350ms var(--syo-ease-elastic)}
-.progress-text{font-family:var(--syo-font-mono);font-size:var(--text-sm);color:var(--syo-fg-muted);white-space:nowrap}
+.progress-text{font-family:var(--syo-font-mono);font-size:var(--text-sm);color:var(--syo-fg-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 
 /* rating */
 .rating-row{margin-top:32px;transition:opacity 300ms var(--syo-ease-out)}
@@ -144,6 +144,7 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
 .sort-select{padding:10px 32px 10px 12px}
 
 .filter-pill{padding:5px 14px;font-size:var(--text-sm);cursor:pointer;transition:background 180ms var(--syo-ease-out),border-color 180ms var(--syo-ease-out),color 180ms var(--syo-ease-out)}
+.filter-pill:hover{transform:none}
 .filter-pill.active{background:var(--syo-info);color:#fff;border-color:var(--syo-info)}
 
 .word-card{margin-bottom:10px;overflow:hidden;padding:0}
@@ -156,6 +157,9 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
 .act-btn.delete-btn:hover{border-color:var(--syo-danger);color:var(--syo-danger);transform:scale(1.1)}
 
 .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.syo-tag-dot--success{background:var(--syo-success)}
+.syo-tag-dot--warning{background:var(--syo-warning)}
+.status-dot.new{background:var(--syo-fg-muted)}
 
 .card-body .meanings{margin-bottom:8px;line-height:1.5}
 .pos-tag{font-size:var(--text-micro);margin-right:6px}
@@ -408,7 +412,7 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
     <div id="stats-calendar">
       <div class="syo-section-label section-title">学习日历</div>
       <div class="calendar-wrap">
-        <div class="calendar-months" id="calendar-months" style="display:none"></div>
+        <div class="calendar-months" id="calendar-months" style="visibility:hidden;height:14px"></div>
         <div style="display:flex">
           <div class="calendar-row-labels">
             <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>

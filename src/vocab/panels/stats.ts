@@ -83,7 +83,7 @@ function renderCalendar(stats: FullStatsResponse): void {
       }
     }
     monthBar.innerHTML = months.join('');
-    monthBar.style.display = '';
+    monthBar.style.visibility = 'visible';
   }
 }
 

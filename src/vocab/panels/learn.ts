@@ -155,7 +155,7 @@ function showCard(): void {
     let meaningHtml: string;
     if (word.translation.partsOfSpeech?.length) {
       meaningHtml = word.translation.partsOfSpeech.map(p =>
-        `${showPos ? `<span class="syo-tag pos-tag">${escapeHtml(p.type)}</span>` : ''} ${escapeHtml(p.meanings.join('；'))}`
+        `${escapeHtml(p.meanings.join('；'))}`
       ).join('<br>');
       posEl.innerHTML = showPos ? word.translation.partsOfSpeech.map(p =>
         `<span class="syo-tag pos-tag">${escapeHtml(p.type)}</span>`
