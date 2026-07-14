@@ -1,6 +1,6 @@
 import type { VocabSettings } from '../../shared/types';
 import { getState, saveSettings, loadWords } from '../state';
-import { showToast, showConfirm } from '../utils';
+import { showConfirm } from '../utils';
 import { exportCSV, exportJSON } from '../export';
 
 // ── Field labels ──
@@ -199,7 +199,7 @@ export function mountSettings(): void {
   saveHandler = async () => {
     const newSettings = readSettingsFromForm();
     await saveSettings(newSettings);
-    showToast('设置已保存');
+    Sayo.toast.show('设置已保存', { type: 'success' });
     closeDrawer();
   };
 
@@ -231,7 +231,7 @@ export function mountSettings(): void {
       }
     }
     await loadWords();
-    showToast('已清除全部数据');
+    Sayo.toast.show('已清除全部数据', { type: 'success' });
   };
 
   closeHandler = (e: Event) => {

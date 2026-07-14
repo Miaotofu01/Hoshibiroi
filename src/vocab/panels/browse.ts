@@ -1,6 +1,6 @@
 import type { FavoriteWord } from '../../shared/types';
 import { getState, loadWords, loadFullStats } from '../state';
-import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, Icons, ico, showToast, showConfirm } from '../utils';
+import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, Icons, ico, showConfirm } from '../utils';
 import { renderCurveSvg } from './stats';
 
 // ── Module-level state ──
@@ -199,7 +199,7 @@ export function mountBrowse(): void {
       await loadWords();
       await loadFullStats();
       renderBrowse();
-      showToast('已删除');
+      Sayo.toast.show('已删除', { type: 'success' });
       return;
     }
 

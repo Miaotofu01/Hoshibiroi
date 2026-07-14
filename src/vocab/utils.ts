@@ -83,19 +83,6 @@ export function wordStatus(word: FavoriteWord): 'new' | 'learning' | 'mastered' 
   return 'learning';
 }
 
-// ── Toast notification ──
-
-let toastTimer: ReturnType<typeof setTimeout> | null = null;
-
-export function showToast(msg: string): void {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = msg;
-  toast.classList.add('show');
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 1800);
-}
-
 // ── SVG Icons ──
 
 function svg(paths: string): string {
