@@ -189,14 +189,8 @@ body{
 .empty-desc{font-size:var(--text-sm);line-height:1.6}
 
 /* ═══════════════════════  STATS PANEL  ═══════════════════════ */
-.section-title{
-  font-family:var(--syo-font-mono);font-size:var(--text-base);font-weight:600;
-  color:var(--syo-fg-default);margin-bottom:16px;letter-spacing:.04em;
-}
-.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:24px}
-.stat-big{flex:1;min-width:100px;text-align:center}
-.stat-big-num{font-family:var(--syo-font-mono);font-size:36px;font-weight:600;color:var(--syo-fg-default);line-height:1.2}
-.stat-big-label{font-size:var(--text-sm);color:var(--syo-fg-muted);margin-top:4px}
+.section-title{font-size:var(--text-lg);font-weight:600;margin-bottom:20px;padding-bottom:8px;border-bottom:1px solid var(--syo-border)}
+.stat-big{flex:1;min-width:140px}
 .today-progress{margin-bottom:28px}
 .today-progress .progress-track{height:4px}
 .today-progress .progress-fill{background:var(--syo-info)}
@@ -283,38 +277,13 @@ body{
   border-bottom:1px solid var(--syo-border-muted);
 }
 .setting-group{margin-bottom:14px}
-.setting-label{display:block;font-size:var(--text-sm);color:var(--syo-fg-body);margin-bottom:6px}
-.setting-check{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:var(--text-sm);color:var(--syo-fg-body);cursor:pointer}
-.setting-check input[type=checkbox]{accent-color:var(--syo-info);width:16px;height:16px;cursor:pointer}
-.setting-radio{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:var(--text-sm);color:var(--syo-fg-body);cursor:pointer}
-.setting-radio input[type=radio]{accent-color:var(--syo-info);width:16px;height:16px;cursor:pointer}
-.setting-select{
-  width:100%;padding:8px 12px;border-radius:var(--syo-radius-md);
-  border:1px solid var(--syo-border);background:var(--syo-bg-elevated);
-  color:var(--syo-fg-default);font-family:var(--syo-font-mono);font-size:var(--text-sm);
-  cursor:pointer;outline:none;transition:border-color 180ms var(--syo-ease-out);
-}
-.setting-select:focus{border-color:var(--syo-info)}
+.setting-label{display:block;font-size:var(--text-sm);margin-bottom:6px}
 .setting-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px}
-.setting-btn{
-  padding:8px 16px;border-radius:var(--syo-radius-md);border:1px solid var(--syo-border);
-  background:var(--syo-bg-elevated);color:var(--syo-fg-body);font-size:var(--text-sm);
-  font-family:var(--syo-font-mono);cursor:pointer;text-align:center;transition:all 180ms var(--syo-ease-out);
-}
-.setting-btn:hover{border-color:var(--syo-fg-muted);transition:border-color 180ms var(--syo-ease-out)}
-.setting-btn.danger{color:var(--syo-danger);border-color:rgba(248,81,73,.3)}
-.setting-btn.danger:hover{background:rgba(248,81,73,.1);border-color:var(--syo-danger)}
+.setting-btn.danger{color:var(--syo-danger);border-color:var(--syo-danger)}
 .drawer-footer{
   padding:16px 24px;border-top:1px solid var(--syo-border);
 }
-.save-btn{
-  width:100%;padding:10px 0;border-radius:var(--syo-radius-md);
-  background:var(--syo-info);color:#fff;border:none;
-  font-family:var(--syo-font-mono);font-size:var(--text-sm);font-weight:600;
-  cursor:pointer;transition:opacity 180ms var(--syo-ease-out);letter-spacing:.04em;
-}
-.save-btn:hover{opacity:.9}
-.save-btn:active{opacity:.75;transform:scale(.98)}
+.save-btn{width:100%;padding:12px;font-family:var(--font-mono);font-size:var(--text-sm)}
 </style>
 <script src="/sayo.js"></script>
 </head>
@@ -410,11 +379,11 @@ body{
   <!-- ═══ STATS PANEL ═══ -->
   <div class="panel" id="panel-stats">
     <div id="stats-overview">
-      <div class="stat-row">
-        <div class="stat-big"><div class="stat-big-num" id="stat-total">0</div><div class="stat-big-label">总词汇</div></div>
-        <div class="stat-big"><div class="stat-big-num" id="stat-learning">0</div><div class="stat-big-label">学习中</div></div>
-        <div class="stat-big"><div class="stat-big-num" id="stat-mastered">0</div><div class="stat-big-label">已掌握</div></div>
-        <div class="stat-big"><div class="stat-big-num" id="stat-streak">0</div><div class="stat-big-label">连续天数</div></div>
+      <div class="syo-flex stat-row" style="flex-wrap:wrap;gap:24px">
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-total">0</div><div class="syo-stat-label">总词汇</div></div>
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-learning">0</div><div class="syo-stat-label">学习中</div></div>
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-mastered">0</div><div class="syo-stat-label">已掌握</div></div>
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-streak">0</div><div class="syo-stat-label">连续天数</div></div>
       </div>
       <div class="today-progress">
         <div class="progress-track"><div class="progress-fill" id="today-fill" style="width:0%"></div></div>
@@ -422,7 +391,7 @@ body{
       </div>
     </div>
     <div id="stats-calendar">
-      <div class="section-title">学习日历</div>
+      <div class="syo-section-label section-title">学习日历</div>
       <div class="calendar-wrap">
         <div class="calendar-months" id="calendar-months" style="display:none"></div>
         <div style="display:flex">
@@ -442,11 +411,11 @@ body{
       </div>
     </div>
     <div id="stats-forecast">
-      <div class="section-title">未来 7 天复习预测</div>
+      <div class="syo-section-label section-title">未来 7 天复习预测</div>
       <div class="forecast-list" id="forecast-list"></div>
     </div>
     <div id="stats-curve">
-      <div class="section-title">记忆曲线</div>
+      <div class="syo-section-label section-title">记忆曲线</div>
       <div class="curve-word-select" id="curve-word-select"></div>
       <div class="curve-svg-wrap" id="curve-svg-wrap"></div>
     </div>
@@ -465,29 +434,29 @@ body{
       <div class="setting-section-title">卡片模板</div>
       <div class="setting-group">
         <div class="setting-label">正面显示</div>
-        <label class="setting-check"><input type="checkbox" checked> 单词</label>
-        <label class="setting-check"><input type="checkbox" checked> 音标</label>
-        <label class="setting-check"><input type="checkbox"> 上下文</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 单词</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 音标</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox"> 上下文</label>
       </div>
       <div class="setting-group">
         <div class="setting-label">背面显示</div>
-        <label class="setting-check"><input type="checkbox" checked> 释义</label>
-        <label class="setting-check"><input type="checkbox" checked> 词性</label>
-        <label class="setting-check"><input type="checkbox" checked> 例句</label>
-        <label class="setting-check"><input type="checkbox" checked> 上下文</label>
-        <label class="setting-check"><input type="checkbox"> 来源</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 释义</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 词性</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 例句</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 上下文</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox"> 来源</label>
       </div>
       <div class="setting-group">
         <div class="setting-label">布局风格</div>
-        <label class="setting-radio"><input type="radio" name="layout" checked> 不背单词（单词为主）</label>
-        <label class="setting-radio"><input type="radio" name="layout"> 上下文优先（句子挖空）</label>
+        <label class="syo-radio setting-radio"><input type="radio" name="layout" checked> 不背单词（单词为主）</label>
+        <label class="syo-radio setting-radio"><input type="radio" name="layout"> 上下文优先（句子挖空）</label>
       </div>
     </div>
     <div class="setting-section">
       <div class="setting-section-title">学习参数</div>
       <div class="setting-group">
         <div class="setting-label">每日新词上限</div>
-        <select class="setting-select" id="setting-new-limit">
+        <select class="syo-select setting-select" id="setting-new-limit">
           <option value="5">5</option>
           <option value="10" selected>10</option>
           <option value="15">15</option>
@@ -497,7 +466,7 @@ body{
       </div>
       <div class="setting-group">
         <div class="setting-label">每日复习上限</div>
-        <select class="setting-select" id="setting-review-limit">
+        <select class="syo-select setting-select" id="setting-review-limit">
           <option value="20">20</option>
           <option value="30">30</option>
           <option value="50" selected>50</option>
@@ -508,20 +477,20 @@ body{
     </div>
     <div class="setting-section">
       <div class="setting-section-title">通知</div>
-      <label class="setting-check"><input type="checkbox" id="setting-reminder" checked> 复习提醒</label>
-      <label class="setting-check"><input type="checkbox" id="setting-celebration"> 达标庆祝</label>
+      <label class="syo-checkbox setting-check"><input type="checkbox" id="setting-reminder" checked> 复习提醒</label>
+      <label class="syo-checkbox setting-check"><input type="checkbox" id="setting-celebration"> 达标庆祝</label>
     </div>
     <div class="setting-section">
       <div class="setting-section-title">数据</div>
       <div class="setting-actions">
-        <button class="setting-btn" id="btn-export-csv">导出 CSV</button>
-        <button class="setting-btn" id="btn-export-json">导出 JSON</button>
-        <button class="setting-btn danger" id="btn-clear-all">清除全部数据</button>
+        <button class="syo-btn setting-btn" id="btn-export-csv">导出 CSV</button>
+        <button class="syo-btn setting-btn" id="btn-export-json">导出 JSON</button>
+        <button class="syo-btn setting-btn danger" id="btn-clear-all">清除全部数据</button>
       </div>
     </div>
   </div>
   <div class="drawer-footer">
-    <button class="save-btn" id="save-settings">保存设置</button>
+    <button class="syo-btn syo-btn--primary save-btn" id="save-settings">保存设置</button>
   </div>
 </div>
 

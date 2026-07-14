@@ -42,7 +42,7 @@ export function renderSettings(): void {
 
   const frontCheckboxes = (['word', 'phonetic', 'context'] as const).map(
     (f) =>
-      `<label class="setting-check">
+      `<label class="syo-checkbox setting-check">
         <input type="checkbox" data-field="front-${f}" ${s.cardFront.includes(f) ? 'checked' : ''}>
         ${FRONT_LABELS[f]}
       </label>`,
@@ -52,7 +52,7 @@ export function renderSettings(): void {
     ['meaning', 'pos', 'examples', 'context', 'source'] as const
   ).map(
     (f) =>
-      `<label class="setting-check">
+      `<label class="syo-checkbox setting-check">
         <input type="checkbox" data-field="back-${f}" ${s.cardBack.includes(f) ? 'checked' : ''}>
         ${BACK_LABELS[f]}
       </label>`,
@@ -74,7 +74,7 @@ export function renderSettings(): void {
 
   const layoutRadios = (['minimal', 'context-first'] as const).map(
     (lo) =>
-      `<label class="setting-radio">
+      `<label class="syo-radio setting-radio">
         <input type="radio" name="cardLayout" value="${lo}" ${s.cardLayout === lo ? 'checked' : ''}>
         ${lo === 'minimal' ? '不背单词（单词为主）' : '上下文优先（句子挖空）'}
       </label>`,
@@ -100,20 +100,20 @@ export function renderSettings(): void {
       <div class="setting-section-title">学习参数</div>
       <div class="setting-group">
         <div class="setting-label">每日新词上限</div>
-        <select class="setting-select" id="setting-new-limit">${newLimitOptions}</select>
+        <select class="syo-select setting-select" id="setting-new-limit">${newLimitOptions}</select>
       </div>
       <div class="setting-group">
         <div class="setting-label">每日复习上限</div>
-        <select class="setting-select" id="setting-review-limit">${reviewLimitOptions}</select>
+        <select class="syo-select setting-select" id="setting-review-limit">${reviewLimitOptions}</select>
       </div>
     </div>
     <div class="setting-section">
       <div class="setting-section-title">通知</div>
-      <label class="setting-check">
+      <label class="syo-checkbox setting-check">
         <input type="checkbox" id="setting-reminder" ${s.reviewReminder ? 'checked' : ''}>
         复习提醒
       </label>
-      <label class="setting-check">
+      <label class="syo-checkbox setting-check">
         <input type="checkbox" id="setting-celebration" ${s.goalCelebration ? 'checked' : ''}>
         达标庆祝
       </label>
@@ -121,9 +121,9 @@ export function renderSettings(): void {
     <div class="setting-section">
       <div class="setting-section-title">数据</div>
       <div class="setting-actions">
-        <button class="setting-btn" id="btn-export-csv">导出 CSV</button>
-        <button class="setting-btn" id="btn-export-json">导出 JSON</button>
-        <button class="setting-btn danger" id="btn-clear-all">清除全部数据</button>
+        <button class="syo-btn setting-btn" id="btn-export-csv">导出 CSV</button>
+        <button class="syo-btn setting-btn" id="btn-export-json">导出 JSON</button>
+        <button class="syo-btn setting-btn danger" id="btn-clear-all">清除全部数据</button>
       </div>
     </div>
   `;
