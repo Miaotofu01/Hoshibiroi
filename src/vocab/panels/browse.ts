@@ -180,7 +180,7 @@ function renderCard(word: FavoriteWord): string {
   cardsHtml += '<div class="syo-inertia nc-scroll" data-syo-inertia>';
   if (hasContext) {
     const sourceLabel = word.translation.source || '来源';
-    cardsHtml += `<article class="syo-card nc-card" data-card-idx="-1" draggable="true">
+    cardsHtml += `<article class="syo-card nc-card" data-card-idx="-1">
       <div class="nc-card-inner">
         <div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(sourceLabel)} · 原文</h3></div>
         <p class="syo-card-desc">${escapeHtml(word.context!)}</p>
@@ -194,7 +194,7 @@ function renderCard(word: FavoriteWord): string {
   if (hasCards) {
     for (let i = 0; i < examples.length; i++) {
       const ex = examples[i];
-      cardsHtml += `<article class="syo-card nc-card" data-card-idx="${i}" draggable="true">
+      cardsHtml += `<article class="syo-card nc-card" data-card-idx="${i}">
         <div class="nc-card-inner">
           <div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(ex.original)}</h3></div>
           <p class="syo-card-desc">${escapeHtml(ex.translated)}</p>
@@ -203,6 +203,7 @@ function renderCard(word: FavoriteWord): string {
           <button class="btn-icon btn-icon--xs nc-edit-btn" title="编辑" data-action="edit-card" data-card-idx="${i}">${ico(Icons.gear)}</button>
           <button class="btn-icon btn-icon--xs nc-del-btn" title="删除" data-action="del-card" data-card-idx="${i}">${ico(Icons.x)}</button>
         </div>
+        <div class="nc-grip" draggable="true" title="拖拽排序">${ico(Icons.grip)}</div>
       </article>`;
     }
   }
@@ -458,9 +459,11 @@ export function mountBrowse(): void {
     searchEl.addEventListener('input', searchHandler);
   }
 
-  // Drag-to-reorder note cards
+  // Drag-to-reorder note cards (only via grip handle)
   dragStartHandler = (e: DragEvent) => {
-    const card = (e.target as HTMLElement).closest('.nc-card[data-card-idx]') as HTMLElement | null;
+    const grip = (e.target as HTMLElement).closest('.nc-grip[draggable]') as HTMLElement | null;
+    if (!grip) return;
+    const card = grip.closest('.nc-card[data-card-idx]') as HTMLElement | null;
     if (!card) return;
     const wordCard = card.closest('.word-card') as HTMLElement | null;
     if (!wordCard?.dataset.id) return;
