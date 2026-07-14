@@ -26,7 +26,15 @@ body{
 .ico svg{width:100%;height:100%;display:block}
 
 /* ── Navigation ── */
-.nav-tab{font-family:var(--syo-font-mono);font-size:var(--text-sm);letter-spacing:.04em;gap:6px}
+.nav{display:flex;align-items:center;gap:0;margin-bottom:28px;border-bottom:1px solid var(--syo-border)}
+.nav-tab{
+  padding:10px 20px;font-family:var(--syo-font-mono);font-size:var(--text-sm);
+  letter-spacing:.04em;color:var(--syo-fg-muted);background:none;border:none;
+  border-bottom:2px solid transparent;cursor:pointer;
+  transition:color 180ms var(--syo-ease-out),border-color 180ms var(--syo-ease-out);
+  display:inline-flex;align-items:center;gap:6px;
+}
+.nav-tab:hover{color:var(--syo-fg-body)}
 .nav-tab:active{transform:scale(.95)}
 .nav-tab.active{color:var(--syo-info);border-bottom-color:var(--syo-info)}
 .nav-gear{width:34px;height:34px;font-size:18px}
@@ -294,11 +302,11 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
 </head>
 <body>
 <div id="app" class="container">
-  <nav class="syo-nav">
-    <button class="syo-tab nav-tab active" data-panel="learn">学习</button>
-    <button class="syo-tab nav-tab" data-panel="browse">词库</button>
-    <button class="syo-tab nav-tab" data-panel="stats">统计</button>
-    <button class="nav-gear syo-btn--icon" id="btn-settings" style="margin-left:auto" title="设置">
+  <nav class="nav syo-flex">
+    <button class="nav-tab active" data-panel="learn">学习</button>
+    <button class="nav-tab" data-panel="browse">词库</button>
+    <button class="nav-tab" data-panel="stats">统计</button>
+    <button class="nav-gear syo-btn syo-btn--ghost" id="btn-settings" style="margin-left:auto" title="设置">
       <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
     </button>
   </nav>
@@ -439,22 +447,22 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
       <div class="setting-section-title">卡片模板</div>
       <div class="setting-group">
         <div class="setting-label">正面显示</div>
-        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 单词</label>
-        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 音标</label>
-        <label class="syo-checkbox setting-check"><input type="checkbox"> 上下文</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked><span class="syo-checkmark"></span> 单词</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked><span class="syo-checkmark"></span> 音标</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox"><span class="syo-checkmark"></span> 上下文</label>
       </div>
       <div class="setting-group">
         <div class="setting-label">背面显示</div>
-        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 释义</label>
-        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 词性</label>
-        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 例句</label>
-        <label class="syo-checkbox setting-check"><input type="checkbox" checked> 上下文</label>
-        <label class="syo-checkbox setting-check"><input type="checkbox"> 来源</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked><span class="syo-checkmark"></span> 释义</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked><span class="syo-checkmark"></span> 词性</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked><span class="syo-checkmark"></span> 例句</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox" checked><span class="syo-checkmark"></span> 上下文</label>
+        <label class="syo-checkbox setting-check"><input type="checkbox"><span class="syo-checkmark"></span> 来源</label>
       </div>
       <div class="setting-group">
         <div class="setting-label">布局风格</div>
-        <label class="syo-radio setting-radio"><input type="radio" name="layout" checked> 不背单词（单词为主）</label>
-        <label class="syo-radio setting-radio"><input type="radio" name="layout"> 上下文优先（句子挖空）</label>
+        <label class="syo-radio setting-radio"><input type="radio" name="layout" checked><span class="syo-radiomark"></span> 不背单词（单词为主）</label>
+        <label class="syo-radio setting-radio"><input type="radio" name="layout"><span class="syo-radiomark"></span> 上下文优先（句子挖空）</label>
       </div>
     </div>
     <div class="setting-section">
@@ -482,8 +490,8 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
     </div>
     <div class="setting-section">
       <div class="setting-section-title">通知</div>
-      <label class="syo-checkbox setting-check"><input type="checkbox" id="setting-reminder" checked> 复习提醒</label>
-      <label class="syo-checkbox setting-check"><input type="checkbox" id="setting-celebration"> 达标庆祝</label>
+      <label class="syo-checkbox setting-check"><input type="checkbox" id="setting-reminder" checked><span class="syo-checkmark"></span> 复习提醒</label>
+      <label class="syo-checkbox setting-check"><input type="checkbox" id="setting-celebration"><span class="syo-checkmark"></span> 达标庆祝</label>
     </div>
     <div class="setting-section">
       <div class="setting-section-title">数据</div>
