@@ -3,16 +3,6 @@ import { getState, loadWords, loadFullStats } from '../state';
 import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, Icons, ico } from '../utils';
 import { renderCurveSvg } from './stats';
 
-// ── Source-to-Sayo variant mapping ──
-
-const SOURCE_SYO_MAP: Record<string, string> = {
-  's-deepseek': 'syo-tag-dot--accent',
-  's-google': 'syo-tag-dot--success',
-  's-tencent': 'syo-tag-dot--info',
-  's-baidu': 'syo-tag-dot--danger',
-  's-deepl': 'syo-tag-dot--secondary',
-};
-
 // ── Module-level state ──
 
 let currentFilter = 'all';
@@ -151,9 +141,9 @@ function renderCard(word: FavoriteWord): string {
         </div>
       </div>
       <div class="meanings">${meaningHtml}</div>
-      ${word.context ? `<div class="card-context" data-expanded="false">${escapeHtml(word.context)}<svg class="ctx-chevron" width="12" height="12" viewBox="0 0 12 12"><path d="M3 5l3 3 3-3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>` : ''}
+      ${word.context ? `<div class="card-context" tabindex="0" role="button" data-expanded="false">${escapeHtml(word.context)}<svg class="ctx-chevron" width="12" height="12" viewBox="0 0 12 12"><path d="M3 5l3 3 3-3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg></div>` : ''}
       <div class="card-meta">
-        <span class="syo-tag-dot ${(() => { const sc = sourceDotClass(word.translation.sourceId); return SOURCE_SYO_MAP[sc] || ''; })()} src-dot ${sourceDotClass(word.translation.sourceId)}" title="${escapeHtml(word.translation.source)}"></span>
+        <span class="src-dot ${sourceDotClass(word.translation.sourceId)}" title="${escapeHtml(word.translation.source)}"></span>
         <span>${escapeHtml(word.translation.source)}</span>
         ${hostname ? `<a class="src-link" href="${escapeHtml(word.sourceUrl)}" target="_blank">${ico(Icons.link)}${escapeHtml(hostname)}</a>` : ''}
         <span class="card-mastery" style="color:${masteryColor}">${mastery}%</span>
@@ -220,7 +210,7 @@ export function mountBrowse(): void {
 
     if (target.closest('.card-context')) {
       const ctx = target.closest('.card-context') as HTMLElement | null;
-      if (ctx) {
+      if (ctx && (e.type === 'click' || (e.type === 'keydown' && (e as KeyboardEvent).key === 'Enter'))) {
         const expanded = ctx.dataset.expanded === 'true';
         ctx.dataset.expanded = String(!expanded);
         ctx.classList.toggle('expanded', !expanded);
@@ -258,6 +248,7 @@ export function mountBrowse(): void {
   const wordList = document.getElementById('word-list');
   if (wordList) {
     wordList.addEventListener('click', wordListClick);
+    wordList.addEventListener('keydown', wordListClick);
   }
 
   const searchEl = document.getElementById('search-input');
@@ -280,6 +271,7 @@ export function unmountBrowse(): void {
   const wordList = document.getElementById('word-list');
   if (wordList && wordListClick) {
     wordList.removeEventListener('click', wordListClick);
+    wordList.removeEventListener('keydown', wordListClick);
   }
 
   const searchEl = document.getElementById('search-input');

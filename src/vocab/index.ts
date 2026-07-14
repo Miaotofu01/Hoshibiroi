@@ -17,11 +17,15 @@ function switchPanel(panel: string): void {
   if (currentPanel === panel) return;
   panelRenderers[currentPanel]?.unmount();
   document.getElementById(`panel-${currentPanel}`)?.classList.remove('active');
-  document.querySelector(`.nav-tab[data-panel="${currentPanel}"]`)?.classList.remove('active');
+  const prevTab = document.querySelector(`.nav-tab[data-panel="${currentPanel}"]`);
+  prevTab?.classList.remove('active');
+  prevTab?.setAttribute('aria-selected', 'false');
   currentPanel = panel;
   setPanel(panel as any);
   document.getElementById(`panel-${panel}`)?.classList.add('active');
-  document.querySelector(`.nav-tab[data-panel="${panel}"]`)?.classList.add('active');
+  const nextTab = document.querySelector(`.nav-tab[data-panel="${panel}"]`);
+  nextTab?.classList.add('active');
+  nextTab?.setAttribute('aria-selected', 'true');
   panelRenderers[panel]?.mount();
   panelRenderers[panel]?.render();
   if (panel === 'learn' || panel === 'stats') {

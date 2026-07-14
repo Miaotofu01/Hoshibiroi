@@ -189,9 +189,7 @@ function readSettingsFromForm(): VocabSettings {
 // ── Event handlers (stored for cleanup) ──
 
 let saveHandler: ((e: Event) => void) | null = null;
-let exportCsvHandler: ((e: Event) => void) | null = null;
-let exportJsonHandler: ((e: Event) => void) | null = null;
-let clearHandler: ((e: Event) => void) | null = null;
+let delegationHandler: ((e: Event) => void) | null = null;
 let closeHandler: ((e: Event) => void) | null = null;
 let overlayClickHandler: ((e: Event) => void) | null = null;
 let escapeKeyHandler: ((e: Event) => void) | null = null;
@@ -204,36 +202,32 @@ export function mountSettings(): void {
     closeDrawer();
   };
 
-  exportCsvHandler = (e: Event) => {
-    e.stopPropagation();
-    exportCSV();
-  };
-
-  exportJsonHandler = (e: Event) => {
-    e.stopPropagation();
-    exportJSON();
-  };
-
-  clearHandler = async (e: Event) => {
-    e.stopPropagation();
-    const ok = await Sayo.dialog.confirm({
-      title: '清除全部数据',
-      message: '此操作不可恢复，所有生词和复习记录将被永久删除。',
-      confirmText: '确认清除',
-      cancelText: '取消',
-    });
-    if (!ok) return;
-
-    const { words } = getState();
-    for (const w of words) {
-      try {
-        await chrome.runtime.sendMessage({ type: 'REMOVE_FAVORITE', wordId: w.id });
-      } catch {
-        /* continue */
-      }
+  delegationHandler = (e: Event) => {
+    const target = e.target as HTMLElement;
+    const btn = target.closest('button');
+    if (!btn) return;
+    if (btn.id === 'btn-export-csv') { e.stopPropagation(); exportCSV(); }
+    else if (btn.id === 'btn-export-json') { e.stopPropagation(); exportJSON(); }
+    else if (btn.id === 'btn-clear-all') {
+      e.stopPropagation();
+      (async () => {
+        const ok = await Sayo.dialog.confirm({
+          title: '清除全部数据',
+          message: '此操作不可恢复，所有生词和复习记录将被永久删除。',
+          confirmText: '确认清除',
+          cancelText: '取消',
+        });
+        if (!ok) return;
+        const { words } = getState();
+        for (const w of words) {
+          try {
+            await chrome.runtime.sendMessage({ type: 'REMOVE_FAVORITE', wordId: w.id });
+          } catch { /* continue */ }
+        }
+        await loadWords();
+        Sayo.toast.show('已清除全部数据', { type: 'success' });
+      })();
     }
-    await loadWords();
-    Sayo.toast.show('已清除全部数据', { type: 'success' });
   };
 
   closeHandler = (e: Event) => {
@@ -252,9 +246,7 @@ export function mountSettings(): void {
   };
 
   document.getElementById('save-settings')?.addEventListener('click', saveHandler);
-  document.getElementById('btn-export-csv')?.addEventListener('click', exportCsvHandler);
-  document.getElementById('btn-export-json')?.addEventListener('click', exportJsonHandler);
-  document.getElementById('btn-clear-all')?.addEventListener('click', clearHandler);
+  document.querySelector('.drawer-body')?.addEventListener('click', delegationHandler);
   document.getElementById('drawer-close-btn')?.addEventListener('click', closeHandler);
   document.getElementById('drawer-overlay')?.addEventListener('click', overlayClickHandler);
   document.addEventListener('keydown', escapeKeyHandler);
@@ -264,14 +256,8 @@ export function unmountSettings(): void {
   if (saveHandler) {
     document.getElementById('save-settings')?.removeEventListener('click', saveHandler);
   }
-  if (exportCsvHandler) {
-    document.getElementById('btn-export-csv')?.removeEventListener('click', exportCsvHandler);
-  }
-  if (exportJsonHandler) {
-    document.getElementById('btn-export-json')?.removeEventListener('click', exportJsonHandler);
-  }
-  if (clearHandler) {
-    document.getElementById('btn-clear-all')?.removeEventListener('click', clearHandler);
+  if (delegationHandler) {
+    document.querySelector('.drawer-body')?.removeEventListener('click', delegationHandler);
   }
   if (closeHandler) {
     document.getElementById('drawer-close-btn')?.removeEventListener('click', closeHandler);
@@ -283,9 +269,7 @@ export function unmountSettings(): void {
     document.removeEventListener('keydown', escapeKeyHandler);
   }
   saveHandler = null;
-  exportCsvHandler = null;
-  exportJsonHandler = null;
-  clearHandler = null;
+  delegationHandler = null;
   closeHandler = null;
   overlayClickHandler = null;
   escapeKeyHandler = null;

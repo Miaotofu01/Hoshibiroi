@@ -24,6 +24,7 @@ body{
 .container{padding:36px 24px 80px}
 .ico{width:1em;height:1em;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 .ico svg{width:100%;height:100%;display:block}
+.overflow-hidden{overflow:hidden!important}
 
 /* ── Navigation ── */
 .nav{display:flex;align-items:center;gap:0;margin-bottom:28px;border-bottom:1px solid var(--syo-border)}
@@ -142,10 +143,10 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
 
 .sort-select{padding:10px 32px 10px 12px}
 
-.filter-pill{padding:5px 14px;font-size:var(--text-sm);transition:background 180ms var(--syo-ease-out),border-color 180ms var(--syo-ease-out),color 180ms var(--syo-ease-out)}
+.filter-pill{padding:5px 14px;font-size:var(--text-sm);cursor:pointer;transition:background 180ms var(--syo-ease-out),border-color 180ms var(--syo-ease-out),color 180ms var(--syo-ease-out)}
 .filter-pill.active{background:var(--syo-info);color:#fff;border-color:var(--syo-info)}
 
-.word-card{margin-bottom:10px;overflow:hidden}
+.word-card{margin-bottom:10px;overflow:hidden;padding:0}
 .card-body{padding:16px 20px}
 .card-head .word{font-family:var(--syo-font-mono);font-size:var(--text-lg);font-weight:600;word-break:break-word}
 .card-head .phon{font-family:var(--syo-font-mono);font-size:var(--text-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -185,7 +186,7 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
   margin-top:12px;padding-top:12px;border-top:1px solid var(--syo-border-muted);
   overflow:hidden;
 }
-.src-dot{width:6px;height:6px}
+.src-dot{width:6px;height:6px;display:inline-block;border-radius:50%;flex-shrink:0}
 .src-dot.s-deepseek{background:var(--syo-accent)}
 .src-dot.s-google{background:var(--syo-success)}
 .src-dot.s-tencent{background:var(--syo-info)}
@@ -297,15 +298,16 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
   padding:16px 24px;border-top:1px solid var(--syo-border);
 }
 .save-btn{width:100%;padding:12px;font-family:var(--font-mono);font-size:var(--text-sm)}
+.skeleton{background:var(--syo-bg-surface);border-radius:var(--syo-radius-sm);animation:syo-shimmer 1.8s ease-in-out infinite;background-size:200% 100%}
 </style>
 <script src="/sayo.js"></script>
 </head>
 <body>
 <div id="app" class="container">
-  <nav class="nav syo-flex">
-    <button class="nav-tab active" data-panel="learn">学习</button>
-    <button class="nav-tab" data-panel="browse">词库</button>
-    <button class="nav-tab" data-panel="stats">统计</button>
+  <nav class="nav syo-flex" role="tablist" aria-label="生词本导航">
+    <button class="nav-tab active" data-panel="learn" role="tab" aria-selected="true">学习</button>
+    <button class="nav-tab" data-panel="browse" role="tab" aria-selected="false">词库</button>
+    <button class="nav-tab" data-panel="stats" role="tab" aria-selected="false">统计</button>
     <button class="nav-gear syo-btn syo-btn--ghost" id="btn-settings" style="margin-left:auto" title="设置">
       <span class="ico"><svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
     </button>
@@ -393,10 +395,10 @@ kbd{background:var(--syo-bg-surface);border:1px solid var(--syo-border);border-r
   <div class="panel" id="panel-stats">
     <div id="stats-overview">
       <div class="syo-flex stat-row" style="flex-wrap:wrap;gap:24px">
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-total">0</div><div class="syo-stat-label">总词汇</div></div>
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-learning">0</div><div class="syo-stat-label">学习中</div></div>
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-mastered">0</div><div class="syo-stat-label">已掌握</div></div>
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-streak">0</div><div class="syo-stat-label">连续天数</div></div>
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-total"><div class="skeleton" style="height:28px;width:48px;margin:0 auto"></div></div><div class="syo-stat-label">总词汇</div></div>
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-learning"><div class="skeleton" style="height:28px;width:48px;margin:0 auto"></div></div><div class="syo-stat-label">学习中</div></div>
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-mastered"><div class="skeleton" style="height:28px;width:48px;margin:0 auto"></div></div><div class="syo-stat-label">已掌握</div></div>
+        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-streak"><div class="skeleton" style="height:28px;width:48px;margin:0 auto"></div></div><div class="syo-stat-label">连续天数</div></div>
       </div>
       <div class="today-progress">
         <div class="progress-track"><div class="progress-fill" id="today-fill" style="width:0%"></div></div>
