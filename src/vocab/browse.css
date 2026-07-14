@@ -203,13 +203,21 @@
 }
 
 /* Note card drag states */
+.nc-card {
+  transition: transform 250ms var(--syo-ease-out);
+}
+
 .nc-card.nc-dragging {
-  opacity: 0.4;
+  opacity: 0.35;
+  transform: scale(0.95);
+  transition: opacity 180ms var(--syo-ease-out), transform 180ms var(--syo-ease-out);
 }
 
 .nc-card.nc-drag-over {
   border-color: var(--syo-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--syo-accent) 40%, transparent);
+  transform: scale(1.03);
+  transition: border-color 150ms, box-shadow 150ms, transform 150ms var(--syo-ease-out);
 }
 
 /* Grip handle for drag reorder */
