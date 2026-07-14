@@ -1,37 +1,39 @@
-/* Tokyo Night 暗色主题 — CSS Custom Properties */
-/* 后续新增主题只需提供一组变量覆盖即可 */
+/* Sayo UI tokens — Primer Dark (for Shadow DOM isolation) */
 
 :host {
-  --bg-primary: #1a1b26;
-  --bg-secondary: #24283b;
-  --bg-elevated: #292e42;
-  --bg-hover: #2f3348;
-  --text-primary: #c0caf5;
-  --text-secondary: #7982a9;
-  --text-muted: #565f89;
-  --accent: #7aa2f7;
-  --accent-hover: #89b4fa;
-  --accent-green: #9ece6a;
-  --accent-cyan: #7dcfff;
-  --accent-red: #f7768e;
-  --accent-yellow: #e0af68;
-  --accent-purple: #bb9af7;
-  --border: #2f3550;
-  --border-soft: #232842;
-  --shadow: rgba(0, 0, 0, 0.4);
-  --shadow-card: 0 12px 40px rgba(0, 0, 0, 0.55), 0 3px 10px rgba(0, 0, 0, 0.4);
-  --radius: 8px;
-  --radius-sm: 6px;
-  --radius-lg: 12px;
-  --font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'FiraCode Nerd Font', 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+  --syo-bg-base: #0d1117;
+  --syo-bg-surface: #161b22;
+  --syo-bg-elevated: #1c2129;
+  --syo-border: #30363d;
+  --syo-border-muted: #21262d;
+  --syo-fg-default: #e6edf3;
+  --syo-fg-body: #c9d1d9;
+  --syo-fg-muted: #8b949e;
+  --syo-blue: #58a6ff;
+  --syo-green: #3fb950;
+  --syo-yellow: #d29922;
+  --syo-red: #f85149;
+  --syo-purple: #bc8cff;
+  --syo-cyan: #79c0ff;
+  --syo-info: var(--syo-blue);
+  --syo-success: var(--syo-green);
+  --syo-warning: var(--syo-yellow);
+  --syo-danger: var(--syo-red);
+  --syo-accent: var(--syo-purple);
+  --syo-secondary: var(--syo-cyan);
+  --syo-radius-sm: 4px;
+  --syo-radius-md: 6px;
+  --syo-radius-lg: 8px;
+  --syo-ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --syo-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --font-display: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Fira Code", "FiraCode Nerd Font", "SF Mono", "Cascadia Code", "JetBrains Mono", monospace;
   --font-size-sm: 12px;
   --font-size-base: 14px;
   --font-size-lg: 16px;
-  --transition: 0.14s ease;
 }
 
-/* 全局 reset（仅在 Shadow DOM 内生效） */
+/* Global reset (Shadow DOM only) */
 * {
   margin: 0;
   padding: 0;
@@ -42,13 +44,12 @@ button {
   cursor: pointer;
   border: none;
   background: none;
-  color: var(--text-primary);
-  font-family: var(--font-family);
+  color: var(--syo-fg-default);
+  font-family: var(--font-display);
   font-size: var(--font-size-sm);
-  transition: var(--transition);
+  transition: color 150ms var(--syo-ease-out), background 150ms var(--syo-ease-out);
 }
 
-/* SVG 图标随文字颜色走（描边风格） */
 svg { display: block; }
 
 @media (prefers-reduced-motion: reduce) {
