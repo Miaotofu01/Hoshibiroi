@@ -1,6 +1,9 @@
 import type { VocabSettings } from '../../shared/types';
 import { getState, saveSettings, loadWords } from '../state';
 import { exportCSV, exportJSON } from '../export';
+import { renderBrowse } from './browse';
+import { renderStats } from './stats';
+import { renderLearn } from './learn';
 
 // ── Field labels ──
 
@@ -197,9 +200,13 @@ let escapeKeyHandler: ((e: Event) => void) | null = null;
 export function mountSettings(): void {
   saveHandler = async () => {
     const newSettings = readSettingsFromForm();
-    await saveSettings(newSettings);
-    Sayo.toast.show('设置已保存', { type: 'success' });
-    closeDrawer();
+    try {
+      await saveSettings(newSettings);
+      Sayo.toast.show('设置已保存', { type: 'success' });
+      closeDrawer();
+    } catch {
+      Sayo.toast.show('保存失败，请重试', { type: 'error' });
+    }
   };
 
   delegationHandler = (e: Event) => {
@@ -225,6 +232,11 @@ export function mountSettings(): void {
           } catch { /* continue */ }
         }
         await loadWords();
+        // Re-render current panel
+        const { panel } = getState();
+        if (panel === 'browse') renderBrowse();
+        else if (panel === 'stats') renderStats();
+        else if (panel === 'learn') renderLearn();
         Sayo.toast.show('已清除全部数据', { type: 'success' });
       })();
     }

@@ -42,7 +42,7 @@ function renderCalendar(stats: FullStatsResponse): void {
 
   if (stats.calendar.length === 0) {
     grid.innerHTML = '<div style="grid-column:1/-1;color:var(--syo-fg-muted);font-size:14px;padding:20px 0;text-align:center">暂无数据</div>';
-    if (monthBar) monthBar.innerHTML = '';
+    if (monthBar) { monthBar.innerHTML = ''; monthBar.style.visibility = 'visible'; }
     return;
   }
 
