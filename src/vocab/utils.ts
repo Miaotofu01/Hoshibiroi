@@ -101,6 +101,8 @@ export const Icons: Record<string, string> = {
   play: svg('<polygon points="5 3 19 12 5 21 5 3"/>'),
   list: svg('<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>'),
   x: svg('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'),
+  star: svg('<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.86L12 18.56 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/>'),
+  starFilled: svg('<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.86L12 18.56 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor" stroke="none"/>'),
 };
 
 export function ico(svgStr: string, cls?: string): string {

@@ -99,6 +99,18 @@ export interface SaveVocabSettingsRequest {
   settings: VocabSettings;
 }
 
+export interface StarWordRequest {
+  type: 'STAR_WORD';
+  wordId: string;
+  starred: boolean;
+}
+
+export interface UpdateNoteRequest {
+  type: 'UPDATE_NOTE';
+  wordId: string;
+  note: string;
+}
+
 export type WorkerRequest =
   | TranslateRequest
   | SpeakRequest
@@ -117,7 +129,9 @@ export type WorkerRequest =
   | GetWordHistoryRequest
   | GetForecastRequest
   | GetFullStatsRequest
-  | SaveVocabSettingsRequest;
+  | SaveVocabSettingsRequest
+  | StarWordRequest
+  | UpdateNoteRequest;
 
 // ── 响应类型 ──
 
@@ -226,6 +240,18 @@ export interface VocabSettingsResponse {
   settings: VocabSettings;
 }
 
+export interface StarWordResponse {
+  type: 'STAR_RESULT';
+  wordId: string;
+  starred: boolean;
+}
+
+export interface UpdateNoteResponse {
+  type: 'NOTE_RESULT';
+  wordId: string;
+  note: string;
+}
+
 export type WorkerResponse =
   | TranslateResponse
   | TranslateErrorResponse
@@ -243,7 +269,9 @@ export type WorkerResponse =
   | WordHistoryResponse
   | ForecastResponse
   | FullStatsResponse
-  | VocabSettingsResponse;
+  | VocabSettingsResponse
+  | StarWordResponse
+  | UpdateNoteResponse;
 
 // ── 类型守卫 ──
 
@@ -254,6 +282,7 @@ const RESPONSE_TYPES: WorkerResponse['type'][] = [
   'GRAMMAR_RESULT', 'GRAMMAR_ERROR',
   'REVIEW_RESULT', 'DUE_WORDS_RESULT', 'LEARN_STATS_RESULT',
   'WORD_HISTORY_RESULT', 'FORECAST_RESULT', 'FULL_STATS_RESULT', 'VOCAB_SETTINGS_RESULT',
+  'STAR_RESULT', 'NOTE_RESULT',
 ];
 
 export function isWorkerResponse(msg: unknown): msg is WorkerResponse {
