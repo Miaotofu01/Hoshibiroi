@@ -383,11 +383,13 @@
 /* ── Card meta ──────────────────────────────────────────────── */
 .card-meta {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
   align-items: center;
   padding-top: 8px;
   border-top: 1px solid var(--syo-border-muted);
+  font-size: var(--text-micro);
+  color: var(--syo-fg-muted);
 }
 
 .card-meta .src-link {
@@ -395,12 +397,18 @@
   text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
+  font-size: var(--text-micro);
   transition: color 180ms;
 }
 
 .card-meta .src-link:hover {
   color: var(--syo-secondary);
+}
+
+.card-meta .src-link .ico {
+  width: 12px;
+  height: 12px;
 }
 
 .card-mastery {
@@ -432,8 +440,8 @@
 
 /* ── Source dot colors ──────────────────────────────────────── */
 .src-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   display: inline-block;
   border-radius: 50%;
   flex-shrink: 0;
