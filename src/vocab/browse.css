@@ -172,7 +172,6 @@
   gap: 12px;
   padding-bottom: 8px;
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
 }
 
