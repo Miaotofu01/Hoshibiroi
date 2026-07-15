@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#0f1928"/>
+      <stop offset="100%" stop-color="#0d1117"/>
+    </radialGradient>
+  </defs>
+  <rect width="128" height="128" rx="24" fill="url(#bg)"/>
+  <!-- orbit ring -->
+  <ellipse cx="64" cy="62" rx="38" ry="12" fill="none" stroke="#30363d" stroke-width="0.9" transform="rotate(-18,64,62)"/>
+  <!-- glow around main star -->
+  <circle cx="38" cy="48" r="8" fill="#f0c040" opacity="0.06"/>
+  <!-- glow around secondary star -->
+  <circle cx="90" cy="64" r="6" fill="#58a6ff" opacity="0.06"/>
+  <!-- connection arc -->
+  <path d="M46 54 Q64 42 82 64" fill="none" stroke="#7c6ff7" stroke-width="1.4" opacity="0.4" stroke-dasharray="3.5,2.5"/>
+  <!-- main star (warm gold) -->
+  <g transform="translate(38,52)" fill="#f0c040" opacity="0.92">
+    <path d="M0-14 L3.5-4.5 L13-4.5 L5.5 1.5 L8 11 L0 6 L-8 11 L-5.5 1.5 L-13-4.5 L-3.5-4.5 Z"/>
+  </g>
+  <!-- secondary star (cool blue) -->
+  <g transform="translate(88,68)" fill="#58a6ff" opacity="0.8">
+    <path d="M0-9 L2.2-2.8 L9-2.8 L3.5 1 L5.5 7.5 L0 4 L-5.5 7.5 L-3.5 1 L-9-2.8 L-2.2-2.8 Z"/>
+  </g>
+</svg>
