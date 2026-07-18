@@ -24,7 +24,7 @@ function renderOverview(stats: FullStatsResponse): void {
 
   const remaining = Math.max(0, stats.dailyGoal - stats.reviewedToday);
   textEl.textContent =
-    `今日已复习 ${stats.reviewedToday} 个 · 目标 ${stats.dailyGoal} 个 · 还剩 ${remaining} 个`;
+    `${stats.reviewedToday} / ${stats.dailyGoal} · 剩 ${remaining}`;
 }
 
 // ── Calendar Heatmap (GitHub-style: columns=weeks, rows=days) ──
@@ -92,11 +92,13 @@ function renderForecast(stats: FullStatsResponse): void {
 
   const bars = stats.forecast.map(day => {
     const d = new Date(day.date + 'T00:00:00');
-    const label = `${d.getMonth() + 1}/${d.getDate()} ${dayNames[d.getDay()]}`;
+    const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
+    const weekday = dayNames[d.getDay()];
     const pct = (day.count / maxCount) * 100;
     const heavy = day.count > 15 ? 'heavy' : '';
     return `<div class="forecast-row ${heavy}">
-      <span class="date-label">${label}</span>
+      <span class="date-label">${dateStr}</span>
+      <span class="date-weekday">${weekday}</span>
       <div class="forecast-bar-track">
         <div class="forecast-bar-fill" style="width:${pct}%"></div>
       </div>

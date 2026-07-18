@@ -124,39 +124,66 @@
   <!-- ═══ STATS PANEL ═══ -->
   <div class="panel" id="panel-stats">
     <div id="stats-overview">
-      <div class="stat-row">
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-total"><div class="skeleton skeleton--stat"></div></div><div class="syo-stat-label">总词汇</div></div>
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-learning"><div class="skeleton skeleton--stat"></div></div><div class="syo-stat-label">学习中</div></div>
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-mastered"><div class="skeleton skeleton--stat"></div></div><div class="syo-stat-label">已掌握</div></div>
-        <div class="syo-stat stat-big"><div class="syo-stat-value" id="stat-streak"><div class="skeleton skeleton--stat"></div></div><div class="syo-stat-label">连续天数</div></div>
+      <!-- Streak is the emotional anchor — centered, prominent, the first thing you see -->
+      <div class="streak-hero">
+        <div class="streak-flame">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2c-4 6-8 8-8 12a8 8 0 0 0 16 0c0-4-4-6-8-12z"/>
+            <path d="M12 22a4 4 0 0 0 4-4c0-2-2-3-4-6-2 3-4 4-4 6a4 4 0 0 0 4 4z"/>
+          </svg>
+        </div>
+        <div class="streak-number" id="stat-streak"><div class="skeleton skeleton--streak"></div></div>
+        <div class="streak-label">连续学习天数</div>
       </div>
+
+      <!-- Supporting stats as inline typography — no card boxes, just the data -->
+      <div class="stats-inline">
+        <span>共 <strong id="stat-total"><span class="skeleton skeleton--inline-stat"></span></strong> 词</span>
+        <span class="stats-inline-sep">·</span>
+        <span><strong id="stat-learning"><span class="skeleton skeleton--inline-stat"></span></strong> 学习中</span>
+        <span class="stats-inline-sep">·</span>
+        <span><strong id="stat-mastered"><span class="skeleton skeleton--inline-stat"></span></strong> 已掌握</span>
+      </div>
+
+      <!-- Today's progress — compact bar with label above -->
       <div class="today-progress">
-        <div class="progress-track"><div class="progress-fill" id="today-fill" style="width:0%"></div></div>
-        <span class="progress-text" id="today-text">今日 0/0 目标</span>
+        <div class="progress-header">
+          <span class="progress-label">今日进度</span>
+          <span class="progress-text" id="today-text">-- / --</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="today-fill" style="width:0%"></div>
+        </div>
       </div>
     </div>
+
     <div id="stats-calendar">
-      <div class="syo-section-label section-title">学习日历</div>
+      <div class="section-head">
+        <h3 class="section-head-title">学习日历</h3>
+      </div>
       <div class="calendar-wrap">
-        <div class="calendar-months" id="calendar-months" style="visibility:hidden;height:14px"></div>
-        <div style="display:flex">
+        <div class="calendar-months" id="calendar-months" style="visibility:hidden;height:16px"></div>
+        <div class="calendar-body">
           <div class="calendar-row-labels">
-            <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+            <span>一</span><span>三</span><span>五</span><span>日</span>
           </div>
           <div class="calendar-grid" id="calendar-grid"></div>
         </div>
       </div>
       <div class="calendar-legend">
-        <span>少</span>
+        <span class="calendar-legend-label">少</span>
         <span class="calendar-cell"></span>
         <span class="calendar-cell level-1"></span>
         <span class="calendar-cell level-2"></span>
         <span class="calendar-cell level-3"></span>
-        <span>多</span>
+        <span class="calendar-legend-label">多</span>
       </div>
     </div>
+
     <div id="stats-forecast">
-      <div class="syo-section-label section-title">未来 7 天复习预测</div>
+      <div class="section-head">
+        <h3 class="section-head-title">未来 7 天复习预测</h3>
+      </div>
       <div class="forecast-list" id="forecast-list"></div>
     </div>
   </div>
