@@ -8,6 +8,8 @@ export interface AppState {
   settings: VocabSettings;
   fullStats: FullStatsResponse | null;
   listeners: Set<() => void>;
+  /** 当天已进入 step2（点过「认识」）的新词 id —— 重开页面不重复出现 */
+  learnStep2Today: Set<string>;
 }
 
 const state: AppState = {
@@ -25,6 +27,7 @@ const state: AppState = {
   },
   fullStats: null,
   listeners: new Set(),
+  learnStep2Today: new Set(),
 };
 
 export function getState(): AppState { return state; }
@@ -84,4 +87,50 @@ export async function saveSettings(settings: VocabSettings): Promise<void> {
   state.settings = settings;
   await chrome.runtime.sendMessage({ type: 'SAVE_VOCAB_SETTINGS', settings });
   notify();
+}
+
+// ═══════════════════════════════════════════════
+//  当日学习会话（跨页面重开时防重复）
+// ═══════════════════════════════════════════════
+
+const SESSION_KEY = 'learnSession';
+
+export interface LearnSession {
+  date: string;        // 本地日期 YYYY-MM-DD
+  step2Ids: string[];  // 当天已进入 step2（点过「认识」）的新词 id
+}
+
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** 读取当日学习会话（跨天自动重置），并填充到 state */
+export async function loadLearnSession(): Promise<LearnSession> {
+  let s: LearnSession = { date: todayKey(), step2Ids: [] };
+  try {
+    const data = await chrome.storage.local.get(SESSION_KEY);
+    const stored = (data as any)?.[SESSION_KEY] as LearnSession | undefined;
+    if (stored && stored.date === todayKey() && Array.isArray(stored.step2Ids)) {
+      s = stored;
+    }
+  } catch { /* 使用空会话 */ }
+  state.learnStep2Today = new Set(s.step2Ids);
+  return s;
+}
+
+/** 记录某新词当天已进入 step2（点过「认识」） */
+export async function markLearnStep2(wordId: string): Promise<void> {
+  if (state.learnStep2Today.has(wordId)) return;
+  state.learnStep2Today.add(wordId);
+  try {
+    const s = await loadLearnSession();
+    s.step2Ids.push(wordId);
+    await chrome.storage.local.set({ [SESSION_KEY]: s });
+  } catch { /* 尽力而为 */ }
+}
+
+/** 该新词今天是否已进入 step2 */
+export function isLearnStep2Today(wordId: string): boolean {
+  return state.learnStep2Today.has(wordId);
 }

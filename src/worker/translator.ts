@@ -39,6 +39,7 @@ export async function translate(
   }
 
   let lastError: Error | null = null;
+  const errors: string[] = [];
 
   for (const config of enabled) {
     const adapter = ADAPTERS[config.id];
@@ -58,12 +59,18 @@ export async function translate(
       return result;
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
+      errors.push(`${adapter.name}: ${lastError.message}`);
       console.warn(`[Translator] ${adapter.name} failed:`, lastError.message);
       // 继续尝试下一个
     }
   }
 
-  throw new Error(lastError?.message ?? '所有翻译源均失败');
+  // 汇总所有失败原因，避免被最后一个源（如网络失败的 Google）掩盖真实问题
+  if (errors.length > 0) {
+    throw new Error(errors.join('；'));
+  }
+
+  throw new Error('没有启用的翻译源，请在设置中开启至少一个');
 }
 
 /** 已启用的翻译源列表（按优先级排序），供 UI 渲染来源标签 */
@@ -73,4 +80,18 @@ export async function getEnabledSources(): Promise<Array<{ id: string; name: str
     .filter(t => t.enabled && ADAPTERS[t.id])
     .sort((a, b) => a.priority - b.priority)
     .map(t => ({ id: t.id, name: t.name }));
+}
+
+/** 测试指定翻译源是否可用（不要求启用、不走缓存），返回可读结果 */
+export async function testTranslator(
+  sourceId: string, apiKey?: string
+): Promise<{ ok: boolean; message: string }> {
+  const adapter = ADAPTERS[sourceId];
+  if (!adapter) return { ok: false, message: '未知翻译源' };
+  try {
+    const result = await adapter.translate('Hello, world!', 'en', 'zh', apiKey || undefined);
+    return { ok: true, message: result.text };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : String(err) };
+  }
 }

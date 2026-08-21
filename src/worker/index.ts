@@ -1,25 +1,32 @@
-import type { WorkerRequest, TranslateResponse, TranslateErrorResponse } from '../shared/messages';
-import { translate, getEnabledSources } from './translator';
-import { analyzeGrammar } from './grammar';
-import { speak } from './tts';
-import {
-  getHistory, addHistory,
-  getFavorites, addFavorite, removeFavorite, isFavorite,
-  updateFavorite, getDueWords,
-  getSettings, saveSettings,
-  saveVocabSettings,
-} from './storage';
-import { sm2, normalizeQuality } from './srs';
+import type { WorkerRequest } from '../shared/messages';
+import { testTranslator } from './translator';
 import { cleanExpiredCache } from './cache';
+import { handleTranslate } from './handlers/translate';
+import { handleSpeak, handleAnalyzeGrammar } from './handlers/sidebar';
+import { handleToggleFavorite, handleRemoveFavorite, handleGetFavorites } from './handlers/favorites';
+import { handleSubmitReview, handleGetDueWords, handleGetLearnStats, handleGetWordHistory } from './handlers/review';
+import { handleGetSettings, handleSaveSettings, handleGetSources, handleSaveVocabSettings } from './handlers/settings';
+import { handleGetForecast } from './handlers/stats';
+import {
+  getHistory,
+  getFavorites, addFavorite, findFavoriteByKey, favoriteKey,
+  updateFavorite, getDueWords, dedupeFavorites,
+} from './storage';
 
 // ── 定期清理过期缓存 ──
+// MV3 SW 空闲约 30s 即被终止，setInterval 在睡眠期间不触发；清理并入 alarm 唤醒时执行
 cleanExpiredCache();
-setInterval(cleanExpiredCache, 6 * 60 * 60 * 1000);
+
+// ── 存量词形归并迁移（大小写/时态重复词条合并，幂等）──
+void dedupeFavorites().then(n => {
+  if (n > 0) console.warn(`[SW] 词形归并迁移：合并删除了 ${n} 条重复词条`);
+}).catch(() => {});
 
 // ── SRS 复习提醒 ──
 chrome.alarms.create('srs-check', { periodInMinutes: 60 }).catch(() => {});
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== 'srs-check') return;
+  cleanExpiredCache(); // 每小时随提醒一起清一次缓存
   const due = await getDueWords();
   if (due.length === 0) return;
 
@@ -45,14 +52,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }).catch(() => {});
 });
 
-// ── 语言检测辅助 ──
-function detectLang(text: string): string {
-  // 简单字符集检测
-  if (/[一-鿿㐀-䶿]/.test(text)) return 'zh';
-  if (/[぀-ゟ゠-ヿ]/.test(text)) return 'ja';
-  if (/[가-힯]/.test(text)) return 'ko';
-  return 'en';
-}
+// 点击复习提醒通知 → 直达复习页
+chrome.notifications.onClicked.addListener((id) => {
+  if (id !== 'srs-reminder') return;
+  chrome.tabs.create({ url: chrome.runtime.getURL('src/vocab/index.html#/learn') }).catch(() => {});
+});
 
 // ── ID 生成 ──
 function generateId(): string {
@@ -60,13 +64,24 @@ function generateId(): string {
 }
 
 // ── 键盘快捷键 ──
+// 快捷键在未注入 content script 的页面（chrome://、商店页等）会静默失败 → 给一条通知反馈
+function notifyShortcutUnavailable(action: string): void {
+  chrome.notifications.create('shortcut-unavailable', {
+    type: 'basic',
+    iconUrl: 'icons/icon-48.png',
+    title: '划词翻译',
+    message: `快捷键「${action}」不可用：当前页面不支持划词`,
+    priority: 0,
+  }).catch(() => {});
+}
+
 chrome.commands.onCommand.addListener(async (command) => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return;
   if (command === 'translate') {
-    chrome.tabs.sendMessage(tab.id, { action: 'translate-selection' }).catch(() => {});
+    chrome.tabs.sendMessage(tab.id, { action: 'translate-selection' }).catch(() => notifyShortcutUnavailable('翻译'));
   } else if (command === 'speak') {
-    chrome.tabs.sendMessage(tab.id, { action: 'speak-selection' }).catch(() => {});
+    chrome.tabs.sendMessage(tab.id, { action: 'speak-selection' }).catch(() => notifyShortcutUnavailable('朗读'));
   }
 });
 
@@ -80,7 +95,13 @@ chrome.runtime.onMessage.addListener(
       .then(sendResponse)
       .catch(err => {
         console.error('[SW] handler error:', err);
-        sendResponse({ type: 'TRANSLATE_ERROR', text: '', error: err.message });
+        // 非翻译请求失败也按原类型回包会让调用方误判（如 GET_SETTINGS 失败 → popup 误显"未配置翻译源"横幅），
+        // 统一回 WORKER_ERROR，调用方按查询失败处理
+        sendResponse({
+          type: 'WORKER_ERROR',
+          requestType: req.type,
+          error: err instanceof Error ? err.message : String(err),
+        });
       });
 
     return true; // 异步响应
@@ -89,78 +110,23 @@ chrome.runtime.onMessage.addListener(
 
 async function handleRequest(req: WorkerRequest): Promise<unknown> {
   switch (req.type) {
-    // ── 翻译 ──
+    // ── 翻译（含写历史，见 handlers/translate.ts）──
     case 'TRANSLATE': {
-      const from = req.sourceLang === 'auto' ? detectLang(req.text) : req.sourceLang;
-      const to = req.targetLang || 'zh';
-
-      try {
-        const result = await translate(req.text, from, to, req.skipCache, req.sourceId);
-
-        // 写入历史
-        await addHistory({
-          id: generateId(),
-          word: req.text,
-          translation: result,
-          sourceUrl: req.sourceUrl ?? '',
-          timestamp: Date.now(),
-        });
-
-        const resp: TranslateResponse = {
-          type: 'TRANSLATE_RESULT',
-          text: req.text,
-          translation: result,
-          from,
-          to,
-        };
-        return resp;
-      } catch (err) {
-        const resp: TranslateErrorResponse = {
-          type: 'TRANSLATE_ERROR',
-          text: req.text,
-          error: err instanceof Error ? err.message : '未知错误',
-        };
-        return resp;
-      }
+      return handleTranslate(req);
     }
 
-    // ── 朗读 ──
+    // ── 朗读（lang='auto' 时按文本内容检测，见 handlers/sidebar.ts）──
     case 'SPEAK': {
-      const success = await speak(req.text, req.lang);
-      return { type: 'SPEAK_RESULT', success };
+      return handleSpeak(req);
     }
 
     // ── 收藏 ──
     case 'TOGGLE_FAVORITE': {
-      const existing = await isFavorite(req.word);
-      if (existing) {
-        await removeFavorite(existing.id);
-        return { type: 'FAVORITE_RESULT', added: false, word: null };
-      } else {
-        const word = {
-          id: generateId(),
-          word: req.word,
-          translation: req.translation,
-          context: req.context,
-          sourceUrl: req.sourceUrl,
-          createdAt: Date.now(),
-          reviewCount: 0,
-          lastReviewedAt: 0,
-          nextReviewAt: 0,
-          easeFactor: 2.5,
-          reviewHistory: [],
-          learned: false,
-          starred: false,
-          note: '',
-        };
-        await addFavorite(word);
-        return { type: 'FAVORITE_RESULT', added: true, word };
-      }
+      return handleToggleFavorite(req);
     }
 
     case 'REMOVE_FAVORITE': {
-      await removeFavorite(req.id);
-      return { type: 'FAVORITE_RESULT', added: false, word: null };
+      return handleRemoveFavorite(req);
     }
 
     // ── 查询 ──
@@ -170,133 +136,109 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
     }
 
     case 'GET_FAVORITES': {
-      const words = await getFavorites();
-      return { type: 'FAVORITES_RESULT', words };
+      return handleGetFavorites();
+    }
+
+    case 'CHECK_FAVORITE': {
+      const existing = await findFavoriteByKey(favoriteKey(req.word, req.lemma));
+      return { type: 'FAVORITE_CHECK_RESULT', word: req.word, favorited: !!existing };
+    }
+
+    case 'OPEN_OPTIONS': {
+      try {
+        await chrome.runtime.openOptionsPage();
+        return { type: 'OPEN_OPTIONS_RESULT', ok: true };
+      } catch {
+        return { type: 'OPEN_OPTIONS_RESULT', ok: false };
+      }
     }
 
     case 'GET_SETTINGS': {
-      const settings = await getSettings();
-      return { type: 'SETTINGS_RESULT', ...settings };
+      return handleGetSettings(req);
     }
 
     case 'GET_SOURCES': {
-      const sources = await getEnabledSources();
-      return { type: 'SOURCES_RESULT', sources };
+      return handleGetSources(req);
     }
 
     case 'ANALYZE_GRAMMAR': {
-      try {
-        const analysis = await analyzeGrammar(req.text, req.lang, req.detail);
-        return { type: 'GRAMMAR_RESULT', text: req.text, analysis };
-      } catch (err) {
-        return {
-          type: 'GRAMMAR_ERROR',
-          text: req.text,
-          error: err instanceof Error ? err.message : '语法分析失败',
-        };
-      }
-    }
-
-    case 'SHOW_SIDEBAR': {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tab?.id) {
-        chrome.tabs.sendMessage(tab.id, { action: 'show-sidebar', word: req.word, translation: req.translation }).catch(() => {});
-      }
-      return { type: 'SPEAK_RESULT', success: true }; // 复用简单应答
+      return handleAnalyzeGrammar(req);
     }
 
     case 'SAVE_SETTINGS': {
-      await saveSettings(req.translators, req.preferences);
-      return { type: 'SETTINGS_RESULT', translators: req.translators, preferences: req.preferences };
+      return handleSaveSettings(req);
+    }
+
+    case 'TEST_TRANSLATOR': {
+      return testTranslator(req.translatorId, req.apiKey);
+    }
+
+    // ── 批量导入（按匹配 key 去重：大小写/词形不敏感，已存在的跳过、保留本机进度）──
+    case 'IMPORT_WORDS': {
+      const favorites = await getFavorites();
+      const existing = new Set(favorites.map(f => favoriteKey(f.word, f.lemma)));
+      const now = Date.now();
+      const fresh: import('../shared/types').FavoriteWord[] = [];
+      for (const w of req.words) {
+        const word = w?.word?.trim();
+        const lemma = w?.lemma ? String(w.lemma).toLowerCase() : undefined;
+        const key = favoriteKey(word, lemma);
+        if (!word || existing.has(key)) continue;
+        existing.add(key);
+        // 词头用原形；导入词形与原形不同时记入 forms
+        let forms = w.forms ?? [];
+        if (lemma && word.toLowerCase() !== lemma && !forms.some(f => f.toLowerCase() === word.toLowerCase())) {
+          forms = [...forms, word];
+        }
+        fresh.push({
+          id: generateId(),
+          word: lemma ?? word,
+          lemma,
+          forms,
+          translation: {
+            text: w.translation?.text ?? word,
+            phonetic: w.translation?.phonetic ?? '',
+            partsOfSpeech: w.translation?.partsOfSpeech ?? undefined,
+            examples: w.translation?.examples ?? undefined,
+            source: w.translation?.source ?? '',
+            sourceId: w.translation?.sourceId ?? undefined,
+          },
+          context: w.context ?? '',
+          sourceUrl: w.sourceUrl ?? '',
+          createdAt: typeof w.createdAt === 'number' ? w.createdAt : now,
+          reviewCount: w.reviewCount ?? 0,
+          lastReviewedAt: w.lastReviewedAt ?? 0,
+          nextReviewAt: w.nextReviewAt ?? 0,
+          easeFactor: w.easeFactor ?? 2.5,
+          reviewHistory: w.reviewHistory ?? [],
+          learned: w.learned ?? false,
+          starred: w.starred ?? false,
+          note: w.note ?? '',
+        });
+      }
+      for (const f of fresh) await addFavorite(f);
+      return { type: 'IMPORT_WORDS_RESULT', imported: fresh.length, skipped: req.words.length - fresh.length };
     }
 
     case 'SUBMIT_REVIEW': {
-      const favorites = await getFavorites();
-      const word = favorites.find(f => f.id === req.wordId);
-      if (!word) return { type: 'REVIEW_RESULT', word: null as any };
-
-      const patch = sm2(word, req.quality);
-
-      // Compute interval in days for history record
-      const intervalDays = Math.round((patch.nextReviewAt - patch.lastReviewedAt) / 86400000);
-
-      // Append to review history (max 30 entries)
-      const history = word.reviewHistory ?? [];
-      history.push({
-        timestamp: Date.now(),
-        quality: req.quality,
-        interval: intervalDays,
-      });
-      if (history.length > 30) history.splice(0, history.length - 30);
-
-      // Mark learned on first successful graduation (Good or Easy)
-      const grade = normalizeQuality(req.quality);
-      const learned = word.learned || (grade >= 3 && patch.reviewCount >= 1);
-
-      const updated = await updateFavorite(req.wordId, {
-        ...patch,
-        reviewHistory: history,
-        learned,
-      });
-      return { type: 'REVIEW_RESULT', word: updated! };
+      // FSRS-5 全量调度（含难度 D 演化），见 handlers/review.ts
+      return handleSubmitReview(req);
     }
 
     case 'GET_DUE_WORDS': {
-      const due = await getDueWords();
-      return { type: 'DUE_WORDS_RESULT', words: due };
+      return handleGetDueWords(req);
     }
 
     case 'GET_LEARN_STATS': {
-      const all = await getFavorites();
-      const now = Date.now();
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayTs = todayStart.getTime();
-
-      const total = all.length;
-      const due = all.filter(f => f.nextReviewAt === 0 || f.nextReviewAt <= now).length;
-      const reviewedToday = all.filter(f => f.lastReviewedAt >= todayTs).length;
-      const mastered = all.filter(f => f.reviewCount >= 3 && f.easeFactor >= 2.0).length;
-
-      // streak: 简单按连续有复习的天数算
-      let streak = 0;
-      const dayMs = 86400000;
-      let checkDay = todayTs;
-      while (true) {
-        const hasReview = all.some(f =>
-          f.lastReviewedAt >= checkDay && f.lastReviewedAt < checkDay + dayMs
-        );
-        if (!hasReview) break;
-        streak++;
-        checkDay -= dayMs;
-      }
-
-      return { type: 'LEARN_STATS_RESULT', total, due, reviewedToday, streak, mastered };
+      return handleGetLearnStats(req);
     }
 
     case 'GET_WORD_HISTORY': {
-      const favorites = await getFavorites();
-      const word = favorites.find(f => f.id === req.wordId);
-      return {
-        type: 'WORD_HISTORY_RESULT',
-        wordId: req.wordId,
-        history: word?.reviewHistory ?? [],
-      };
+      return handleGetWordHistory(req);
     }
 
     case 'GET_FORECAST': {
-      const favorites = await getFavorites();
-      const now = Date.now();
-      const forecast: Array<{ date: string; count: number }> = [];
-      for (let i = 1; i <= req.days; i++) {
-        const dayStart = now + i * 86400000;
-        const dayEnd = dayStart + 86400000;
-        const count = favorites.filter(f =>
-          f.nextReviewAt > 0 && f.nextReviewAt >= dayStart && f.nextReviewAt < dayEnd
-        ).length;
-        forecast.push({ date: new Date(dayStart).toISOString().slice(0, 10), count });
-      }
-      return { type: 'FORECAST_RESULT', days: forecast };
+      return handleGetForecast(req);
     }
 
     case 'GET_FULL_STATS': {
@@ -356,8 +298,7 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
     }
 
     case 'SAVE_VOCAB_SETTINGS': {
-      await saveVocabSettings(req.settings);
-      return { type: 'VOCAB_SETTINGS_RESULT', settings: req.settings };
+      return handleSaveVocabSettings(req);
     }
 
     case 'STAR_WORD': {

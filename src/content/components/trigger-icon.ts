@@ -7,7 +7,9 @@ const CSS = `
   .trigger {
     display: inline-flex; align-items: center; gap: 6px;
     height: 30px; padding: 0 11px;
-    background: var(--syo-bg-elevated);
+    background: rgba(28, 33, 41, 0.88);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    backdrop-filter: blur(10px) saturate(140%);
     border: 1px solid var(--syo-border);
     border-radius: 20px;
     color: var(--syo-info);
@@ -15,6 +17,10 @@ const CSS = `
     cursor: pointer;
     transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
     animation: pop .12s ease;
+  }
+  :host(.theme-light) .trigger {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 4px 14px rgba(31, 35, 40, 0.14);
   }
   .trigger:hover {
     transform: translateY(-1px) scale(1.03);

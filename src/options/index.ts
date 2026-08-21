@@ -3,6 +3,9 @@ import type { TranslatorConfig, Preferences } from '../shared/types';
 /** 需要 API Key 的翻译源 ID 集合 */
 const API_KEY_IDS = new Set(['deepseek', 'tencent', 'baidu', 'deepl']);
 
+/** 测试超时（毫秒）：请求可能长期挂起，UI 层兜底 */
+const TEST_TIMEOUT_MS = 15000;
+
 interface State {
   translators: TranslatorConfig[];
   preferences: Preferences;
@@ -38,6 +41,12 @@ function renderTranslators(translators: TranslatorConfig[]) {
         ${needsKey ? `<input class="api-key-input" type="password" placeholder="输入 API Key" data-id="${t.id}">` : ''}
       </div>
       <button class="toggle ${t.enabled ? 'enabled' : ''}" data-id="${t.id}" title="开关"></button>
+    `;
+    card.innerHTML += `
+      <div class="translator-actions" style="flex-basis:100%">
+        <button class="test-btn" data-test-id="${t.id}">测试连接</button>
+        <span class="test-result" data-test-result="${t.id}"></span>
+      </div>
     `;
     list.appendChild(card);
   });
@@ -83,6 +92,62 @@ function renderTranslators(translators: TranslatorConfig[]) {
       t.apiKey = (input as HTMLInputElement).value;
     });
   });
+
+  // 测试连接事件
+  list.querySelectorAll('.test-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = (btn as HTMLElement).dataset.testId!;
+      void runTest(id, list);
+    });
+  });
+}
+
+/** 测试指定翻译源：填写中的 Key 立即可测，无需先保存 */
+async function runTest(id: string, list: HTMLElement): Promise<void> {
+  const card = list.querySelector<HTMLElement>(`.translator-card[data-id="${id}"]`);
+  if (!card) return;
+  const btn = card.querySelector<HTMLButtonElement>('.test-btn');
+  const resultEl = card.querySelector<HTMLElement>('.test-result');
+  if (!btn || !resultEl) return;
+
+  const input = card.querySelector<HTMLInputElement>('.api-key-input');
+  const needsKey = API_KEY_IDS.has(id);
+  const apiKey = input?.value.trim() || '';
+  if (needsKey && !apiKey) {
+    resultEl.className = 'test-result fail';
+    resultEl.textContent = '请先填写 API Key';
+    return;
+  }
+
+  const originalText = btn.textContent || '测试连接';
+  btn.disabled = true;
+  btn.textContent = '测试中…';
+  resultEl.className = 'test-result';
+  resultEl.textContent = '';
+
+  let resp: { ok: boolean; message: string } | null = null;
+  try {
+    const send = chrome.runtime.sendMessage({
+      type: 'TEST_TRANSLATOR',
+      translatorId: id,
+      apiKey,
+    }) as Promise<{ ok: boolean; message: string }>;
+    const timeout = new Promise<null>(res => setTimeout(() => res(null), TEST_TIMEOUT_MS));
+    resp = await Promise.race([send, timeout]);
+  } catch {
+    resp = null;
+  }
+
+  btn.disabled = false;
+  btn.textContent = originalText;
+
+  if (resp?.ok) {
+    resultEl.className = 'test-result ok';
+    resultEl.textContent = `✓ 连接正常：${resp.message}`;
+  } else {
+    resultEl.className = 'test-result fail';
+    resultEl.textContent = `✗ ${resp?.message || `测试超时（${TEST_TIMEOUT_MS / 1000} 秒），请检查网络、Key 或稍后重试`}`;
+  }
 }
 
 let state: State;
@@ -93,6 +158,11 @@ async function init() {
   // 按优先级排序一次，后续通过上下按钮调整顺序
   state.translators.sort((a, b) => a.priority - b.priority);
   renderTranslators(state.translators);
+
+  // 没有启用任何翻译源 → 显示顶部引导横幅
+  const enabledCount = state.translators.filter(t => t.enabled).length;
+  const banner = document.getElementById('setup-banner');
+  if (banner) banner.classList.toggle('visible', enabledCount === 0);
 
   const targetSel = document.getElementById('target-lang') as HTMLSelectElement;
   const sourceSel = document.getElementById('source-lang') as HTMLSelectElement;

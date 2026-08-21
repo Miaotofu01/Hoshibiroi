@@ -35,6 +35,17 @@ export function extractHostname(url: string): string {
   }
 }
 
+/** 仅放行 http/https 链接；其它协议（javascript: 等）一律返回空串 */
+export function safeUrl(url: string | undefined | null): string {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    return u.protocol === 'http:' || u.protocol === 'https:' ? url : '';
+  } catch {
+    return '';
+  }
+}
+
 // ── Mastery calculation (0-100) ──
 
 export function calcMastery(word: FavoriteWord): number {

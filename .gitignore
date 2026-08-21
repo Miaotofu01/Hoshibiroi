@@ -1,3 +1,9 @@
 node_modules/
 dist/
 .claude/worktrees/
+# 敏感/本地产物（历史已被 filter-branch 清理，勿再提交）
+dist.pem
+dist.crx
+.superpowers/
+docs/superpowers/
+src/icons/

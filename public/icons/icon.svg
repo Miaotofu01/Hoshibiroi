@@ -1,25 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <defs>
-    <radialGradient id="bg" cx="50%" cy="50%">
-      <stop offset="0%" stop-color="#0f1928"/>
-      <stop offset="100%" stop-color="#0d1117"/>
-    </radialGradient>
-  </defs>
-  <rect width="128" height="128" rx="24" fill="url(#bg)"/>
-  <!-- orbit ring -->
-  <ellipse cx="64" cy="62" rx="38" ry="12" fill="none" stroke="#30363d" stroke-width="0.9" transform="rotate(-18,64,62)"/>
-  <!-- glow around main star -->
-  <circle cx="38" cy="48" r="8" fill="#f0c040" opacity="0.06"/>
-  <!-- glow around secondary star -->
-  <circle cx="90" cy="64" r="6" fill="#58a6ff" opacity="0.06"/>
-  <!-- connection arc -->
-  <path d="M46 54 Q64 42 82 64" fill="none" stroke="#7c6ff7" stroke-width="1.4" opacity="0.4" stroke-dasharray="3.5,2.5"/>
-  <!-- main star (warm gold) -->
-  <g transform="translate(38,52)" fill="#f0c040" opacity="0.92">
-    <path d="M0-14 L3.5-4.5 L13-4.5 L5.5 1.5 L8 11 L0 6 L-8 11 L-5.5 1.5 L-13-4.5 L-3.5-4.5 Z"/>
-  </g>
-  <!-- secondary star (cool blue) -->
-  <g transform="translate(88,68)" fill="#58a6ff" opacity="0.8">
-    <path d="M0-9 L2.2-2.8 L9-2.8 L3.5 1 L5.5 7.5 L0 4 L-5.5 7.5 L-3.5 1 L-9-2.8 L-2.2-2.8 Z"/>
-  </g>
+  <!-- 星拾 · Linear 风格图标（design-md 品牌 token）：
+       canvas #010102 / primary #5e6ad2 / hairline #23252a / ink-muted #d0d6e0
+       纪律：单强调色（薰衣草紫只用于品牌标记），无渐变、无辉光、无第二彩色 -->
+  <rect width="128" height="128" rx="24" fill="#010102"/>
+  <rect x="0.75" y="0.75" width="126.5" height="126.5" rx="23.25" fill="none" stroke="#23252a" stroke-width="1.5"/>
+
+  <!-- 主星：薰衣草紫四角闪光（拾取生词 / 划词） -->
+  <path d="M64 20 C64 42 90 52 106 57 C90 62 64 76 64 98 C64 76 38 62 22 57 C38 52 64 42 64 20 Z"
+        fill="#5e6ad2"/>
+
+  <!-- 划词条：中性灰，唯一的语义提示（无彩色） -->
+  <rect x="40" y="106" width="48" height="8" rx="4" fill="#d0d6e0" opacity="0.6"/>
 </svg>

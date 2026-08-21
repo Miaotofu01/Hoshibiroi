@@ -1,10 +1,23 @@
 import { html, nothing } from 'lit';
 import type { TranslationResult } from '../../shared/types';
 import { ShadowView } from '../shadow-view';
-import { iconSpeak, iconStar, iconChevronRight, iconRetry, iconPin, iconSettings, iconClose } from '../icons';
+import { iconSpeak, iconStar, iconChevronRight, iconRetry, iconPin, iconSettings, iconClose, iconCopy, iconMore } from '../icons';
 
 const MIN_W = 240, MAX_W = 640;
 const MIN_H = 120;
+
+/** 弹泡知识区可配置项（id → 设置浮窗里的勾选标签） */
+const SECTION_ITEMS: Array<{ id: string; label: string }> = [
+  { id: 'pos', label: '释义' },
+  { id: 'inflections', label: '词形变化' },
+  { id: 'synonyms', label: '同反义词' },
+  { id: 'collocations', label: '常用搭配' },
+  { id: 'wordRoot', label: '词根词缀' },
+  { id: 'usageNote', label: '易混辨析' },
+  { id: 'memoryTip', label: '记忆技巧' },
+  { id: 'register', label: '语域' },
+  { id: 'examples', label: '例句' },
+];
 
 const CSS = `
   :host {
@@ -27,8 +40,9 @@ const CSS = `
   .bubble {
     display: flex; flex-direction: column;
     max-width: calc(100vw - 16px);
-    opacity: var(--card-opacity, 1);
-    background: var(--bg-primary);
+    background: rgba(13, 17, 23, calc(var(--card-opacity, 1) * 0.82));
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
     border: 1px solid var(--border);
     border-top: 2px solid var(--accent);
     border-radius: 2px 2px var(--syo-radius-lg) var(--syo-radius-lg);
@@ -38,6 +52,10 @@ const CSS = `
     color: var(--text-primary);
     animation: rise 200ms var(--syo-ease-out);
     position: relative; /* 为 resize 手柄提供定位上下文 */
+  }
+  :host(.theme-light) .bubble {
+    background: rgba(255, 255, 255, calc(var(--card-opacity, 1) * 0.85));
+    box-shadow: 0 12px 40px rgba(31, 35, 40, 0.18), 0 3px 10px rgba(31, 35, 40, 0.12);
   }
   .bubble.pinned { border-top-color: var(--syo-cyan); }
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
@@ -69,14 +87,14 @@ const CSS = `
     border: 1px solid rgba(63,185,80,.22); white-space: nowrap;
   }
 
-  .body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 14px 12px; }
+  .body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 14px 12px; font-family: var(--font-display); }
   .body::-webkit-scrollbar { width: 8px; }
   .body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
   .body::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
   .body::-webkit-scrollbar-track { background: transparent; }
   .orig { font-family: var(--font-mono); font-size: var(--font-size-base); color: var(--text-secondary); margin-bottom: 3px; word-break: break-word; }
   .phon { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--text-muted); margin-bottom: 9px; }
-  .trans { font-size: var(--font-size-xl, 20px); font-weight: 600; line-height: 1.35; color: var(--text-primary); letter-spacing: .01em; word-break: break-word; }
+  .trans { font-family: var(--font-display); font-size: var(--font-size-xl, 20px); font-weight: 600; line-height: 1.5; color: var(--text-primary); letter-spacing: .01em; word-break: break-word; }
 
   .divider { flex: 0 0 auto; height: 1px; background: var(--border-soft); }
   .actions { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; padding: 10px 12px; }
@@ -106,6 +124,37 @@ const CSS = `
   .expand:hover { background: rgba(122,162,247,.18); }
   .expand svg { width: 14px; height: 14px; }
 
+  /* ── 溢出菜单（低频操作：设置 / 固定）── */
+  .more-wrap { position: relative; }
+  .more-menu {
+    position: absolute; bottom: calc(100% + 6px); right: 0;
+    min-width: 150px;
+    background: rgba(22, 27, 34, calc(var(--card-opacity, 1) * 0.95));
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid var(--border);
+    border-radius: var(--syo-radius-lg);
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    padding: 4px;
+    z-index: 3;
+    animation: popIn 160ms var(--syo-ease-out);
+  }
+  :host(.theme-light) .more-menu {
+    background: rgba(255, 255, 255, calc(var(--card-opacity, 1) * 0.97));
+    box-shadow: 0 8px 32px rgba(31, 35, 40, 0.18);
+  }
+  .more-item {
+    display: flex; align-items: center; gap: 8px;
+    width: 100%; padding: 7px 10px;
+    background: none; border: none; border-radius: var(--syo-radius-sm);
+    font-family: var(--font-display); font-size: 13px;
+    color: var(--text-secondary); cursor: pointer;
+    transition: var(--transition);
+  }
+  .more-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .more-item.on { color: var(--syo-cyan); }
+  .more-item svg { width: 14px; height: 14px; }
+
   /* ── 调尺寸手柄（右下角，低调）── */
   .resize-handle {
     position: absolute; bottom: 0; right: 0;
@@ -123,16 +172,72 @@ const CSS = `
   }
   .resize-handle:hover, .bubble:hover .resize-handle { opacity: .7; }
 
+  /* ── 知识区块（弹泡内，可在设置浮窗中配置显隐）── */
+  .sections { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  .sec-label {
+    display: flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: calc(var(--font-size-sm) - 1px);
+    letter-spacing: .08em; color: var(--text-muted); text-transform: uppercase;
+  }
+  .sec-label::after { content: ''; flex: 1; height: 1px; background: var(--border-soft); }
+  .sec-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .sec-chip {
+    font-family: var(--font-mono); font-size: calc(var(--font-size-sm) - 1px);
+    padding: 2px 8px; border-radius: 10px; line-height: 1.5;
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+  .sec-chip.syn { background: rgba(63,185,80,.1); border-color: rgba(63,185,80,.25); color: var(--accent-green); }
+  .sec-chip.ant { background: rgba(248,81,73,.08); border-color: rgba(248,81,73,.25); color: var(--accent-red); }
+  .sec-chip.pos { background: rgba(187,154,247,.08); border-color: rgba(187,154,247,.22); color: var(--accent-purple); }
+  .posline { display: flex; gap: 8px; align-items: baseline; font-size: var(--font-size-sm); padding: 2px 0; color: var(--text-secondary); }
+  .colloc-row { display: flex; align-items: baseline; gap: 10px; font-size: var(--font-size-sm); padding: 2px 0; }
+  .colloc-row .pat { font-family: var(--font-mono); color: var(--text-primary); }
+  .colloc-row .mea { color: var(--text-muted); margin-left: auto; text-align: right; }
+  .sec-note {
+    border-left: 2px solid var(--accent-purple); background: var(--bg-secondary);
+    border-radius: 0 var(--syo-radius-sm) var(--syo-radius-sm) 0;
+    padding: 6px 10px; font-size: var(--font-size-sm); line-height: 1.6;
+    color: var(--text-secondary);
+  }
+  .sec-note.tip { border-left-color: var(--accent-green); }
+  .sec-root { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--accent); line-height: 1.5; }
+  .sec .ex {
+    border-left: 2px solid var(--accent-green); background: var(--bg-secondary);
+    border-radius: 0 var(--syo-radius-sm) var(--syo-radius-sm) 0; padding: 7px 10px; margin-bottom: 6px;
+  }
+  .sec .ex .o { font-size: var(--font-size-sm); color: var(--text-primary); margin-bottom: 2px; line-height: 1.5; }
+  .sec .ex .tr { font-size: calc(var(--font-size-sm) - 1px); color: var(--text-muted); line-height: 1.5; }
+  .sec-more { font-size: calc(var(--font-size-sm) - 1px); color: var(--text-muted); font-style: italic; }
+
+  .chip.reg { background: rgba(125,207,255,.1); color: var(--syo-cyan); border-color: rgba(125,207,255,.25); }
+
+  /* ── 设置浮窗：显示内容复选框 ── */
+  .set-chks { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .set-chk {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-display); font-size: 12px; color: var(--text-muted);
+    cursor: pointer; user-select: none;
+  }
+  .set-chk input { accent-color: var(--accent); margin: 0; cursor: pointer; }
+  .set-chk.on { color: var(--text-secondary); }
+
   /* ── 设置小浮窗（独立浮层，从齿轮按钮旁弹出）── */
   .settings-pop {
     position: fixed;
     z-index: 2147483648; /* 高于主卡片 */
     width: 250px; max-width: calc(100vw - 24px);
-    background: var(--syo-bg-elevated);
+    background: rgba(22, 27, 34, calc(var(--card-opacity, 1) * 0.95));
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
     border: 1px solid var(--border);
     border-radius: var(--syo-radius-lg);
     box-shadow: 0 8px 32px rgba(0,0,0,.55);
     animation: popIn 200ms var(--syo-ease-out);
+  }
+  :host(.theme-light) .settings-pop {
+    background: rgba(255, 255, 255, calc(var(--card-opacity, 1) * 0.97));
+    box-shadow: 0 8px 32px rgba(31, 35, 40, 0.18);
   }
   @keyframes popIn { from { opacity: 0; transform: scale(.93) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
   .settings-pop .set-head {
@@ -222,6 +327,8 @@ export class PopupBubble extends ShadowView {
   private _fontScale = 20;
   /** 设置面板是否展开 */
   private _showSettings = false;
+  /** 溢出菜单是否展开 */
+  private _showMore = false;
   /** 设置浮窗锚点（齿轮按钮的左下角坐标） */
   private _settingsX = 0;
   private _settingsY = 0;
@@ -234,6 +341,19 @@ export class PopupBubble extends ShadowView {
   /** 翻译方向 */
   private _targetLang = 'zh';
   private _sourceLang = 'auto';
+  /** 弹泡知识区显隐配置（id → 是否显示；缺省全开） */
+  private _sections: Record<string, boolean> = {};
+
+  /** 外部注入弹泡知识区配置（content script 从 storage 读出后调用） */
+  setSections(sections: Record<string, boolean> | undefined): void {
+    this._sections = sections ?? {};
+    this.update();
+  }
+
+  /** 某知识区是否显示（显式 false 才隐藏） */
+  private _secOn(id: string): boolean {
+    return this._sections[id] !== false;
+  }
 
   get targetLang(): string { return this._targetLang; }
   get sourceLang(): string { return this._sourceLang; }
@@ -276,6 +396,9 @@ export class PopupBubble extends ShadowView {
           <button class="expand" @click=${() => this.emit('retry-translate')} style="margin-left:0">
             ${iconRetry} 重试
           </button>
+          <button class="expand" @click=${() => this._openOptions()} title="打开设置页检查翻译源与 API Key">
+            ${iconSettings} 去设置
+          </button>
         </div>
       </div>`;
     }
@@ -289,24 +412,89 @@ export class PopupBubble extends ShadowView {
       <div class="meta" @mousedown=${(e: MouseEvent) => this._onDragStart(e)}>
         <span class="sig">${this._sig || ''}</span>
         <span class="grip" title="拖拽移动卡片"></span>
+        ${this._secOn('register') && t.register ? html`<span class="chip reg" title="语域">${t.register}</span>` : nothing}
         <span class="chip">${t.source}</span>
       </div>
       <div class="body">
         ${showOrig ? html`<div class="orig">${this._originalWord}</div>` : nothing}
         ${t.phonetic ? html`<div class="phon">/${t.phonetic}/</div>` : nothing}
         <div class="trans">${t.text}</div>
+        ${this._sectionsTemplate(t)}
       </div>
       <div class="divider"></div>
       <div class="actions">
+        <button class="iconbtn" title="复制译文" @click=${() => this._copyTranslation()}>${iconCopy}</button>
         <button class="iconbtn" title="朗读" @click=${() => this.emit('speak-word', { word: this._originalWord })}>${iconSpeak}</button>
         <button class="iconbtn ${this.isFavorited ? 'on' : ''}" title="收藏" @click=${() => this._toggleFavorite()}>${iconStar}</button>
-        <button class="iconbtn" title="设置" @click=${(e: Event) => this._openSettings(e)}>${iconSettings}</button>
-        <button class="iconbtn ${this.pinned ? 'pinned-on' : ''}" title="${this.pinned ? '已固定 · 点击解固' : '固定卡片 · 点页面其他地方不会关'}" @click=${() => this._togglePin()}>${iconPin}</button>
+        <div class="more-wrap">
+          <button class="iconbtn ${this._showMore ? 'on' : ''}" title="更多操作" @click=${() => this._toggleMore()}>${iconMore}</button>
+          ${this._showMore ? this._moreMenuTemplate() : nothing}
+        </div>
         <button class="expand" title="展开详情" @click=${() => this.emit('expand-detail')}>详情 ${iconChevronRight}</button>
       </div>
       <div class="resize-handle" title="拖拽调整卡片尺寸" @mousedown=${(e: MouseEvent) => this._onResizeStart(e)}></div>
     </div>
     ${this._showSettings ? this._settingsPopTemplate() : nothing}`;
+  }
+
+  /** 弹泡知识区（按用户配置显隐；LLM 源才有的字段，无值不渲染） */
+  private _sectionsTemplate(t: TranslationResult) {
+    const hasAny =
+      (this._secOn('pos') && !!t.partsOfSpeech?.length)
+      || (this._secOn('inflections') && !!t.inflections?.length)
+      || (this._secOn('synonyms') && (!!t.synonyms?.length || !!t.antonyms?.length))
+      || (this._secOn('collocations') && !!t.collocations?.length)
+      || (this._secOn('wordRoot') && !!t.wordRoot)
+      || (this._secOn('usageNote') && !!t.usageNote)
+      || (this._secOn('memoryTip') && !!t.memoryTip)
+      || (this._secOn('examples') && !!t.examples?.length);
+    if (!hasAny) return nothing;
+
+    return html`<div class="sections">
+      ${this._secOn('pos') && t.partsOfSpeech?.length ? html`<div class="sec">
+        <div class="sec-label">释义</div>
+        ${t.partsOfSpeech.map(p => html`<div class="posline"><span class="sec-chip pos">${p.type}</span><span>${p.meanings.join('；')}</span></div>`)}
+      </div>` : nothing}
+
+      ${this._secOn('inflections') && t.inflections?.length ? html`<div class="sec">
+        <div class="sec-label">词形变化</div>
+        <div class="sec-chips">${t.inflections.map(i => html`<span class="sec-chip">${i}</span>`)}</div>
+      </div>` : nothing}
+
+      ${this._secOn('synonyms') && (t.synonyms?.length || t.antonyms?.length) ? html`<div class="sec">
+        <div class="sec-label">同反义词</div>
+        <div class="sec-chips">
+          ${(t.synonyms ?? []).map(s => html`<span class="sec-chip syn">${s}</span>`)}
+          ${(t.antonyms ?? []).map(a => html`<span class="sec-chip ant">${a}</span>`)}
+        </div>
+      </div>` : nothing}
+
+      ${this._secOn('collocations') && t.collocations?.length ? html`<div class="sec">
+        <div class="sec-label">常用搭配</div>
+        ${t.collocations.map(c => html`<div class="colloc-row"><span class="pat">${c.pattern}</span><span class="mea">${c.meaning}</span></div>`)}
+      </div>` : nothing}
+
+      ${this._secOn('wordRoot') && t.wordRoot ? html`<div class="sec">
+        <div class="sec-label">词根词缀</div>
+        <div class="sec-root">${t.wordRoot}</div>
+      </div>` : nothing}
+
+      ${this._secOn('usageNote') && t.usageNote ? html`<div class="sec">
+        <div class="sec-label">易混辨析</div>
+        <div class="sec-note">${t.usageNote}</div>
+      </div>` : nothing}
+
+      ${this._secOn('memoryTip') && t.memoryTip ? html`<div class="sec">
+        <div class="sec-label">记忆技巧</div>
+        <div class="sec-note tip">${t.memoryTip}</div>
+      </div>` : nothing}
+
+      ${this._secOn('examples') && t.examples?.length ? html`<div class="sec">
+        <div class="sec-label">例句</div>
+        ${t.examples.slice(0, 2).map(ex => html`<div class="ex"><div class="o">${ex.original}</div><div class="tr">${ex.translated}</div></div>`)}
+        ${t.examples.length > 2 ? html`<div class="sec-more">…共 ${t.examples.length} 条，完整见侧栏</div>` : nothing}
+      </div>` : nothing}
+    </div>`;
   }
 
   show(originalWord: string, trans: TranslationResult, anchorRect: DOMRect, sig = '', isFavorited = false) {
@@ -343,11 +531,28 @@ export class PopupBubble extends ShadowView {
 
   hide() {
     this.pinned = false;
+    this._showSettings = false;
+    this._showMore = false;
     this.setVisible(false);
     this.translation = null;
     this.loading = false;
     this.error = '';
     this.update();
+  }
+
+  /** 外接重定位（窗口 resize 时按锚点重新摆放；未固定才有效） */
+  reposition(anchorRect: DOMRect): void {
+    if (this.pinned || this.el.style.display === 'none') return;
+    this._position(anchorRect);
+  }
+
+  /**
+   * 打开扩展设置页（翻译失败时的引导出口）。
+   * content script 环境无法直接调用 chrome.runtime.openOptionsPage()，
+   * 需由 content/index.ts 转发给 Service Worker 执行。
+   */
+  private _openOptions(): void {
+    this.emit('open-options');
   }
 
   /** 外接恢复尺寸（content script 从 storage 读出后调用） */
@@ -521,10 +726,11 @@ export class PopupBubble extends ShadowView {
 
   /** 关闭设置浮窗；返回 true 表示有关闭动作 */
   closeSettings(): boolean {
-    if (!this._showSettings) return false;
+    const closed = this._showSettings || this._showMore;
     this._showSettings = false;
-    this.update();
-    return true;
+    this._showMore = false;
+    if (closed) this.update();
+    return closed;
   }
 
   /** 外部恢复透明度 */
@@ -533,19 +739,38 @@ export class PopupBubble extends ShadowView {
     this.el.style.setProperty('--card-opacity', String(this._opacity));
   }
 
-  private _openSettings(e: Event): void {
-    const btn = e.currentTarget as HTMLElement;
-    const r = btn.getBoundingClientRect();
+  private _openSettings(anchorEl: HTMLElement): void {
+    const r = anchorEl.getBoundingClientRect();
     this._settingsX = r.left;
     this._settingsY = r.bottom + 4;
     this._showSettings = true;
+    this._showMore = false;
     this.update();
+  }
+
+  // ── 溢出菜单（低频操作收纳）──
+
+  private _toggleMore(): void {
+    this._showMore = !this._showMore;
+    this._showSettings = false;
+    this.update();
+  }
+
+  private _moreMenuTemplate() {
+    return html`<div class="more-menu">
+      <button class="more-item" title="固定卡片：点页面其他地方不会关" @click=${() => this._togglePin()}>
+        ${iconPin}${this.pinned ? '取消固定' : '固定卡片'}
+      </button>
+      <button class="more-item" title="设置字体、透明度、翻译方向与源" @click=${(e: Event) => this._openSettings(e.currentTarget as HTMLElement)}>
+        ${iconSettings}设置
+      </button>
+    </div>`;
   }
 
   private _settingsPopTemplate() {
     // 把小浮窗夹在视口内
     const m = 8, vw = window.innerWidth, vh = window.innerHeight;
-    const w = 250, hEst = 180;
+    const w = 250, hEst = 460;
     let left = this._settingsX;
     let top = this._settingsY;
     if (left + w > vw - m) left = vw - w - m;
@@ -577,6 +802,9 @@ export class PopupBubble extends ShadowView {
               <option value="zh">中文</option>
               <option value="ja">日本語</option>
               <option value="ko">한국어</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="es">Español</option>
             </select>
             <span class="set-arrow">→</span>
             <select class="set-sel" .value=${this._targetLang} @change=${(e: Event) => this._onDirChange(e, 'to')}>
@@ -584,7 +812,20 @@ export class PopupBubble extends ShadowView {
               <option value="en">English</option>
               <option value="ja">日本語</option>
               <option value="ko">한국어</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="es">Español</option>
             </select>
+          </div>
+        </div>
+        <div class="set-row">
+          <div class="set-label">弹泡显示内容</div>
+          <div class="set-chks">
+            ${SECTION_ITEMS.map(s => html`
+              <label class="set-chk ${this._secOn(s.id) ? 'on' : ''}">
+                <input type="checkbox" .checked=${this._secOn(s.id)} @change=${(e: Event) => this._onSectionToggle(s.id, (e.target as HTMLInputElement).checked)} />
+                ${s.label}
+              </label>`)}
           </div>
         </div>
         ${this._sources.length > 0 ? html`<div class="set-row">
@@ -615,6 +856,13 @@ export class PopupBubble extends ShadowView {
     this.emit('opacity-change', { opacity: this._opacity });
   }
 
+  /** 知识区显隐切换 → 本地重渲染 + 交 content script 持久化 */
+  private _onSectionToggle(id: string, on: boolean): void {
+    this._sections[id] = on;
+    this.update();
+    this.emit('sections-change', { sections: { ...this._sections } });
+  }
+
   private _onSourceTab(id: string): void {
     if (id === this._activeSourceId) return;
     this._activeSourceId = id;
@@ -625,6 +873,7 @@ export class PopupBubble extends ShadowView {
 
   private _togglePin() {
     this.pinned = !this.pinned;
+    this._showMore = false;
     this.update();
   }
 
@@ -683,6 +932,35 @@ export class PopupBubble extends ShadowView {
     this.isFavorited = !this.isFavorited;
     this.update();
     this.emit('toggle-favorite', { word: this._originalWord, translation: this.translation });
+  }
+
+  // ── 复制译文 ──
+  private _copyTranslation(): void {
+    const text = this.translation?.text ?? '';
+    if (!text) return;
+    const done = () => this.showToast('已复制译文');
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(() => this._legacyCopy(text, done));
+    } else {
+      this._legacyCopy(text, done);
+    }
+  }
+
+  /** content script 环境 clipboard API 不可用时的降级复制 */
+  private _legacyCopy(text: string, done: () => void): void {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      done();
+    } catch {
+      this.showToast('复制失败，请手动选择');
+    }
   }
 
 }

@@ -7,9 +7,23 @@ Respond in JSON format only:
 {
   "text": "translated text",
   "phonetic": "pronunciation in IPA (for English words only, omit for other languages)",
+  "lemma": "base form of the word in lowercase: dogs → dog, running → run, Hello → hello; omit for phrases/sentences/non-English words",
   "partsOfSpeech": [{"type": "n.", "meanings": ["meaning1", "meaning2"]}],
-  "examples": [{"original": "example sentence", "translated": "翻译"}]
-}`;
+  "examples": [{"original": "example sentence", "translated": "翻译"}],
+  "inflections": ["plural: dogs", "past tense: walked", "comparative: easier"],
+  "synonyms": ["synonym1", "synonym2"],
+  "antonyms": ["antonym1"],
+  "collocations": [{"pattern": "make a decision", "meaning": "做决定"}],
+  "wordRoot": "词根词缀解析，如 \"dict = 说\"，无则省略",
+  "register": "语域：正式/口语/书面/俚语（仅形容词短语），无则省略",
+  "usageNote": "易混词辨析或用法注意事项，一两句，无则省略",
+  "memoryTip": "记忆技巧/联想助记，一两句，无则省略"
+}
+
+Rules:
+- inflections/synonyms/antonyms/collocations: only for English words (or the source language when translating into Chinese); omit for phrases/sentences
+- All fields except "text" are optional — omit what does not apply
+- Keep every string concise`;
 
 export const deepseekTranslator: TranslatorAdapter = {
   id: 'deepseek',
@@ -43,7 +57,7 @@ export const deepseekTranslator: TranslatorAdapter = {
             { role: 'user', content: `Translate "${text}" ${direction}` },
           ],
           temperature: 0.3,
-          max_tokens: 1024,
+          max_tokens: 2048,
         }),
         signal: controller.signal,
       });
@@ -66,8 +80,17 @@ export const deepseekTranslator: TranslatorAdapter = {
         return {
           text: parsed.text ?? content.trim(),
           phonetic: parsed.phonetic,
+          lemma: parsed.lemma ? String(parsed.lemma).toLowerCase() : undefined,
           partsOfSpeech: parsed.partsOfSpeech,
           examples: parsed.examples,
+          inflections: parsed.inflections,
+          synonyms: parsed.synonyms,
+          antonyms: parsed.antonyms,
+          collocations: parsed.collocations,
+          wordRoot: parsed.wordRoot,
+          register: parsed.register,
+          usageNote: parsed.usageNote,
+          memoryTip: parsed.memoryTip,
           source: 'DeepSeek',
         };
       } catch {

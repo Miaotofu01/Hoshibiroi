@@ -84,6 +84,21 @@
   margin-bottom: 6px;
 }
 
+.setting-hint {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--syo-fg-muted);
+  background: rgba(122, 162, 247, .06);
+  border: 1px solid var(--syo-border-muted);
+  border-radius: var(--syo-radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 4px;
+}
+
+.setting-hint b {
+  color: var(--syo-fg-body);
+}
+
 .setting-actions {
   display: flex;
   flex-direction: column;

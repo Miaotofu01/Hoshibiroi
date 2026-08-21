@@ -24,6 +24,7 @@ export interface ToggleFavoriteRequest {
   translation: TranslationResult;
   context?: string;
   sourceUrl: string;
+  lemma?: string;    // 词条原形（来自翻译源），用于词形归并
 }
 
 export interface RemoveFavoriteRequest {
@@ -37,6 +38,17 @@ export interface GetHistoryRequest {
 
 export interface GetFavoritesRequest {
   type: 'GET_FAVORITES';
+}
+
+export interface CheckFavoriteRequest {
+  type: 'CHECK_FAVORITE';
+  word: string;
+  lemma?: string;    // 词条原形，用于词形归并后的收藏态判断
+}
+
+/** content script 无法直接调 openOptionsPage，需经 worker 中转 */
+export interface OpenOptionsRequest {
+  type: 'OPEN_OPTIONS';
 }
 
 export interface GetSettingsRequest {
@@ -54,16 +66,21 @@ export interface AnalyzeGrammarRequest {
   detail: 'brief' | 'full';
 }
 
-export interface ShowSidebarRequest {
-  type: 'SHOW_SIDEBAR';
-  word: string;
-  translation: TranslationResult;
-}
-
 export interface SaveSettingsRequest {
   type: 'SAVE_SETTINGS';
   translators: TranslatorConfig[];
   preferences: Preferences;
+}
+
+export interface TestTranslatorRequest {
+  type: 'TEST_TRANSLATOR';
+  translatorId: string;
+  apiKey?: string;
+}
+
+export interface ImportWordsRequest {
+  type: 'IMPORT_WORDS';
+  words: FavoriteWord[];
 }
 
 export interface SubmitReviewRequest {
@@ -125,11 +142,14 @@ export type WorkerRequest =
   | RemoveFavoriteRequest
   | GetHistoryRequest
   | GetFavoritesRequest
+  | CheckFavoriteRequest
+  | OpenOptionsRequest
   | GetSettingsRequest
   | GetSourcesRequest
-  | ShowSidebarRequest
   | AnalyzeGrammarRequest
   | SaveSettingsRequest
+  | TestTranslatorRequest
+  | ImportWordsRequest
   | SubmitReviewRequest
   | GetDueWordsRequest
   | GetLearnStatsRequest
@@ -157,6 +177,13 @@ export interface TranslateErrorResponse {
   error: string;
 }
 
+/** 处理器兜底异常（非翻译类请求失败时返回，避免把一切错误伪装成 TRANSLATE_ERROR） */
+export interface WorkerErrorResponse {
+  type: 'WORKER_ERROR';
+  requestType: string;
+  error: string;
+}
+
 export interface SpeakResponse {
   type: 'SPEAK_RESULT';
   success: boolean;
@@ -166,6 +193,7 @@ export interface ToggleFavoriteResponse {
   type: 'FAVORITE_RESULT';
   added: boolean;
   word: FavoriteWord | null;
+  merged?: boolean;  // true = 已并入已有词条（词形归并），非新建
 }
 
 export interface HistoryResponse {
@@ -178,10 +206,33 @@ export interface FavoritesResponse {
   words: FavoriteWord[];
 }
 
+export interface CheckFavoriteResponse {
+  type: 'FAVORITE_CHECK_RESULT';
+  word: string;
+  favorited: boolean;
+}
+
+export interface OpenOptionsResponse {
+  type: 'OPEN_OPTIONS_RESULT';
+  ok: boolean;
+}
+
 export interface SettingsResponse {
   type: 'SETTINGS_RESULT';
   translators: TranslatorConfig[];
   preferences: Preferences;
+}
+
+export interface TestTranslatorResponse {
+  type: 'TEST_TRANSLATOR_RESULT';
+  ok: boolean;
+  message: string;
+}
+
+export interface ImportWordsResponse {
+  type: 'IMPORT_WORDS_RESULT';
+  imported: number;
+  skipped: number;
 }
 
 export interface SourcesResponse {
@@ -268,10 +319,13 @@ export interface UpdateNoteCardsResponse {
 export type WorkerResponse =
   | TranslateResponse
   | TranslateErrorResponse
+  | WorkerErrorResponse
   | SpeakResponse
   | ToggleFavoriteResponse
   | HistoryResponse
   | FavoritesResponse
+  | CheckFavoriteResponse
+  | OpenOptionsResponse
   | SettingsResponse
   | SourcesResponse
   | GrammarResponse
@@ -285,18 +339,21 @@ export type WorkerResponse =
   | VocabSettingsResponse
   | StarWordResponse
   | UpdateNoteResponse
-  | UpdateNoteCardsResponse;
+  | UpdateNoteCardsResponse
+  | TestTranslatorResponse
+  | ImportWordsResponse;
 
 // ── 类型守卫 ──
 
 const RESPONSE_TYPES: WorkerResponse['type'][] = [
-  'TRANSLATE_RESULT', 'TRANSLATE_ERROR', 'SPEAK_RESULT',
-  'FAVORITE_RESULT', 'HISTORY_RESULT', 'FAVORITES_RESULT', 'SETTINGS_RESULT',
+  'TRANSLATE_RESULT', 'TRANSLATE_ERROR', 'WORKER_ERROR', 'SPEAK_RESULT',
+  'FAVORITE_RESULT', 'HISTORY_RESULT', 'FAVORITES_RESULT', 'FAVORITE_CHECK_RESULT', 'OPEN_OPTIONS_RESULT', 'SETTINGS_RESULT',
   'SOURCES_RESULT',
   'GRAMMAR_RESULT', 'GRAMMAR_ERROR',
   'REVIEW_RESULT', 'DUE_WORDS_RESULT', 'LEARN_STATS_RESULT',
   'WORD_HISTORY_RESULT', 'FORECAST_RESULT', 'FULL_STATS_RESULT', 'VOCAB_SETTINGS_RESULT',
-  'STAR_RESULT', 'NOTE_RESULT', 'NOTE_CARDS_RESULT',
+  'STAR_RESULT', 'NOTE_RESULT', 'NOTE_CARDS_RESULT', 'TEST_TRANSLATOR_RESULT',
+  'IMPORT_WORDS_RESULT',
 ];
 
 export function isWorkerResponse(msg: unknown): msg is WorkerResponse {
@@ -320,10 +377,6 @@ export function getSourcesRequest(): GetSourcesRequest {
   return { type: 'GET_SOURCES' };
 }
 
-export function showSidebarRequest(word: string, translation: TranslationResult): ShowSidebarRequest {
-  return { type: 'SHOW_SIDEBAR', word, translation };
-}
-
 export function analyzeGrammarRequest(text: string, lang: string, detail: 'brief' | 'full' = 'brief'): AnalyzeGrammarRequest {
   return { type: 'ANALYZE_GRAMMAR', text, lang, detail };
 }
@@ -335,7 +388,7 @@ export function speakRequest(text: string, lang: string): SpeakRequest {
 export function toggleFavoriteRequest(
   word: string, translation: TranslationResult, sourceUrl: string, context?: string
 ): ToggleFavoriteRequest {
-  return { type: 'TOGGLE_FAVORITE', word, translation, sourceUrl, context };
+  return { type: 'TOGGLE_FAVORITE', word, translation, sourceUrl, context, lemma: translation.lemma };
 }
 
 export function submitReviewRequest(wordId: string, quality: number): SubmitReviewRequest {

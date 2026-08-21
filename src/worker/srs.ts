@@ -313,58 +313,16 @@ export function schedule(
  *
  * Old → New mapping:
  *   5 (认识) → 3 (Good)
- *   3 (模糊) → 2 (Hard)
  *   1 (不认识) → 1 (Again)
+ *
+ * 注意判定顺序：新四级评分（1-4）必须直接透传——旧映射里的 3(模糊→Hard)
+ * 与新系统 3(Good) 撞号，先判 3→2 会把 Good 误降级为 Hard。旧 UI 早已改为
+ * 只发 1-4，3→2 分支不再需要。
  */
 export function normalizeQuality(oldQuality: number): number {
-  if (oldQuality === 5) return 3;  // old "known" → Good
-  if (oldQuality === 3) return 2;  // old "fuzzy" → Hard
-  if (oldQuality >= 1 && oldQuality <= 4) return oldQuality; // already new
+  if (oldQuality >= 1 && oldQuality <= 4) return oldQuality; // 新四级评分直接透传
+  if (oldQuality === 5) return 3;  // 旧 "known" → Good（兼容旧数据）
   return 1; // fallback
-}
-
-/**
- * Legacy SM-2 compatibility wrapper around FSRS-5 schedule().
- *
- * Called by worker/index.ts to compute the next review state for a word.
- * Accepts a FavoriteWord-like object and a quality score (old 1/3/5 or new 1-4),
- * normalizes it, then delegates to schedule().
- *
- * Returns a patch object suitable for spreading into updateFavorite().
- */
-export function sm2(
-  word: { easeFactor: number; reviewCount: number; lastReviewedAt: number },
-  quality: number,
-): {
-  easeFactor: number;
-  reviewCount: number;
-  lastReviewedAt: number;
-  nextReviewAt: number;
-} {
-  const grade = normalizeQuality(quality);
-  const now = Date.now();
-  const isSameDay =
-    word.lastReviewedAt > 0 &&
-    new Date(word.lastReviewedAt).toDateString() === new Date(now).toDateString();
-
-  const state = schedule(
-    {
-      difficulty: 0, // not persisted on FavoriteWord; schedule() defaults to 5.0
-      stability: word.easeFactor || 0,
-      reviewCount: word.reviewCount,
-      lastReviewedAt: word.lastReviewedAt,
-      isSameDay,
-    },
-    grade,
-    now,
-  );
-
-  return {
-    easeFactor: state.stability,
-    reviewCount: state.reviewCount,
-    lastReviewedAt: state.lastReviewedAt,
-    nextReviewAt: state.nextReviewAt,
-  };
 }
 
 // ═══════════════════════════════════════════════

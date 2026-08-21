@@ -56,10 +56,10 @@
       </div>
       <div class="rating-row hidden" id="rating-row">
         <div class="rating-actions">
-          <button class="syo-btn rate-btn" id="btn-again">不认识</button>
-          <button class="syo-btn rate-btn" id="btn-hard">模糊</button>
-          <button class="syo-btn rate-btn" id="btn-good">认识</button>
-          <button class="syo-btn rate-btn" id="btn-easy">简单</button>
+          <button class="syo-btn rate-btn" id="btn-again"><kbd class="rate-key">1</kbd>不认识</button>
+          <button class="syo-btn rate-btn" id="btn-hard"><kbd class="rate-key">2</kbd>模糊</button>
+          <button class="syo-btn rate-btn" id="btn-good"><kbd class="rate-key">3</kbd>认识</button>
+          <button class="syo-btn rate-btn" id="btn-easy"><kbd class="rate-key">4</kbd>简单</button>
         </div>
         <details class="fc-tips">
           <summary>评分说明</summary>
@@ -173,6 +173,7 @@
   <div class="drawer-footer">
     <button class="syo-btn syo-btn--primary save-btn" id="save-settings">保存设置</button>
   </div>
+  <input type="file" id="import-file" accept=".csv,.json" hidden>
 </div>
 
 <script type="module" src="./index.ts"></script>

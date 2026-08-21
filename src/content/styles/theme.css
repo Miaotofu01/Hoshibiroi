@@ -58,6 +58,28 @@
   --font-size-lg:   16px;
 }
 
+/* ── 亮色主题（页面为浅色背景时由 content/index.ts 挂 .theme-light）──
+   GitHub Primer Light 配色，与上方暗色 token 一一对应。 */
+:host(.theme-light) {
+  --syo-bg-base:     #ffffff;
+  --syo-bg-surface:  #f6f8fa;
+  --syo-bg-elevated: #eaeef2;
+
+  --syo-border:       #d0d7de;
+  --syo-border-muted: #d8dee4;
+
+  --syo-fg-default: #1f2328;
+  --syo-fg-body:    #424a53;
+  --syo-fg-muted:   #59636e;
+
+  --syo-blue:   #0969da;
+  --syo-green:  #1a7f37;
+  --syo-yellow: #9a6700;
+  --syo-red:    #cf222e;
+  --syo-purple: #8250df;
+  --syo-cyan:   #0550ae;
+}
+
 /* ── Shadow DOM reset ────────────────────────────────────────── */
 * {
   margin: 0;

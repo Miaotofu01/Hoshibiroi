@@ -14,7 +14,19 @@ let recentFavs: FavoriteWord[] = [];
 // ── Load all data ──
 
 async function init(): Promise<void> {
-  await Promise.all([loadStats(), loadDueAndRecent()]);
+  await Promise.all([loadStats(), loadDueAndRecent(), loadSetupBanner()]);
+}
+
+/** 没有启用的翻译源 → 显示配置引导横幅 */
+async function loadSetupBanner(): Promise<void> {
+  try {
+    const resp = await chrome.runtime.sendMessage({ type: 'GET_SETTINGS' }) as { translators?: Array<{ enabled: boolean }> } | undefined;
+    const enabledCount = (resp?.translators ?? []).filter(t => t.enabled).length;
+    const banner = document.getElementById('setup-banner');
+    if (banner) banner.hidden = enabledCount > 0;
+  } catch {
+    // 查询失败时保持横幅隐藏，不打扰用户
+  }
 }
 
 async function loadStats(): Promise<void> {
@@ -113,19 +125,29 @@ function renderRecent(isDue: boolean): void {
 
   // Click to open side panel with word detail
   container.querySelectorAll('.mini-word').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', async () => {
       const id = (el as HTMLElement).dataset.wordId;
       const word = recentFavs.find(f => f.id === id);
       if (!word) return;
-      chrome.runtime.sendMessage({
-        type: 'SHOW_SIDEBAR',
-        word: word.word,
-        translation: word.translation,
-      }).catch(() => {});
-      window.close();
+      // 直接发给当前标签页的 content script；失败（chrome:// 页、新标签页等
+      // 没有注入）时兜底打开生词本并定位到该词
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab?.id != null) {
+          await chrome.tabs.sendMessage(tab.id, {
+            action: 'show-sidebar',
+            word: word.word,
+            translation: word.translation,
+          });
+          window.close();
+          return;
+        }
+      } catch { /* 当前页面不可用，走兜底 */ }
+      await chrome.storage.local.set({ pendingFocusWord: word.word });
+      await navigateOrFocus('browse');
     });
-    el.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+    el.addEventListener('keydown', (e: Event) => {
+      if ((e as KeyboardEvent).key === 'Enter') {
         (el as HTMLElement).click();
       }
     });
@@ -139,24 +161,29 @@ function showFallback(): void {
 }
 
 // ── Tab navigation helper ──
+// 无 "tabs" 权限时 chrome.tabs.query({url}) 的 URL 过滤不可用（chrome-extension:// 也无法配 host 权限），
+// 因此改由 vocab 页加载时自报 tab id（chrome.tabs.getCurrent() 无需权限），这里按 id 复用/聚焦
 async function navigateOrFocus(panel: string): Promise<void> {
-  const baseUrl = chrome.runtime.getURL('src/vocab/index.html');
-  const targetUrl = baseUrl + '#/' + panel;
+  const targetUrl = chrome.runtime.getURL('src/vocab/index.html') + '#/' + panel;
   try {
-    const tabs = await chrome.tabs.query({ url: baseUrl + '*' });
-    if (tabs.length > 0 && tabs[0].id != null) {
-      // Update URL hash of existing tab and focus it
-      await chrome.tabs.update(tabs[0].id, { url: targetUrl, active: true });
-      if (tabs[0].windowId != null) {
-        await chrome.windows.update(tabs[0].windowId, { focused: true });
+    const { vocabTabId } = await chrome.storage.local.get('vocabTabId');
+    if (typeof vocabTabId === 'number') {
+      const tab = await chrome.tabs.get(vocabTabId); // 已关闭会 reject → 走兜底新开
+      if (tab?.id != null) {
+        await chrome.tabs.update(tab.id, { url: targetUrl, active: true });
+        if (tab.windowId != null) {
+          await chrome.windows.update(tab.windowId, { focused: true });
+        }
+        window.close();
+        return;
       }
-    } else {
-      await chrome.tabs.create({ url: targetUrl });
     }
   } catch {
-    // Fallback: create new tab
-    await chrome.tabs.create({ url: targetUrl });
+    // 标签页已关闭或不可用 → 新开
   }
+  try {
+    await chrome.tabs.create({ url: targetUrl });
+  } catch { /* 兜底失败静默 */ }
   window.close();
 }
 
@@ -172,6 +199,11 @@ document.getElementById('open-vocab')!.addEventListener('click', () => {
 
 document.getElementById('open-options')!.addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
+});
+
+document.getElementById('btn-setup')!.addEventListener('click', () => {
+  chrome.runtime.openOptionsPage();
+  window.close();
 });
 
 // ── Go ──

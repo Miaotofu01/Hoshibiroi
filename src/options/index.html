@@ -115,6 +115,61 @@
       border-color: var(--syo-info);
     }
 
+    /* ── Test connection ─────────────────────────────────────── */
+    .translator-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .test-btn {
+      padding: 3px 12px;
+      border-radius: var(--syo-radius-sm);
+      border: 1px solid var(--syo-border);
+      background: transparent;
+      color: var(--syo-info);
+      font-size: 12px;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: all 150ms var(--syo-ease-out);
+    }
+
+    .test-btn:hover:not(:disabled) {
+      border-color: var(--syo-info);
+      background: rgba(122, 162, 247, .1);
+    }
+
+    .test-btn:disabled {
+      opacity: .5;
+      cursor: default;
+    }
+
+    .test-result {
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .test-result.ok { color: var(--syo-success); }
+    .test-result.fail { color: var(--syo-danger); }
+
+    /* ── Setup banner ────────────────────────────────────────── */
+    .setup-banner {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      margin-bottom: 16px;
+      border-radius: var(--syo-radius-md);
+      background: rgba(210, 153, 34, .1);
+      border: 1px solid rgba(210, 153, 34, .35);
+      font-size: 13px;
+      color: var(--syo-warning);
+    }
+
+    .setup-banner.visible { display: flex; }
+
     /* ── Toggle switch ────────────────────────────────────────── */
     .toggle {
       width: 44px;
@@ -223,6 +278,10 @@
 <body>
   <h1>翻译设置</h1>
 
+  <div class="setup-banner" id="setup-banner">
+    <span>⚠ 还没有启用的翻译源，划词翻译将无法工作。请启用至少一个翻译源，需要 API Key 的源请填写 Key 后点「测试连接」验证。</span>
+  </div>
+
   <h2>翻译源</h2>
   <p class="hint">点击 ▲ ▼ 按钮调整翻译源优先级，靠前的优先使用</p>
   <div id="translators-list"></div>
@@ -236,6 +295,9 @@
         <option value="en">English</option>
         <option value="ja">日本語</option>
         <option value="ko">한국어</option>
+        <option value="fr">Français</option>
+        <option value="de">Deutsch</option>
+        <option value="es">Español</option>
       </select>
     </label>
     <label>
@@ -246,6 +308,9 @@
         <option value="zh">中文</option>
         <option value="ja">日本語</option>
         <option value="ko">한국어</option>
+        <option value="fr">Français</option>
+        <option value="de">Deutsch</option>
+        <option value="es">Español</option>
       </select>
     </label>
   </div>

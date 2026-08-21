@@ -6,7 +6,8 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 }
 
-function detectLang(text: string): string {
+/** 简单字符集语言检测（worker 内唯一权威实现，SPEAK/TRANSLATE 共用） */
+export function detectLang(text: string): string {
   if (/[一-鿿㐀-䶿]/.test(text)) return 'zh';
   if (/[぀-ゟ゠-ヿ]/.test(text)) return 'ja';
   if (/[가-힯]/.test(text)) return 'ko';

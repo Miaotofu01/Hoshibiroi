@@ -88,6 +88,15 @@
   color: var(--syo-info);
 }
 
+/* 词形归并后的变体列表（run · runs · running） */
+.word-forms {
+  font-family: var(--syo-font-mono);
+  font-size: 11px;
+  color: var(--syo-fg-muted);
+  margin: 3px 0 8px;
+  word-break: break-all;
+}
+
 .card-actions {
   margin-left: auto;
   display: flex;
@@ -166,6 +175,44 @@
   margin-bottom: 6px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* ── 备注区折叠开关 ── */
+.nc-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  margin-bottom: 8px;
+  font-size: var(--text-sm);
+  font-family: var(--syo-font-sans);
+  color: var(--syo-fg-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--syo-radius-sm);
+  cursor: pointer;
+  transition: color 160ms var(--syo-ease-out), background 160ms var(--syo-ease-out), border-color 160ms var(--syo-ease-out);
+}
+.nc-toggle:hover {
+  color: var(--syo-fg-default);
+  background: var(--syo-bg-surface);
+  border-color: var(--syo-border);
+}
+.nc-caret {
+  display: inline-block;
+  font-size: 10px;
+  transition: transform 180ms var(--syo-ease-out);
+}
+.word-card.cards-open .nc-caret {
+  transform: rotate(180deg);
+}
+
+/* 默认折叠：展开由 .word-card.cards-open 控制 */
+.card-note-cards .nc-scroll {
+  display: none;
+}
+.word-card.cards-open .card-note-cards .nc-scroll {
+  display: flex;
 }
 
 .nc-scroll {

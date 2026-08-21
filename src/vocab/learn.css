@@ -83,6 +83,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* 两面同高：翻开瞬间高度不变，避免布局跳动 */
+  min-height: clamp(280px, 38vh, 420px);
 }
 
 .fc-back {
@@ -90,7 +92,7 @@
   align-items: stretch;
   justify-content: flex-start;
   padding: 28px 32px 24px;
-  overflow: hidden;
+  overflow-y: auto; /* 内容过长内部滚动，不再截断 */
 }
 
 .fc-context {
@@ -281,7 +283,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  position: relative; /* 键位角标定位 */
   background: transparent;
   border: 1px solid var(--syo-border);
   border-radius: var(--syo-radius-lg);
@@ -303,6 +307,39 @@
 
 .syo-btn.rate-btn:active {
   transform: scale(.96);
+}
+
+/* ── 键位角标 + 语义色（Again 红 / Easy 绿）── */
+.rate-key {
+  position: absolute;
+  top: 7px;
+  left: 9px;
+  font-family: var(--syo-font-mono);
+  font-size: 10px;
+  line-height: 1.2;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: var(--syo-bg-elevated);
+  border: 1px solid var(--syo-border);
+  color: var(--syo-fg-muted);
+  pointer-events: none;
+}
+
+#btn-again.rate-btn {
+  border-color: rgba(248, 81, 73, .2);
+}
+#btn-again.rate-btn:hover {
+  border-color: var(--syo-danger);
+  color: var(--syo-danger);
+  background: rgba(248, 81, 73, .08);
+}
+#btn-easy.rate-btn {
+  border-color: rgba(63, 185, 80, .2);
+}
+#btn-easy.rate-btn:hover {
+  border-color: var(--syo-success);
+  color: var(--syo-success);
+  background: rgba(63, 185, 80, .08);
 }
 
 /* ── Rating tips ────────────────────────────────────────────── */

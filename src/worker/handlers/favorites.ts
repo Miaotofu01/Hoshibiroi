@@ -1,20 +1,42 @@
 import type { ToggleFavoriteRequest, RemoveFavoriteRequest, ToggleFavoriteResponse } from '../../shared/messages';
-import { isFavorite, removeFavorite, addFavorite, getFavorites } from '../storage';
+import { findFavoriteByKey, removeFavorite, addFavorite, updateFavorite, getFavorites, favoriteKey, mergeFormPatch } from '../storage';
+import type { FavoriteWord } from '../../shared/types';
 
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 }
 
+/**
+ * 收藏切换（词形归并版）：
+ * - 词头/已有词形完全一致（忽略大小写）→ 取消收藏（原行为）
+ * - lemma 相同但词形不同（run ↔ running）→ 并入已有词条，保留 SRS 进度
+ * - 全新词 → 新建（有 lemma 时词头用原形，所选词形记入 forms）
+ */
 export async function handleToggleFavorite(req: ToggleFavoriteRequest): Promise<ToggleFavoriteResponse> {
-  const existing = await isFavorite(req.word);
+  const key = favoriteKey(req.word, req.lemma);
+  const form = req.word.trim();
+  const existing = await findFavoriteByKey(key);
+
   if (existing) {
-    await removeFavorite(existing.id);
-    return { type: 'FAVORITE_RESULT', added: false, word: null };
+    // 取消：点的是词头本身，或已记录过的词形
+    const recorded = favoriteKey(existing.word, existing.lemma) === form.toLowerCase()
+      || (existing.forms ?? []).some(f => f.toLowerCase() === form.toLowerCase());
+    if (recorded) {
+      await removeFavorite(existing.id);
+      return { type: 'FAVORITE_RESULT', added: false, word: null };
+    }
+    // 并入
+    const updated = await updateFavorite(existing.id, mergeFormPatch(existing, form, req.context, req.sourceUrl));
+    return { type: 'FAVORITE_RESULT', added: true, word: updated, merged: true };
   }
 
-  const word = {
+  // 新建
+  const lemma = req.lemma?.trim().toLowerCase();
+  const word: FavoriteWord = {
     id: generateId(),
-    word: req.word,
+    word: lemma && lemma !== form.toLowerCase() ? lemma : form,
+    lemma,
+    forms: lemma && lemma !== form.toLowerCase() ? [form] : [],
     translation: req.translation,
     context: req.context,
     sourceUrl: req.sourceUrl,
@@ -27,9 +49,10 @@ export async function handleToggleFavorite(req: ToggleFavoriteRequest): Promise<
     reviewHistory: [],
     learned: false,
     starred: false,
+    note: '',
   };
   await addFavorite(word);
-  return { type: 'FAVORITE_RESULT', added: true, word };
+  return { type: 'FAVORITE_RESULT', added: true, word, merged: false };
 }
 
 export async function handleRemoveFavorite(req: RemoveFavoriteRequest): Promise<ToggleFavoriteResponse> {

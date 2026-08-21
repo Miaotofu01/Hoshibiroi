@@ -7,18 +7,23 @@ const CSS = `
   :host {
     position: fixed; top: 0; right: 0; width: 380px; max-width: 100vw; height: 100vh;
     z-index: 2147483647;
-    background: var(--syo-bg-base);
+    background: rgba(13, 17, 23, calc(var(--card-opacity, 1) * 0.9));
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(18px) saturate(140%);
     border-left: 1px solid var(--syo-border);
     box-shadow: -8px 0 40px rgba(0,0,0,.45);
     font-family: var(--font-display);
     color: var(--syo-fg-default);
     overflow-y: auto;
     animation: slideIn .25s ease;
-    opacity: var(--card-opacity, 1);
-    transition: transform .2s ease, opacity .2s ease;
+    transition: transform .2s ease;
+  }
+  :host(.theme-light) {
+    background: rgba(255, 255, 255, calc(var(--card-opacity, 1) * 0.92));
+    box-shadow: -8px 0 40px rgba(31, 35, 40, 0.14);
   }
   @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-  .closing { transform: translateX(100%); opacity: 0; }
+  .closing { transform: translateX(100%); }
 
   .panel { padding: 22px 22px 26px; min-height: 100%; display: flex; flex-direction: column; }
 
@@ -48,6 +53,33 @@ const CSS = `
   .play:hover { background: var(--syo-info); color: #1a1b26; }
   .play svg { width: 15px; height: 15px; }
   .phonline { font-family: var(--font-mono); font-size: var(--font-size-base); color: var(--syo-fg-muted); margin-bottom: 24px; }
+  .reg-chip {
+    display: inline-block; margin-left: 8px;
+    font-family: var(--font-mono); font-size: calc(var(--font-size-sm) - 1px);
+    padding: 1px 8px; border-radius: 10px; vertical-align: 2px;
+    background: rgba(125,207,255,.1); border: 1px solid rgba(125,207,255,.25); color: var(--syo-info);
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-family: var(--font-mono); font-size: var(--font-size-sm);
+    padding: 3px 9px; border-radius: 12px;
+    background: var(--syo-bg-surface); border: 1px solid var(--syo-border); color: var(--syo-fg-body);
+  }
+  .chip.syn { background: rgba(158,206,106,.1); border-color: rgba(158,206,106,.28); color: var(--syo-success); }
+  .chip.ant { background: rgba(248,81,73,.08); border-color: rgba(248,81,73,.28); color: var(--syo-danger); }
+
+  .colloc { display: flex; align-items: baseline; gap: 12px; padding: 3px 0; font-size: var(--font-size-base); }
+  .colloc .pat { font-family: var(--font-mono); color: var(--syo-fg-default); }
+  .colloc .mea { color: var(--syo-fg-muted); margin-left: auto; text-align: right; font-size: var(--font-size-sm); }
+
+  .root { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--syo-info); line-height: 1.6; }
+  .note {
+    border-left: 2px solid var(--syo-accent); background: var(--syo-bg-surface);
+    border-radius: 0 var(--syo-radius-sm) var(--syo-radius-sm) 0;
+    padding: 8px 12px; font-size: var(--font-size-sm); line-height: 1.6; color: var(--syo-fg-body);
+  }
+  .note.tip { border-left-color: var(--syo-success); }
 
   .sect { margin-bottom: 22px; }
   .sect .lbl {
@@ -138,7 +170,7 @@ export class SidePanel extends ShadowView {
         <span class="w">${this._originalWord}</span>
         <button class="play" title="朗读" @click=${() => this.emit('speak-word', { word: this._originalWord })}>${iconSpeakSm}</button>
       </div>
-      ${t.phonetic ? html`<div class="phonline">/${t.phonetic}/</div>` : html`<div style="height:12px"></div>`}
+      ${t.phonetic ? html`<div class="phonline">/${t.phonetic}/${t.register ? html` <span class="reg-chip">${t.register}</span>` : nothing}</div>` : html`<div style="height:12px"></div>`}
 
       <div class="sect">
         <div class="lbl">释义</div>
@@ -149,6 +181,40 @@ export class SidePanel extends ShadowView {
         <div class="lbl">例句</div>
         ${t.examples.map(ex => html`
           <div class="ex"><div class="o">${ex.original}</div><div class="tr">${ex.translated}</div></div>`)}
+      </div>` : nothing}
+
+      ${t.inflections && t.inflections.length > 0 ? html`<div class="sect">
+        <div class="lbl">词形变化</div>
+        <div class="chips">${t.inflections.map(i => html`<span class="chip">${i}</span>`)}</div>
+      </div>` : nothing}
+
+      ${t.synonyms?.length || t.antonyms?.length ? html`<div class="sect">
+        <div class="lbl">同反义词</div>
+        <div class="chips">
+          ${(t.synonyms ?? []).map(s => html`<span class="chip syn">${s}</span>`)}
+          ${(t.antonyms ?? []).map(a => html`<span class="chip ant">${a}</span>`)}
+        </div>
+      </div>` : nothing}
+
+      ${t.collocations && t.collocations.length > 0 ? html`<div class="sect">
+        <div class="lbl">常用搭配</div>
+        ${t.collocations.map(c => html`
+          <div class="colloc"><span class="pat">${c.pattern}</span><span class="mea">${c.meaning}</span></div>`)}
+      </div>` : nothing}
+
+      ${t.wordRoot ? html`<div class="sect">
+        <div class="lbl">词根词缀</div>
+        <div class="root">${t.wordRoot}</div>
+      </div>` : nothing}
+
+      ${t.usageNote ? html`<div class="sect">
+        <div class="lbl">易混辨析</div>
+        <div class="note">${t.usageNote}</div>
+      </div>` : nothing}
+
+      ${t.memoryTip ? html`<div class="sect">
+        <div class="lbl">记忆技巧</div>
+        <div class="note tip">${t.memoryTip}</div>
       </div>` : nothing}
 
       ${this._sources.length > 0 ? html`<div class="sect">

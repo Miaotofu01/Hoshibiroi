@@ -55,12 +55,13 @@ export abstract class ShadowView {
     this.applyFontScale(map[size] ?? 20);
   }
 
-  /** 用滑条值（--font-size-xl 的 px 值）等比缩放所有字号 */
+  /**
+   * 滑条控制译文正文的字号（--font-size-xl）。
+   * 只缩放正文，meta / 操作栏 / 图标按钮保持固定（--font-size-sm/base/lg
+   * 由 theme.css 默认值决定），避免「调字号」变成「整个 UI 一起放大」。
+   */
   applyFontScale(xlPx: number): void {
     const xl = Math.round(Math.max(12, Math.min(32, xlPx)));
     this.el.style.setProperty('--font-size-xl', `${xl}px`);
-    this.el.style.setProperty('--font-size-lg', `${Math.round(xl * 0.8)}px`);
-    this.el.style.setProperty('--font-size-base', `${Math.round(xl * 0.7)}px`);
-    this.el.style.setProperty('--font-size-sm', `${Math.round(xl * 0.6)}px`);
   }
 }

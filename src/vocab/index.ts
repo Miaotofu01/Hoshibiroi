@@ -1,4 +1,4 @@
-import { getState, loadWords, loadSettings, loadFullStats, setPanel } from './state';
+import { getState, loadWords, loadSettings, loadFullStats, loadLearnSession, setPanel } from './state';
 import { renderLearn, mountLearn, unmountLearn } from './panels/learn';
 import { renderBrowse, mountBrowse, unmountBrowse } from './panels/browse';
 import { renderStats, mountStats, unmountStats } from './panels/stats';
@@ -29,17 +29,16 @@ function switchPanel(panel: string): void {
   nextTab?.setAttribute('aria-selected', 'true');
   panelRenderers[panel]?.mount();
   panelRenderers[panel]?.render();
-  if (panel === 'learn' || panel === 'browse' || panel === 'stats') {
-    Sayo.cursor.init({ accentR: 88, accentG: 166, accentB: 255 });
-    Sayo.trail.init();
-  } else {
-    Sayo.cursor.destroy();
-    Sayo.trail.destroy();
-  }
 }
 
 async function init(): Promise<void> {
-  await Promise.all([loadWords(), loadSettings(), loadFullStats()]);
+  // 自报 tab id：popup 的"生词本"入口靠它复用/聚焦本标签页
+  // （chrome.tabs.getCurrent 无需 "tabs" 权限；popup 侧无法按 URL 过滤标签页）
+  chrome.tabs.getCurrent().then(tab => {
+    if (tab?.id != null) chrome.storage.local.set({ vocabTabId: tab.id }).catch(() => {});
+  }).catch(() => {});
+
+  await Promise.all([loadWords(), loadSettings(), loadFullStats(), loadLearnSession()]);
 
   // Parse URL hash for direct panel navigation (#/learn, #/browse, #/stats)
   const hash = window.location.hash;
@@ -73,10 +72,6 @@ async function init(): Promise<void> {
   renderLearn(); renderBrowse(); renderStats(); renderSettings();
   panelRenderers[currentPanel]?.mount();
   mountSettings();
-  if (currentPanel === 'learn' || currentPanel === 'browse' || currentPanel === 'stats') {
-    Sayo.cursor.init({ accentR: 88, accentG: 166, accentB: 255 });
-    Sayo.trail.init();
-  }
   document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', () => switchPanel((tab as HTMLElement).dataset.panel!));
   });

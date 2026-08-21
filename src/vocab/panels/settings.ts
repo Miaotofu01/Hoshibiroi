@@ -1,6 +1,7 @@
 import type { VocabSettings } from '../../shared/types';
 import { getState, saveSettings, loadWords } from '../state';
 import { exportCSV, exportJSON } from '../export';
+import { parseImportFile } from '../import';
 import { renderBrowse } from './browse';
 import { renderStats } from './stats';
 import { renderLearn } from './learn';
@@ -123,9 +124,11 @@ export function renderSettings(): void {
     </div>
     <div class="setting-section">
       <div class="setting-section-title">数据</div>
+      <p class="setting-hint">生词与复习记录保存在<b>本机浏览器</b>中。卸载扩展、清除浏览器数据或更换设备会导致数据丢失，建议定期导出备份。导出的 JSON 包含全部学习进度，可随时导入恢复。</p>
       <div class="setting-actions">
+        <button class="syo-btn setting-btn" id="btn-import">导入 CSV / JSON</button>
         <button class="syo-btn setting-btn" id="btn-export-csv">导出 CSV</button>
-        <button class="syo-btn setting-btn" id="btn-export-json">导出 JSON</button>
+        <button class="syo-btn setting-btn" id="btn-export-json">导出 JSON（含学习进度）</button>
         <button class="syo-btn setting-btn danger" id="btn-clear-all">清除全部数据</button>
       </div>
     </div>
@@ -197,6 +200,41 @@ let closeHandler: ((e: Event) => void) | null = null;
 let overlayClickHandler: ((e: Event) => void) | null = null;
 let escapeKeyHandler: ((e: Event) => void) | null = null;
 
+/** 触发文件选择（由「导入」按钮调用） */
+let importHandler: (() => void) | null = null;
+
+/** 读取并解析导入文件，发送给 worker 合并（按 word 去重） */
+async function handleImportFile(file: File): Promise<void> {
+  try {
+    const text = await file.text();
+    const words = parseImportFile(file.name, text);
+    if (words.length === 0) {
+      Sayo.toast.show('文件中没有可导入的单词', { type: 'error' });
+      return;
+    }
+    const resp = await chrome.runtime.sendMessage({ type: 'IMPORT_WORDS', words }) as
+      { type: 'IMPORT_WORDS_RESULT'; imported: number; skipped: number } | undefined;
+    if (resp?.type === 'IMPORT_WORDS_RESULT') {
+      await loadWords();
+      const { panel } = getState();
+      if (panel === 'browse') renderBrowse();
+      else if (panel === 'stats') renderStats();
+      else if (panel === 'learn') renderLearn();
+      const msg = resp.skipped > 0
+        ? `导入完成：新增 ${resp.imported} 个，跳过 ${resp.skipped} 个已存在`
+        : `导入完成：新增 ${resp.imported} 个单词`;
+      Sayo.toast.show(msg, { type: 'success' });
+    } else {
+      Sayo.toast.show('导入失败，请重试', { type: 'error' });
+    }
+  } catch (err) {
+    Sayo.toast.show(
+      `导入失败：${err instanceof Error ? err.message : '文件格式不正确'}`,
+      { type: 'error' }
+    );
+  }
+}
+
 export function mountSettings(): void {
   saveHandler = async () => {
     const newSettings = readSettingsFromForm();
@@ -213,7 +251,8 @@ export function mountSettings(): void {
     const target = e.target as HTMLElement;
     const btn = target.closest('button');
     if (!btn) return;
-    if (btn.id === 'btn-export-csv') { e.stopPropagation(); try { exportCSV(); Sayo.toast.show('CSV 已导出', { type: 'success' }); } catch { Sayo.toast.show('导出失败', { type: 'error' }); } }
+    if (btn.id === 'btn-import') { e.stopPropagation(); importHandler?.(); }
+    else if (btn.id === 'btn-export-csv') { e.stopPropagation(); try { exportCSV(); Sayo.toast.show('CSV 已导出', { type: 'success' }); } catch { Sayo.toast.show('导出失败', { type: 'error' }); } }
     else if (btn.id === 'btn-export-json') { e.stopPropagation(); try { exportJSON(); Sayo.toast.show('JSON 已导出', { type: 'success' }); } catch { Sayo.toast.show('导出失败', { type: 'error' }); } }
     else if (btn.id === 'btn-clear-all') {
       e.stopPropagation();
@@ -257,10 +296,24 @@ export function mountSettings(): void {
     }
   };
 
+  importHandler = () => {
+    const input = document.getElementById('import-file') as HTMLInputElement | null;
+    if (!input) return;
+    input.value = '';
+    input.click();
+  };
+
   document.getElementById('save-settings')?.addEventListener('click', saveHandler);
   document.querySelector('.drawer-body')?.addEventListener('click', delegationHandler);
   document.getElementById('drawer-close-btn')?.addEventListener('click', closeHandler);
   document.getElementById('drawer-overlay')?.addEventListener('click', overlayClickHandler);
+  document.getElementById('import-file')?.addEventListener('change', (e) => {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    void handleImportFile(file);
+    input.value = '';
+  });
   document.addEventListener('keydown', escapeKeyHandler);
 }
 
@@ -285,4 +338,5 @@ export function unmountSettings(): void {
   closeHandler = null;
   overlayClickHandler = null;
   escapeKeyHandler = null;
+  importHandler = null;
 }

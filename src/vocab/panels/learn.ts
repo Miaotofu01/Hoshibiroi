@@ -1,5 +1,5 @@
 import type { FavoriteWord } from '../../shared/types';
-import { getState, loadWords, loadFullStats } from '../state';
+import { getState, loadWords, loadFullStats, isLearnStep2Today, markLearnStep2 } from '../state';
 import { escapeHtml, extractHostname } from '../utils';
 
 // ═══════════════════════════════════════════════
@@ -39,7 +39,12 @@ let totalUnique = 0;
 let totalActions = 0;
 let revealed = false;
 let submitting = false;
-let revealTimestamp = 0;
+/**
+ * 会话是否已建立：面板切换（unmount/mount）不销毁队列，
+ * 保证「学到一半切去词库再回来」能继续。仅当队列从未构建、
+ * 初始就没有词（可能刚收藏了新词）、或用户主动返回词库时重建。
+ */
+let sessionActive = false;
 
 let revealHandler: ((e: Event) => void) | null = null;
 let againHandler: ((e: Event) => void) | null = null;
@@ -60,7 +65,10 @@ function buildQueue(): void {
   const newLimit = settings.dailyNewLimit;
   const reviewLimit = settings.dailyReviewLimit;
 
-  const newWords = dueWords.filter(w => w.reviewCount === 0).slice(0, newLimit);
+  // 当天已进入 step2 确认的新词不再重复出现（跨页面重开也生效）
+  const newWords = dueWords
+    .filter(w => w.reviewCount === 0 && !isLearnStep2Today(w.id))
+    .slice(0, newLimit);
   const reviewWords = dueWords.filter(w => w.reviewCount > 0);
   const limitedReview = reviewLimit > 0 ? reviewWords.slice(0, reviewLimit) : reviewWords;
 
@@ -88,7 +96,10 @@ function insertBack(item: QueueItem, afterN: number): void {
 // ═══════════════════════════════════════════════
 
 export function renderLearn(): void {
-  buildQueue();
+  if (!sessionActive || queue.length === 0) {
+    buildQueue();
+    sessionActive = true;
+  }
   if (queue.length === 0) {
     showDoneState();
     return;
@@ -173,7 +184,6 @@ function showCard(): void {
   }
 
   const showMeaning = settings.cardBack.includes('meaning');
-  const showPos = settings.cardBack.includes('pos');
   const showExamples = settings.cardBack.includes('examples');
   const showContextBack = settings.cardBack.includes('context');
   const showSource = settings.cardBack.includes('source');
@@ -206,7 +216,7 @@ function showCard(): void {
     let html = `<div class="ctx-source-label">${escapeHtml(sourceLabel)} · 例句</div>`;
     html += '<div class="syo-inertia" data-syo-inertia style="padding-bottom:8px">';
     if (hasContext) {
-      html += `<article class="syo-card" style="width:260px;margin-right:12px"><div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(sourceLabel)} · 原文</h3></div><p class="syo-card-desc">${escapeHtml(word.context)}</p></article>`;
+      html += `<article class="syo-card" style="width:260px;margin-right:12px"><div class="syo-card-head"><h3 class="syo-card-title">${escapeHtml(sourceLabel)} · 原文</h3></div><p class="syo-card-desc">${escapeHtml(word.context ?? '')}</p></article>`;
     }
     if (hasExamples) {
       for (const ex of examples) {
@@ -240,7 +250,6 @@ function showCard(): void {
 function revealCard(): void {
   if (revealed) return;
   revealed = true;
-  revealTimestamp = Date.now();
   const hintEl = document.getElementById('fc-hint');
   const ratingRow = document.getElementById('rating-row');
   if (!hintEl || !ratingRow) return;
@@ -270,7 +279,6 @@ async function submitRating(grade: Grade): Promise<void> {
   item.sessionAppearances++;
   item.sessionResult.push(gradeToResult(grade));
 
-  let shouldSubmit = false;
   let shouldSend = false;
   let backendGrade = grade;
 
@@ -284,16 +292,18 @@ async function submitRating(grade: Grade): Promise<void> {
     } else if (grade === GOOD) {
       if (item.learningStep === 1) {
         item.learningStep = 2;
-        insertBack(item, STEP2_DELAY);
+        // 放入队尾：确认环节隔开其他卡片，不再「翻两张卡就回来」
+        insertBack(item, Math.max(0, queue.length - currentIndex - 1));
+        // 当天记录：中途退出重开也不会再次出现
+        void markLearnStep2(item.word.id);
+        Sayo.toast.show('已放至队尾，稍后再次确认', { type: 'info', duration: 2500 });
       } else {
         graduatedCount++;
-        shouldSubmit = true;
         shouldSend = true;
         backendGrade = GOOD;
       }
     } else {
       graduatedCount++;
-      shouldSubmit = true;
       shouldSend = true;
       backendGrade = EASY;
     }
@@ -308,7 +318,6 @@ async function submitRating(grade: Grade): Promise<void> {
       }
       if (consecutiveAgain >= 3 || item.sessionAppearances >= 5) {
         skippedCount++;
-        shouldSubmit = true;
       } else {
         insertBack(item, REVIEW_AGAIN_DELAY);
       }
@@ -322,18 +331,15 @@ async function submitRating(grade: Grade): Promise<void> {
       }
       if (consecutiveHard >= 3 || item.sessionAppearances >= 4) {
         graduatedCount++;
-        shouldSubmit = true;
       } else {
         insertBack(item, REVIEW_HARD_DELAY);
       }
     } else if (grade === GOOD) {
       graduatedCount++;
-      shouldSubmit = true;
       shouldSend = true;
       backendGrade = GOOD;
     } else {
       graduatedCount++;
-      shouldSubmit = true;
       shouldSend = true;
       backendGrade = EASY;
     }
@@ -457,7 +463,8 @@ function updateProgress(): void {
 function speakWord(): void {
   const item = queue[currentIndex];
   if (!item) return;
-  chrome.runtime.sendMessage({ type: 'SPEAK', text: item.word.word, lang: 'en' });
+  // lang='auto'：worker 按文本检测语言（收藏日语/中文词也能用对语音）
+  chrome.runtime.sendMessage({ type: 'SPEAK', text: item.word.word, lang: 'auto' });
 }
 
 // ═══════════════════════════════════════════════
@@ -483,6 +490,8 @@ export function mountLearn(): void {
     if (doneEl) doneEl.style.display = 'none';
     if (fcArea) fcArea.style.display = '';
     if (progressEl) progressEl.style.display = '';
+    // 主动离开学习面板：下次进入重新构建队列
+    sessionActive = false;
     document.querySelector<HTMLElement>('.nav-tab[data-panel="browse"]')?.click();
   };
 
@@ -536,7 +545,7 @@ export function unmountLearn(): void {
   speakBackHandler = null;
   backHandler = null;
   keydownHandler = null;
+  // 仅重置渲染态；队列/进度保留，切回面板时继续学习
   revealed = false;
   submitting = false;
-  queue = [];
 }

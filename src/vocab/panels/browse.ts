@@ -1,6 +1,6 @@
 import type { FavoriteWord } from '../../shared/types';
 import { getState, loadWords, loadFullStats } from '../state';
-import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, Icons, ico } from '../utils';
+import { escapeHtml, extractHostname, sourceDotClass, wordStatus, calcMastery, safeUrl, Icons, ico } from '../utils';
 
 // ── Module-level state ──
 
@@ -23,6 +23,7 @@ function getFiltered(): FavoriteWord[] {
   if (q) {
     filtered = filtered.filter(w => {
       if (w.word.toLowerCase().includes(q)) return true;
+      if ((w.forms ?? []).some(f => f.toLowerCase().includes(q))) return true;
       if (w.translation.text.toLowerCase().includes(q)) return true;
       if (w.note?.toLowerCase().includes(q)) return true;
       if (w.translation.partsOfSpeech) {
@@ -65,6 +66,29 @@ function getFiltered(): FavoriteWord[] {
 }
 
 // ── Render ──
+
+/** popup 点击单词但当前页面无 content script 时的兜底：打开词库并定位该词 */
+async function focusPendingWord(): Promise<void> {
+  try {
+    const data = await chrome.storage.local.get('pendingFocusWord');
+    const word = (data as any)?.pendingFocusWord as string | undefined;
+    if (!word) return;
+    await chrome.storage.local.remove('pendingFocusWord');
+    searchQuery = word;
+    currentFilter = 'all';
+    const input = document.getElementById('search-input') as HTMLInputElement | null;
+    if (input) input.value = word;
+    renderBrowse();
+    requestAnimationFrame(() => {
+      const card = document.querySelector<HTMLElement>('.word-card[data-id]');
+      card?.scrollIntoView({ block: 'center' });
+      card?.animate(
+        [{ boxShadow: '0 0 0 2px var(--syo-info)', backgroundColor: 'rgba(122,162,247,.15)' }, {}],
+        { duration: 1400, easing: 'ease-out' }
+      );
+    });
+  } catch { /* 忽略 */ }
+}
 
 export function renderBrowse(): void {
   const toolbar = document.getElementById('browse-toolbar');
@@ -125,8 +149,9 @@ export function renderBrowse(): void {
   emptyEl.classList.remove('visible');
 
   wordList.innerHTML = filtered.map(word => renderCard(word)).join('');
-  // Initialize inertia scroll for example areas
+  // Initialize inertia scroll for example areas（折叠中的卡片暂不初始化）
   wordList.querySelectorAll('[data-syo-inertia]').forEach(el => {
+    if ((el as HTMLElement).closest('.word-card:not(.cards-open)')) return;
     if (!(el as any)._syoInertia) (el as any)._syoInertia = (window as any).Sayo?.inertiaScroll?.init(el, { friction: 0.95 });
   });
 }
@@ -148,7 +173,8 @@ function renderCard(word: FavoriteWord): string {
   }
 
   const phonetic = word.translation.phonetic ? `/${escapeHtml(word.translation.phonetic)}/` : '';
-  const hostname = word.sourceUrl ? extractHostname(word.sourceUrl) : '';
+  const sourceHref = safeUrl(word.sourceUrl);
+  const hostname = sourceHref ? extractHostname(sourceHref) : '';
 
   // Star button
   const starIcon = word.starred ? Icons.starFilled : Icons.star;
@@ -169,14 +195,15 @@ function renderCard(word: FavoriteWord): string {
     nextReviewHtml = `<span class="next-review${isDue ? ' due' : ''}">下次复习：${dateStr}</span>`;
   }
 
-  // Note cards — horizontal inertia scroll with edit/delete
+  // Note cards — horizontal inertia scroll with edit/delete（默认折叠，点击展开）
   let cardsHtml = '';
   const examples = word.translation.examples?.length ? word.translation.examples : [];
   const hasContext = !!word.context;
   const hasCards = examples.length > 0;
+  const noteCount = examples.length + (hasContext ? 1 : 0);
 
   cardsHtml = '<div class="card-note-cards">';
-  cardsHtml += '<div class="nc-section-label">备注卡片</div>';
+  cardsHtml += `<button type="button" class="nc-toggle" data-action="toggle-cards" aria-expanded="false">备注卡片 · ${noteCount} 张 <span class="nc-caret">▾</span></button>`;
   cardsHtml += '<div class="syo-inertia nc-scroll" data-syo-inertia>';
   if (hasContext) {
     const sourceLabel = word.translation.source || '来源';
@@ -225,12 +252,13 @@ function renderCard(word: FavoriteWord): string {
           <button class="btn-icon btn-icon--sm act-btn delete-btn" title="删除">${ico(Icons.trash)}</button>
         </div>
       </div>
+      ${word.forms?.length ? `<div class="word-forms" title="已归并的词形变体">${word.forms.map(f => escapeHtml(f)).join(' · ')}</div>` : ''}
       <div class="meanings">${meaningHtml}</div>
       ${cardsHtml}
       <div class="card-meta">
         <span class="src-dot ${sourceDotClass(word.translation.sourceId)}" title="${escapeHtml(word.translation.source)}"></span>
         <span>${escapeHtml(word.translation.source)}</span>
-        ${hostname ? `<a class="src-link" href="${escapeHtml(word.sourceUrl)}" target="_blank">${ico(Icons.link)}${escapeHtml(hostname)}</a>` : ''}
+        ${hostname ? `<a class="src-link" href="${escapeHtml(sourceHref)}" target="_blank" rel="noopener noreferrer">${ico(Icons.link)}${escapeHtml(hostname)}</a>` : ''}
         ${nextReviewHtml}
         <span class="card-mastery" style="color:${masteryColor}">${mastery}%</span>
       </div>
@@ -322,10 +350,11 @@ let wordListClick: ((e: Event) => void) | null = null;
 let searchHandler: ((e: Event) => void) | null = null;
 let dragStartHandler: ((e: DragEvent) => void) | null = null;
 let dragOverHandler: ((e: DragEvent) => void) | null = null;
-let dragEndHandler: ((e: DragEvent) => void) | null = null;
+let dragEndHandler: ((e?: DragEvent) => void) | null = null;
 let dropHandler: ((e: DragEvent) => void) | null = null;
 
 export function mountBrowse(): void {
+  void focusPendingWord();
   toolbarClick = (e: Event) => {
     const target = e.target as HTMLElement;
     const pill = target.closest('.pill') as HTMLElement | null;
@@ -349,6 +378,21 @@ export function mountBrowse(): void {
     const card = target.closest('.word-card') as HTMLElement | null;
     if (!card?.dataset.id) return;
     const id = card.dataset.id;
+
+    // Toggle note cards section (default collapsed)
+    if (target.closest('[data-action="toggle-cards"]')) {
+      const wordCard = target.closest('.word-card') as HTMLElement | null;
+      if (!wordCard) return;
+      const isOpen = wordCard.classList.toggle('cards-open');
+      const btn = target.closest('.nc-toggle');
+      btn?.setAttribute('aria-expanded', String(isOpen));
+      if (isOpen) {
+        wordCard.querySelectorAll('[data-syo-inertia]').forEach(el => {
+          if (!(el as any)._syoInertia) (el as any)._syoInertia = (window as any).Sayo?.inertiaScroll?.init(el, { friction: 0.95 });
+        });
+      }
+      return;
+    }
 
     // Delete button
     if (target.closest('.delete-btn')) {
@@ -610,9 +654,7 @@ export function mountBrowse(): void {
 }
 
 export function unmountBrowse(): void {
-  currentFilter = 'all';
-  currentSort = 'newest';
-  searchQuery = '';
+  // 注意：currentFilter / currentSort / searchQuery 刻意保留 —— 面板切换不丢搜索与筛选
 
   const toolbar = document.getElementById('browse-toolbar');
   if (toolbar && toolbarClick && toolbarChange) {

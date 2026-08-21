@@ -15,6 +15,17 @@ export interface TranslationResult {
   }>;
   source: string;   // 翻译源名称, e.g. "DeepSeek", "Google Translate"
   sourceId?: string; // 产出该结果的翻译源 id, e.g. "deepseek"（用于侧栏高亮当前源）
+  lemma?: string;    // 词条原形（小写），如 dogs→dog, running→run；仅 LLM 源返回
+
+  // ── 知识增强字段（仅 LLM 类翻译源返回，其他源缺省；UI 无值则不显示）──
+  inflections?: string[];        // 词形变化，如 ["复数 dogs", "过去式 walked"]
+  synonyms?: string[];           // 同义词
+  antonyms?: string[];           // 反义词
+  collocations?: Array<{ pattern: string; meaning: string }>; // 常用搭配
+  wordRoot?: string;             // 词根词缀
+  register?: string;             // 语域：正式/口语/俚语/书面等
+  usageNote?: string;            // 易混词辨析/用法说明
+  memoryTip?: string;            // 记忆技巧
 }
 
 // 翻译源配置 (用户可自定义)
@@ -37,7 +48,10 @@ export interface FavoriteWord {
   reviewCount: number;
   lastReviewedAt: number;
   nextReviewAt: number;
-  easeFactor: number;    // SM-2 ease factor, default 2.5
+  easeFactor: number;    // 历史遗留命名，实际存 FSRS 的 Stability(S)
+  difficulty?: number;   // FSRS-5 难度 D（1-10），旧数据缺省按 5.0 处理
+  lemma?: string;        // 词条原形（小写）；收藏去重/合并的匹配基准
+  forms?: string[];      // 收录过的其他词形（大小写/时态变体），仅用于展示
   reviewHistory: ReviewRecord[];  // 复习记录，最多 30 条
   learned: boolean;               // 是否已掌握（首次毕业）
   starred: boolean;               // 是否星标

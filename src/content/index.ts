@@ -33,7 +33,6 @@ function getContext(sel: Selection): string {
     if (!fullText) return "";
     const selStart = range.startOffset;
     // 从选区开始位置向前后扩展到句子边界
-    const sentenceBreaks = /[.!?。！？\n]/g;
     let ctxStart = selStart;
     let ctxEnd = selStart + sel.toString().length;
     // 向前扩展：找到最近的句子分隔符
@@ -59,6 +58,9 @@ function init(): void {
   let lastSelection: { text: string; rect: DOMRect; context: string } | null = null;
   let sources: Array<{ id: string; name: string }> = [];
   const favoriteCache = new Set<string>();  // local cache to avoid flash on re-translate
+  // 翻译序号：滚动/关闭会使在途请求失效，避免结果回来后弹回一张位置错误的卡片。
+  // 声明在 init 开头——上面的 scroll 监听器（capture）会引用它
+  let translateSeq = 0;
 
   // 所有 UI 挂在一个根容器下（各组件内部自带 Shadow DOM）
   const root = document.createElement('div');
@@ -71,6 +73,41 @@ function init(): void {
   root.appendChild(triggerIcon.el);
   root.appendChild(popupBubble.el);
   root.appendChild(sidePanel.el);
+
+  // ── 页面明暗检测：给各组件挂 theme-light/theme-dark，Shadow DOM 内据此切换 token ──
+  function detectPageTheme(): 'light' | 'dark' {
+    for (const el of [document.body, document.documentElement]) {
+      const bg = getComputedStyle(el).backgroundColor;
+      const m = bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' ? bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/) : null;
+      if (m) {
+        const lum = 0.299 * Number(m[1]) + 0.587 * Number(m[2]) + 0.114 * Number(m[3]);
+        return lum > 140 ? 'light' : 'dark';
+      }
+    }
+    return matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  }
+  const pageTheme = detectPageTheme();
+  for (const c of [triggerIcon, popupBubble, sidePanel]) {
+    c.el.classList.add(`theme-${pageTheme}`);
+  }
+
+  // ── 视口滚动：未固定的弹泡/触发图标随选区滚走，一并隐藏（固定态除外）──
+  window.addEventListener('scroll', () => {
+    if (popupBubble.pinned) return;
+    if (popupBubble.el.style.display !== 'none') {
+      translateSeq++; // 使在途翻译请求失效
+      popupBubble.hide();
+    }
+    triggerIcon.hide();
+  }, { capture: true, passive: true });
+
+  // ── 窗口尺寸变化：未固定的弹泡按锚点重新摆放 ──
+  window.addEventListener('resize', () => {
+    if (popupBubble.pinned || !lastSelection) return;
+    if (popupBubble.el.style.display !== 'none') {
+      popupBubble.reposition(lastSelection.rect);
+    }
+  });
 
   // 拉取已启用的翻译源（供侧栏和浮层设置面板渲染来源标签）
   function refreshSources(): void {
@@ -108,6 +145,11 @@ function init(): void {
     if (sz?.width || sz?.maxHeight) popupBubble.restoreDimensions(sz.width, sz.maxHeight);
   }).catch(() => {});
 
+  // ── 恢复弹泡知识区显示配置 ──
+  chrome.storage.local.get(['popupSections']).then(data => {
+    popupBubble.setSections((data as any)?.popupSections);
+  }).catch(() => {});
+
   // ── 恢复翻译方向 ──
   chrome.storage.sync.get(['preferences']).then(data => {
     const prefs = (data as any)?.preferences;
@@ -128,8 +170,18 @@ function init(): void {
         triggerIcon.hide();
         return;
       }
-      const activeEl = document.activeElement;
-      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+      const activeEl = document.activeElement as HTMLElement | null;
+      const inEditable = activeEl !== null && (
+        activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' ||
+        activeEl.isContentEditable ||
+        !!activeEl.closest?.('[contenteditable="true"], [contenteditable=""]')
+      );
+      // 选区落在富文本编辑区（Gmail/Notion/评论区等）也不触发——用户可能只是在编辑
+      const anchorEl = sel.anchorNode?.nodeType === Node.TEXT_NODE
+        ? sel.anchorNode.parentElement
+        : (sel.anchorNode as HTMLElement | null);
+      const inEditableSelection = !!anchorEl?.closest?.('[contenteditable="true"], [contenteditable=""]');
+      if (inEditable || inEditableSelection) {
         triggerIcon.hide();
         return;
       }
@@ -165,19 +217,21 @@ function init(): void {
     triggerIcon.hide();
     const rect = lastSelection.rect;
     popupBubble.setLoading(rect);
+    const seq = ++translateSeq;
     const req = translateRequest(lastSelection.text, popupBubble.sourceLang, popupBubble.targetLang, window.location.href, !sourceId ? undefined : false, sourceId);
     sendToWorker(req)
       .then(res => {
+        if (seq !== translateSeq) return; // 已被滚动/关闭失效
         if (res.type === 'TRANSLATE_RESULT') {
           popupBubble.show(lastSelection!.text, res.translation, rect, langSig(res.from, res.to), favoriteCache.has(lastSelection!.text));
           popupBubble.setSources(sources, res.translation.sourceId ?? '');
-          // Check if word is already favorited
-          sendToWorker({ type: 'GET_FAVORITES' } as WorkerRequest)
+          // 单查收藏状态（不再全量拉取词库；带 lemma 使词形归并后仍能正确高亮）
+          sendToWorker({ type: 'CHECK_FAVORITE', word: lastSelection!.text, lemma: res.translation.lemma } as WorkerRequest)
             .then(favRes => {
-              if (favRes.type === 'FAVORITES_RESULT') {
-                const words = (favRes as any).words as Array<{word: string}> | undefined;
-                const isFav = words?.some(w => w.word === lastSelection!.text) ?? false;
-                popupBubble.setFavorited(isFav);
+              if (favRes.type === 'FAVORITE_CHECK_RESULT') {
+                popupBubble.setFavorited(favRes.favorited);
+                if (favRes.favorited) favoriteCache.add(lastSelection!.text);
+                else favoriteCache.delete(lastSelection!.text);
               }
             })
             .catch(() => {});
@@ -185,7 +239,10 @@ function init(): void {
           popupBubble.setError(res.error, rect);
         }
       })
-      .catch(() => popupBubble.setError('翻译失败，请重试', rect));
+      .catch(() => {
+        if (seq !== translateSeq) return;
+        popupBubble.setError('翻译失败，请检查网络或翻译源设置', rect);
+      });
   }
 
   // ── 触发按钮 → 翻译 / 关闭（toggle）──
@@ -209,10 +266,10 @@ function init(): void {
     sidePanel.show(originalWord, translation, sources, translation.sourceId);
   });
 
-  // ── 朗读 ──
+  // ── 朗读（语言由 worker 按文本自动检测）──
   function onSpeak(e: Event) {
     const detail = (e as CustomEvent).detail;
-    sendToWorker(speakRequest(detail.word, 'en')).catch(() => {});
+    sendToWorker(speakRequest(detail.word, 'auto')).catch(() => {});
   }
   popupBubble.el.addEventListener('speak-word', onSpeak);
   sidePanel.el.addEventListener('speak-word', onSpeak);
@@ -226,7 +283,7 @@ function init(): void {
           popupBubble.setFavorited(res.added);
           sidePanel.setFavorited(res.added);
           // Brief toast-like feedback via the popup bubble
-          popupBubble.showToast(res.added ? '已收藏' : '已取消收藏');
+          popupBubble.showToast(res.merged ? '已并入生词本' : res.added ? '已收藏' : '已取消收藏');
           // Update local cache
           if (res.added) favoriteCache.add(detail.word);
           else favoriteCache.delete(detail.word);
@@ -268,6 +325,11 @@ function init(): void {
   // ── 重试 ──
   popupBubble.el.addEventListener('retry-translate', () => doTranslate());
 
+  // ── 打开设置页（content script 不能直接调 openOptionsPage，经 worker 中转）──
+  popupBubble.el.addEventListener('open-options', () => {
+    sendToWorker({ type: 'OPEN_OPTIONS' } as WorkerRequest).catch(() => {});
+  });
+
   // ── 快捷键 / popup 打开侧栏（来自 background 转发）──
   chrome.runtime.onMessage.addListener((msg: unknown) => {
     const message = msg as { action?: string; word?: string; translation?: import('../shared/types').TranslationResult };
@@ -275,7 +337,7 @@ function init(): void {
       triggerIcon.el.dispatchEvent(new CustomEvent('trigger-translate'));
     }
     if (message?.action === 'speak-selection' && lastSelection) {
-      sendToWorker(speakRequest(lastSelection.text, 'en')).catch(() => {});
+      sendToWorker(speakRequest(lastSelection.text, 'auto')).catch(() => {});
     }
     if (message?.action === 'show-sidebar' && message.word && message.translation) {
       popupBubble.hide();
@@ -316,6 +378,13 @@ function init(): void {
   popupBubble.el.addEventListener('switch-source', (e) => {
     const sourceId = (e as CustomEvent).detail?.sourceId as string | undefined;
     if (sourceId) doTranslate(sourceId);
+  });
+
+  // ── 弹泡显示内容配置变更 → 写入 local storage ──
+  popupBubble.el.addEventListener('sections-change', (e) => {
+    const detail = (e as CustomEvent).detail as { sections: Record<string, boolean> } | undefined;
+    if (!detail) return;
+    chrome.storage.local.set({ popupSections: detail.sections }).catch(() => {});
   });
 
   // ── 卡片调尺寸 → 写入 local storage 记住 ──

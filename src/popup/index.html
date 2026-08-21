@@ -116,9 +116,31 @@
 
     .skeleton{background:var(--syo-bg-surface);border-radius:var(--syo-radius-sm);animation:syo-shimmer 1.8s ease-in-out infinite;background-size:200% 100%}
 
+    /* ── Setup banner ── */
+    .setup-banner {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      margin: 10px 16px 0; padding: 8px 12px;
+      background: rgba(210,153,34,.12); border: 1px solid rgba(210,153,34,.35);
+      border-radius: var(--syo-radius-md);
+      font-size: 12px; color: var(--syo-warning);
+    }
+    .setup-banner[hidden] { display: none; }
+    .setup-banner .setup-btn {
+      flex-shrink: 0; padding: 4px 10px; border-radius: var(--syo-radius-sm);
+      background: var(--syo-warning); color: var(--syo-bg-base);
+      border: none; font-family: var(--syo-font-mono); font-size: 11px; font-weight: 600;
+      cursor: pointer; transition: opacity 180ms;
+    }
+    .setup-banner .setup-btn:hover { opacity: .88; }
 </style>
 </head>
 <body>
+  <!-- ── Setup banner（未配置翻译源时显示）── -->
+  <div class="setup-banner" id="setup-banner" hidden>
+    <span>⚠ 还没有可用的翻译源</span>
+    <button class="setup-btn" id="btn-setup">去配置</button>
+  </div>
+
   <!-- ── Hero ── -->
   <div class="hero">
     <div class="streak-big">
