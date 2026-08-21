@@ -14,9 +14,10 @@
 </p>
 
 <p align="center">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-blue" />
+  <img alt="License" src="https://img.shields.io/github/license/Miaotofu01/Hoshibiroi" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Chrome%20%2F%20Edge-4285F4" />
-  <img alt="Version" src="https://img.shields.io/badge/version-0.1.0-black" />
+  <img alt="Release" src="https://img.shields.io/github/v/release/Miaotofu01/Hoshibiroi" />
+  <img alt="Stars" src="https://img.shields.io/github/stars/Miaotofu01/Hoshibiroi" />
   <!-- Chrome Web Store 上架后替换：
   <img alt="Chrome Web Store" src="https://img.shields.io/chrome-web-store/v/你的扩展ID" />
   <img alt="Users" src="https://img.shields.io/chrome-web-store/users/你的扩展ID" />

@@ -13,8 +13,10 @@
 </p>
 
 <p align="center">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-blue" />
+  <img alt="License" src="https://img.shields.io/github/license/Miaotofu01/Hoshibiroi" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Chrome%20%2F%20Edge-4285F4" />
+  <img alt="Release" src="https://img.shields.io/github/v/release/Miaotofu01/Hoshibiroi" />
+  <img alt="Stars" src="https://img.shields.io/github/stars/Miaotofu01/Hoshibiroi" />
   <!-- Replace after Chrome Web Store listing:
   <img alt="Chrome Web Store" src="https://img.shields.io/chrome-web-store/v/YOUR_EXTENSION_ID" />
   -->
