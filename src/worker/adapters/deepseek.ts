@@ -57,7 +57,7 @@ export const deepseekTranslator: TranslatorAdapter = {
             { role: 'user', content: `Translate "${text}" ${direction}` },
           ],
           temperature: 0.3,
-          max_tokens: 2048,
+          max_tokens: 4096, // 长文本分块可达 2000 字符，输出需要更大预算
         }),
         signal: controller.signal,
       });

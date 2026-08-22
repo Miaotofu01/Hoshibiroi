@@ -61,6 +61,7 @@ Requires Node.js ≥ 18. Output goes to `dist/`.
 ### Select-to-translate
 
 - Select any text on any page → frosted-glass translation bubble that follows the page's light/dark theme
+- **Long-text support**: up to 20,000 characters, auto-split at sentence boundaries with per-source size limits; partial results returned with a failure note if some chunks fail
 - Chinese / English / Japanese / Korean / French / German / Spanish
 - Multiple sources (DeepSeek, Google, Tencent, Baidu, DeepL) with one-click source switching inside the popup
 - Enriched breakdown: IPA, parts of speech, inflections, synonyms/antonyms, collocations, word roots, usage notes, memory tips, register — popup sections are user-configurable

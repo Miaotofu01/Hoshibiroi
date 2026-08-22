@@ -166,7 +166,8 @@ function init(): void {
         return;
       }
       const text = sel.toString().trim();
-      if (text.length === 0 || text.length > 2000) {
+      // 长文本支持：最多 20000 字符（worker 侧自动分块翻译；再长视为误选整页）
+      if (text.length === 0 || text.length > 20000) {
         triggerIcon.hide();
         return;
       }

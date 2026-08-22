@@ -94,7 +94,7 @@ const CSS = `
   .body::-webkit-scrollbar-track { background: transparent; }
   .orig { font-family: var(--font-mono); font-size: var(--font-size-base); color: var(--text-secondary); margin-bottom: 3px; word-break: break-word; }
   .phon { font-family: var(--font-mono); font-size: var(--font-size-sm); color: var(--text-muted); margin-bottom: 9px; }
-  .trans { font-family: var(--font-display); font-size: var(--font-size-xl, 20px); font-weight: 600; line-height: 1.5; color: var(--text-primary); letter-spacing: .01em; word-break: break-word; }
+  .trans { font-family: var(--font-display); font-size: var(--font-size-xl, 20px); font-weight: 600; line-height: 1.5; color: var(--text-primary); letter-spacing: .01em; word-break: break-word; white-space: pre-wrap; }
 
   .divider { flex: 0 0 auto; height: 1px; background: var(--border-soft); }
   .actions { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; padding: 10px 12px; }
@@ -405,7 +405,8 @@ export class PopupBubble extends ShadowView {
     if (!this.translation) return nothing;
 
     const t = this.translation;
-    const showOrig = t.text !== this._originalWord;
+    // 长文本不整体回显原文（折叠成超大块没有意义），仅短文显示
+    const showOrig = t.text !== this._originalWord && this._originalWord.length <= 120;
     const bubbleStyle = `width:${this._width}px;max-height:${this._maxHeight}px`;
 
     return html`<div class="bubble ${this.pinned ? 'pinned' : ''}" style="${bubbleStyle}">

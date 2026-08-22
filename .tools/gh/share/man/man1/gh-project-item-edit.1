@@ -1,0 +1,142 @@
+.nh
+.TH "GH-PROJECT-ITEM-EDIT" "1" "Aug 2026" "GitHub CLI 2.98.0" "GitHub CLI manual"
+
+.SH NAME
+gh-project-item-edit - Edit an item in a project
+
+
+.SH SYNOPSIS
+\fBgh project item-edit [<number>] [flags]\fR
+
+
+.SH DESCRIPTION
+Edit a draft issue or a project item.
+
+.PP
+The usual way to select the item and field is by name: pass the project
+\fBnumber\fR plus \fB--owner\fR, point at the item with its issue or pull
+request \fB--url\fR, and name the field with \fB--field\fR\&. For single-select
+fields, \fB--value\fR is the option name.
+
+.PP
+For scripts and machine use, you can also pass GraphQL node IDs directly with
+\fB--id\fR, \fB--field-id\fR and \fB--project-id\fR (and, for single-select
+fields, \fB--single-select-option-id\fR).
+
+.PP
+Note that \fB--url\fR is the issue or pull request URL, not a project URL, so its
+owner may differ from the project's; \fB--owner\fR selects the project.
+
+.PP
+For non-draft issues, only a single field value can be updated per invocation.
+
+.PP
+Remove a project item field value with \fB--clear\fR\&.
+
+
+.SH OPTIONS
+.TP
+\fB--body\fR \fB<string>\fR
+Body of the draft issue item
+
+.TP
+\fB--clear\fR
+Remove field value
+
+.TP
+\fB--date\fR \fB<string>\fR
+Date value for the field (YYYY-MM-DD)
+
+.TP
+\fB--field\fR \fB<string>\fR
+Name of the field to update
+
+.TP
+\fB--field-id\fR \fB<string>\fR
+ID of the field to update
+
+.TP
+\fB--format\fR \fB<string>\fR
+Output format: {json}
+
+.TP
+\fB--id\fR \fB<string>\fR
+ID of the item to edit
+
+.TP
+\fB--iteration-id\fR \fB<string>\fR
+ID of the iteration value to set on the field
+
+.TP
+\fB-q\fR, \fB--jq\fR \fB<expression>\fR
+Filter JSON output using a jq expression
+
+.TP
+\fB--number\fR \fB<float> (default 0)\fR
+Number value for the field
+
+.TP
+\fB--owner\fR \fB<string>\fR
+Login of the owner. Use "@me" for the current user.
+
+.TP
+\fB--project-id\fR \fB<string>\fR
+ID of the project to which the field belongs to
+
+.TP
+\fB--single-select-option-id\fR \fB<string>\fR
+ID of the single select option value to set on the field
+
+.TP
+\fB-t\fR, \fB--template\fR \fB<string>\fR
+Format JSON output using a Go template; see "gh help formatting"
+
+.TP
+\fB--text\fR \fB<string>\fR
+Text value for the field
+
+.TP
+\fB--title\fR \fB<string>\fR
+Title of the draft issue item
+
+.TP
+\fB--url\fR \fB<string>\fR
+URL of the issue or pull request whose project item to edit
+
+.TP
+\fB--value\fR \fB<--field>\fR
+Value to set on the field named by --field
+
+
+.SH EXIT CODES
+0: Successful execution
+
+.PP
+1: Error
+
+.PP
+2: Command canceled
+
+.PP
+4: Authentication required
+
+.PP
+NOTE: Specific commands may have additional exit codes. Refer to the command's help for more information.
+
+
+.SH EXAMPLE
+.EX
+# Set the "Status" field to "In Progress" for an issue on monalisa's project 1
+$ gh project item-edit 1 --owner monalisa --url https://github.com/monalisa/myproject/issues/23 --field "Status" --value "In Progress"
+
+# Edit an item's text field value by node ID (machine / scripted use)
+$ gh project item-edit --id <item-id> --field-id <field-id> --project-id <project-id> --text "new text"
+
+# Clear an item's field value by node ID
+$ gh project item-edit --id <item-id> --field-id <field-id> --project-id <project-id> --clear
+
+.EE
+
+
+.SH SEE ALSO
+\fBgh-project(1)\fR

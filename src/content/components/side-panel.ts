@@ -44,6 +44,10 @@ const CSS = `
 
   .headword { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 4px; }
   .headword .w { font-family: var(--font-mono); font-size: var(--font-size-xl, 26px); font-weight: 600; color: var(--syo-fg-default); word-break: break-word; line-height: 1.15; }
+  .headword .w.long {
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+    overflow: hidden; font-size: var(--font-size-lg, 20px);
+  }
   .play {
     flex-shrink: 0; width: 30px; height: 30px; margin-bottom: 3px;
     display: inline-flex; align-items: center; justify-content: center;
@@ -167,7 +171,7 @@ export class SidePanel extends ShadowView {
       </div>
 
       <div class="headword">
-        <span class="w">${this._originalWord}</span>
+        <span class="w ${this._originalWord.length > 60 ? 'long' : ''}" title="${this._originalWord}">${this._originalWord}</span>
         <button class="play" title="朗读" @click=${() => this.emit('speak-word', { word: this._originalWord })}>${iconSpeakSm}</button>
       </div>
       ${t.phonetic ? html`<div class="phonline">/${t.phonetic}/${t.register ? html` <span class="reg-chip">${t.register}</span>` : nothing}</div>` : html`<div style="height:12px"></div>`}
@@ -318,6 +322,8 @@ export class SidePanel extends ShadowView {
   // ── 语法分析 ──
   private _canAnalyze(): boolean {
     if (!this._originalWord || this._grammarLoading) return false;
+    // 仅对句子级文本分析（15 字符以上、含空格）；超长文本（如整段翻译）不分析
+    if (this._originalWord.length > 1000) return false;
     return this._originalWord.length >= 15 || this._originalWord.includes(' ');
   }
 
