@@ -52,7 +52,7 @@ Requires Node.js ≥ 18. Output goes to `dist/`.
 
 3. Configure a translation source (optional but recommended):
 
-- **DeepSeek** (recommended, free tier available): get an API key at [platform.deepseek.com](https://platform.deepseek.com), open the extension options (right-click the toolbar icon → Options), paste the key. DeepSeek powers the full enriched fields (inflections, collocations, word roots, memory tips, …) plus encyclopedia entries for technical terms.
+- **DeepSeek** (recommended, low cost): get an API key at [platform.deepseek.com](https://platform.deepseek.com) (registration + top-up required), open the extension options (right-click the toolbar icon → Options), paste the key. DeepSeek powers the full enriched fields (inflections, collocations, word roots, memory tips, …) plus encyclopedia entries for technical terms.
 - **Google Translate** works out of the box (requires access to Google services).
 - Tencent TMT, Baidu, and DeepL are also supported.
 

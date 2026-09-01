@@ -71,8 +71,8 @@ npm run build
 首次使用建议配置翻译 API：
 
 1. 右键点击工具栏的扩展图标 → **「选项」**（或点击图标 → 齿轮设置按钮）
-2. **DeepSeek**（推荐，有免费额度）：
-   - 前往 [platform.deepseek.com](https://platform.deepseek.com) 注册并获取 API Key
+2. **DeepSeek**（推荐，价格低）：
+   - 前往 [platform.deepseek.com](https://platform.deepseek.com) 注册、充值并获取 API Key
    - 在设置页填入 Key，保存
    - DeepSeek 提供完整的知识增强字段（词形/搭配/词根/助记等），专业术语另附百科解释
 3. **Google Translate**：无需配置，开箱即用（需网络能访问 Google 服务）
