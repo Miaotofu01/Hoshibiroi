@@ -18,7 +18,7 @@ Respond in JSON format only:
   "register": "语域：正式/口语/书面/俚语（仅形容词短语），无则省略",
   "usageNote": "易混词辨析或用法注意事项，一两句，无则省略",
   "memoryTip": "记忆技巧/联想助记，一两句，无则省略",
-  "encyclopedia": "用大白话写的通俗解释（3-5 句）：第一句用日常语言说清它是什么；中间给一个生活中的具体类比或场景例子（做饭/开车/上学/购物等）；最后一句说它为什么重要或在哪里会遇到。禁止词典式定义"
+  "encyclopedia": "专业与通俗平衡的解释（3-5 句）：第一句用准确的专业表述说清它是什么（专业术语可以直接用，但要紧跟着用大白话解释一遍）；中间给一个生活化类比或具体例子；最后一句说它为什么重要、在哪里会遇到。既不能是术语堆砌，也不能为了通俗牺牲准确性"
 }
 
 Rules:
@@ -33,12 +33,12 @@ Rules:
   · TERM: encyclopedia, register (optional), usageNote (optional), examples (optional) — NEVER wordRoot, inflections, synonyms, antonyms, collocations, lemma, memoryTip
   · TEXT: text only; usageNote only if grammar or wording is genuinely tricky; NEVER any word-level field
 - encyclopedia rules:
-  1. write for someone with NO background in the field — imagine explaining to a smart 12-year-old
-  2. FORBIDDEN: dictionary definitions, jargon chains, opening with "X是……的一种技术/方法/概念"
+  1. accuracy first: use the correct technical term, then immediately explain it in plain words — never sacrifice precision for simplicity, and never chain unexplained jargon
+  2. FORBIDDEN: defining purely through abstract jargon, opening with "X是……的一种技术/方法/概念"
   3. REQUIRED: one concrete everyday analogy or scenario example (cooking, driving, school, shopping…)
   4. end with why it matters or where you meet it
 - Follow this style for encyclopedia (illustrative example for "static checking"):
-  "程序不用真的跑起来就能检查代码对不对，就像写作文前先过一遍语法检查。比如你写 x = 'hello'，后面又拿 x 做加法，它会在运行前提醒你类型对不上。所以写代码时能第一时间发现低级错误，是代码质量的第一道防线。"
+  "静态检查（static checking）指在不运行程序的情况下，由编译器或分析工具检查代码——也叫编译期检查，是动态检查的反面。就像写作文时先过一遍语法检查，不用真的朗读就知道标点和搭配有没有错。它能尽早发现类型不匹配这类低级错误，是代码质量的第一道防线，写代码时几乎实时给出反馈。"
 - "text" is always required; all other fields are optional — omit what does not apply
 - Keep every string concise`;
 
