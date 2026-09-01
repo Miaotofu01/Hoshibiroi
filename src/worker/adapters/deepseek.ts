@@ -18,7 +18,7 @@ Respond in JSON format only:
   "register": "语域：正式/口语/书面/俚语（仅形容词短语），无则省略",
   "usageNote": "易混词辨析或用法注意事项，一两句，无则省略",
   "memoryTip": "记忆技巧/联想助记，一两句，无则省略",
-  "encyclopedia": "通俗易懂的中文解释（3-5 句，50-120 字）：第一句先一句话定性“它是什么”，再用日常语言、类比或生活化例子展开它做什么、为什么重要"
+  "encyclopedia": "用大白话写的通俗解释（3-5 句）：第一句用日常语言说清它是什么；中间给一个生活中的具体类比或场景例子（做饭/开车/上学/购物等）；最后一句说它为什么重要或在哪里会遇到。禁止词典式定义"
 }
 
 Rules:
@@ -32,7 +32,13 @@ Rules:
   · PHRASE: partsOfSpeech (optional), register, usageNote, examples, memoryTip — NEVER wordRoot, inflections, synonyms, antonyms, collocations, lemma
   · TERM: encyclopedia, register (optional), usageNote (optional), examples (optional) — NEVER wordRoot, inflections, synonyms, antonyms, collocations, lemma, memoryTip
   · TEXT: text only; usageNote only if grammar or wording is genuinely tricky; NEVER any word-level field
-- encyclopedia must be easy to understand: plain everyday language, a relatable analogy or example helps; never define a term by repeating other technical terms
+- encyclopedia rules:
+  1. write for someone with NO background in the field — imagine explaining to a smart 12-year-old
+  2. FORBIDDEN: dictionary definitions, jargon chains, opening with "X是……的一种技术/方法/概念"
+  3. REQUIRED: one concrete everyday analogy or scenario example (cooking, driving, school, shopping…)
+  4. end with why it matters or where you meet it
+- Follow this style for encyclopedia (illustrative example for "static checking"):
+  "程序不用真的跑起来就能检查代码对不对，就像写作文前先过一遍语法检查。比如你写 x = 'hello'，后面又拿 x 做加法，它会在运行前提醒你类型对不上。所以写代码时能第一时间发现低级错误，是代码质量的第一道防线。"
 - "text" is always required; all other fields are optional — omit what does not apply
 - Keep every string concise`;
 
