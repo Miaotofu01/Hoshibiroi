@@ -8,8 +8,8 @@ export function makeCacheKey(
   text: string, from: string, to: string, translator: string
 ): string {
   // 简单 hash: 拼接后取固定长度
-  // SCHEMA_V5: prompt 规则重写（百科通俗化/one-shot 范例），v4 缓存结果不符合新规则
-  const raw = `v5|${text}|${from}|${to}|${translator}`;
+  // SCHEMA_V6: prompt 规则重写（百科以专业定义为主体，类比降为可选），v5 缓存结果不符合新规则
+  const raw = `v6|${text}|${from}|${to}|${translator}`;
   let hash = 0;
   for (let i = 0; i < raw.length; i++) {
     const chr = raw.charCodeAt(i);
