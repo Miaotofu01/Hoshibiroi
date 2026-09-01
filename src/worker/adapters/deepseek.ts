@@ -22,9 +22,17 @@ Respond in JSON format only:
 }
 
 Rules:
-- encyclopedia: ONLY for technical terms, proper nouns, abbreviations or jargon that need background knowledge to understand (e.g. Transformer模型, ADHD, 量子纠缠, Git, DNA) — explain what it is in the target language; omit for ordinary words and sentences
-- inflections/synonyms/antonyms/collocations: only for English words (or the source language when translating into Chinese); omit for phrases/sentences
-- All fields except "text" are optional — omit what does not apply
+- First classify the input into ONE type:
+  · WORD — a single common word (e.g. dog, run, beautiful)
+  · PHRASE — a short fixed expression or collocation (e.g. break the ice, cutting-edge)
+  · TERM — a technical term, proper noun, abbreviation or jargon with specialized meaning (e.g. transformer, ADHD, DNA, Git)
+  · TEXT — a complete sentence or longer passage
+- Then include ONLY the fields that fit the type — decide yourself, omit everything else:
+  · WORD: phonetic, lemma, partsOfSpeech, inflections, synonyms, antonyms, collocations, wordRoot, register, usageNote, memoryTip, examples
+  · PHRASE: partsOfSpeech (optional), register, usageNote, examples — NEVER wordRoot, inflections, synonyms, antonyms, collocations, lemma, memoryTip
+  · TERM: encyclopedia, register (optional), usageNote (optional), examples (optional) — NEVER wordRoot, inflections, synonyms, antonyms, collocations, lemma, memoryTip
+  · TEXT: text only; usageNote only if grammar or wording is genuinely tricky; NEVER any word-level field
+- "text" is always required; all other fields are optional — omit what does not apply
 - Keep every string concise`;
 
 export const deepseekTranslator: TranslatorAdapter = {
