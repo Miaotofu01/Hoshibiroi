@@ -27,7 +27,7 @@ A Chrome extension (Manifest V3) that turns reading into vocabulary learning: **
 ## ✨ Highlights
 
 - **A closed loop while you read**: select → translate → favorite → FSRS-5 review scheduling. No break in flow, words go into long-term memory naturally.
-- **LLM-enriched dictionary entries**: DeepSeek generates inflections, synonyms/antonyms, collocations, word roots, usage notes, and memory tips in a single call — shown in the popup and the side panel, with the popup sections fully customizable.
+- **LLM-enriched dictionary entries**: DeepSeek classifies the input (word / phrase / technical term / sentence) and returns only the fields that fit — inflections, synonyms/antonyms, collocations, word roots, usage notes, and memory tips for words; **a precise professional encyclopedia entry for technical terms** (e.g. "static checking means inspecting source code without running the program"). Popup sections are fully customizable.
 - **Word-form merging**: `run / runs / running / ran` and `Hello / hello` automatically collapse into one entry — review progress never splits.
 - **Privacy-first**: no account, no cloud sync; vocabulary and translation cache live only in local storage.
 
@@ -52,7 +52,7 @@ Requires Node.js ≥ 18. Output goes to `dist/`.
 
 3. Configure a translation source (optional but recommended):
 
-- **DeepSeek** (recommended, free tier available): get an API key at [platform.deepseek.com](https://platform.deepseek.com), open the extension options (right-click the toolbar icon → Options), paste the key. DeepSeek powers the full enriched fields (inflections, collocations, word roots, memory tips, …).
+- **DeepSeek** (recommended, free tier available): get an API key at [platform.deepseek.com](https://platform.deepseek.com), open the extension options (right-click the toolbar icon → Options), paste the key. DeepSeek powers the full enriched fields (inflections, collocations, word roots, memory tips, …) plus encyclopedia entries for technical terms.
 - **Google Translate** works out of the box (requires access to Google services).
 - Tencent TMT, Baidu, and DeepL are also supported.
 
@@ -64,7 +64,7 @@ Requires Node.js ≥ 18. Output goes to `dist/`.
 - **Long-text support**: up to 20,000 characters, auto-split at sentence boundaries with per-source size limits; partial results returned with a failure note if some chunks fail
 - Chinese / English / Japanese / Korean / French / German / Spanish
 - Multiple sources (DeepSeek, Google, Tencent, Baidu, DeepL) with one-click source switching inside the popup
-- Enriched breakdown: IPA, parts of speech, inflections, synonyms/antonyms, collocations, word roots, usage notes, memory tips, register — popup sections are user-configurable
+- Enriched breakdown: IPA, parts of speech, inflections, synonyms/antonyms, collocations, word roots, usage notes, memory tips, register — popup sections are user-configurable. The AI picks fields by input type: full knowledge for words, no word roots for phrases/terms, translation-only for sentences, plus a **professional encyclopedia entry** for technical terms
 - Shortcuts: `Alt+T` translate, `Alt+R` read aloud, `Esc` close
 
 ### Vocabulary & spaced repetition
