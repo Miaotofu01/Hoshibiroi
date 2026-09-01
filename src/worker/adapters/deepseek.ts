@@ -17,10 +17,12 @@ Respond in JSON format only:
   "wordRoot": "词根词缀解析，如 \"dict = 说\"，无则省略",
   "register": "语域：正式/口语/书面/俚语（仅形容词短语），无则省略",
   "usageNote": "易混词辨析或用法注意事项，一两句，无则省略",
-  "memoryTip": "记忆技巧/联想助记，一两句，无则省略"
+  "memoryTip": "记忆技巧/联想助记，一两句，无则省略",
+  "encyclopedia": "百科式简短解释（中文，1-2 句）"
 }
 
 Rules:
+- encyclopedia: ONLY for technical terms, proper nouns, abbreviations or jargon that need background knowledge to understand (e.g. Transformer模型, ADHD, 量子纠缠, Git, DNA) — explain what it is in the target language; omit for ordinary words and sentences
 - inflections/synonyms/antonyms/collocations: only for English words (or the source language when translating into Chinese); omit for phrases/sentences
 - All fields except "text" are optional — omit what does not apply
 - Keep every string concise`;
@@ -91,6 +93,7 @@ export const deepseekTranslator: TranslatorAdapter = {
           register: parsed.register,
           usageNote: parsed.usageNote,
           memoryTip: parsed.memoryTip,
+          encyclopedia: parsed.encyclopedia,
           source: 'DeepSeek',
         };
       } catch {

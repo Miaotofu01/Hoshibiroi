@@ -181,6 +181,11 @@ export class SidePanel extends ShadowView {
         ${meanings}
       </div>
 
+      ${t.encyclopedia ? html`<div class="sect">
+        <div class="lbl">百科</div>
+        <div class="note">${t.encyclopedia}</div>
+      </div>` : nothing}
+
       ${t.examples && t.examples.length > 0 ? html`<div class="sect">
         <div class="lbl">例句</div>
         ${t.examples.map(ex => html`

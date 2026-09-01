@@ -26,6 +26,7 @@ export interface TranslationResult {
   register?: string;             // 语域：正式/口语/俚语/书面等
   usageNote?: string;            // 易混词辨析/用法说明
   memoryTip?: string;            // 记忆技巧
+  encyclopedia?: string;         // 百科：专业术语/专有名词/缩略语的简短解释（仅术语类输入返回）
 }
 
 // 翻译源配置 (用户可自定义)

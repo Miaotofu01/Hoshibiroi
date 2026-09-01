@@ -8,6 +8,7 @@ const MIN_H = 120;
 
 /** 弹泡知识区可配置项（id → 设置浮窗里的勾选标签） */
 const SECTION_ITEMS: Array<{ id: string; label: string }> = [
+  { id: 'encyclopedia', label: '百科' },
   { id: 'pos', label: '释义' },
   { id: 'inflections', label: '词形变化' },
   { id: 'synonyms', label: '同反义词' },
@@ -441,7 +442,8 @@ export class PopupBubble extends ShadowView {
   /** 弹泡知识区（按用户配置显隐；LLM 源才有的字段，无值不渲染） */
   private _sectionsTemplate(t: TranslationResult) {
     const hasAny =
-      (this._secOn('pos') && !!t.partsOfSpeech?.length)
+      (this._secOn('encyclopedia') && !!t.encyclopedia)
+      || (this._secOn('pos') && !!t.partsOfSpeech?.length)
       || (this._secOn('inflections') && !!t.inflections?.length)
       || (this._secOn('synonyms') && (!!t.synonyms?.length || !!t.antonyms?.length))
       || (this._secOn('collocations') && !!t.collocations?.length)
@@ -452,6 +454,11 @@ export class PopupBubble extends ShadowView {
     if (!hasAny) return nothing;
 
     return html`<div class="sections">
+      ${this._secOn('encyclopedia') && t.encyclopedia ? html`<div class="sec">
+        <div class="sec-label">百科</div>
+        <div class="sec-note">${t.encyclopedia}</div>
+      </div>` : nothing}
+
       ${this._secOn('pos') && t.partsOfSpeech?.length ? html`<div class="sec">
         <div class="sec-label">释义</div>
         ${t.partsOfSpeech.map(p => html`<div class="posline"><span class="sec-chip pos">${p.type}</span><span>${p.meanings.join('；')}</span></div>`)}
