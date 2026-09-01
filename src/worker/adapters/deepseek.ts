@@ -18,7 +18,7 @@ Respond in JSON format only:
   "register": "语域：正式/口语/书面/俚语（仅形容词短语），无则省略",
   "usageNote": "易混词辨析或用法注意事项，一两句，无则省略",
   "memoryTip": "记忆技巧/联想助记，一两句，无则省略",
-  "encyclopedia": "百科式简短解释（中文，1-2 句）"
+  "encyclopedia": "通俗易懂的中文解释（3-5 句，50-120 字）：第一句先一句话定性“它是什么”，再用日常语言、类比或生活化例子展开它做什么、为什么重要"
 }
 
 Rules:
@@ -29,9 +29,10 @@ Rules:
   · TEXT — a complete sentence or longer passage
 - Then include ONLY the fields that fit the type — decide yourself, omit everything else:
   · WORD: phonetic, lemma, partsOfSpeech, inflections, synonyms, antonyms, collocations, wordRoot, register, usageNote, memoryTip, examples
-  · PHRASE: partsOfSpeech (optional), register, usageNote, examples — NEVER wordRoot, inflections, synonyms, antonyms, collocations, lemma, memoryTip
+  · PHRASE: partsOfSpeech (optional), register, usageNote, examples, memoryTip — NEVER wordRoot, inflections, synonyms, antonyms, collocations, lemma
   · TERM: encyclopedia, register (optional), usageNote (optional), examples (optional) — NEVER wordRoot, inflections, synonyms, antonyms, collocations, lemma, memoryTip
   · TEXT: text only; usageNote only if grammar or wording is genuinely tricky; NEVER any word-level field
+- encyclopedia must be easy to understand: plain everyday language, a relatable analogy or example helps; never define a term by repeating other technical terms
 - "text" is always required; all other fields are optional — omit what does not apply
 - Keep every string concise`;
 
