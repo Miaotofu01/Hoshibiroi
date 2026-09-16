@@ -111,3 +111,44 @@ export interface Preferences {
   targetLang: Language;
   sourceLang: Language;
 }
+
+// ── AI 助手 ──
+
+/** 思考深度：off=关闭思考（最快，temperature 生效）；low/high/max 对应 DeepSeek reasoning_effort */
+export type AssistantThinking = 'off' | 'low' | 'high' | 'max';
+
+/** 助手设置（存 storage.local.assistantSettings） */
+export interface AssistantSettings {
+  contextChars: number;          // 注入页面正文字符上限；0 = 只带选中范围
+  thinking: AssistantThinking;   // 思考深度
+  includeSelection: boolean;     // 是否把选中范围一并发出
+  maxAnswerTokens: number;       // 回答 token 上限（不含思考预算）
+  instructions: string;          // 附加系统指令（用户自定义）
+}
+
+/** 页面上下文（content script 采集，纯数据） */
+export interface PageContext {
+  title: string;
+  url: string;
+  heading: string;     // 最近的标题路径，如 "H2: 安装 > H3: 配置"
+  text: string;        // 已按 contextChars 截断的正文
+  totalChars: number;  // 截断前正文总字符数
+}
+
+/** 一次回答的用量（来自 DeepSeek usage） */
+export interface AssistantStats {
+  elapsedMs: number;
+  promptTokens: number;
+  cachedTokens: number;     // prompt_cache_hit_tokens
+  answerTokens: number;     // completion_tokens
+  reasoningTokens: number;  // completion_tokens_details.reasoning_tokens
+}
+
+/** 渲染用对话消息（reasoning 只展示，永不回传） */
+export interface AssistantMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  reasoning?: string;
+  stats?: AssistantStats;
+  error?: boolean;
+}
