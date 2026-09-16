@@ -31,6 +31,9 @@ export const THINKING_LEVELS: Array<{ id: AssistantThinking; label: string }> = 
 const MAX_INSTRUCTIONS = 2000;
 const MAX_ANSWER_TOKENS = 8000;
 
+/** 向后对齐行尾时允许的最大超出行长（无换行/超长单行时防止窗口无限扩张） */
+const MAX_LINE_OVERHANG = 200;
+
 export function normalizeAssistantSettings(raw: unknown): AssistantSettings {
   const o = (raw ?? {}) as Partial<AssistantSettings>;
   const chars = Number(o.contextChars);
@@ -76,10 +79,10 @@ export function truncateAround(
     from = nl === -1 ? from : nl + 1;
   }
   let to = from + maxChars;
-  // 向后对齐到行尾（最多多出一行）
+  // 向后对齐到行尾（最多多出一行；行太长或无换行时就停在 maxChars，避免整段泄漏进上下文）
   if (to < text.length) {
     const nl = text.indexOf('\n', to);
-    to = nl === -1 ? text.length : nl;
+    if (nl !== -1 && nl - to <= MAX_LINE_OVERHANG) to = nl;
   }
   // from 已后移到行首，to 可能越过文本末尾，必须夹住，否则省略量为负
   to = Math.min(text.length, to);

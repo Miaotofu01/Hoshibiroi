@@ -47,6 +47,23 @@ describe('truncateAround', () => {
     expect(out.omittedHead + out.text.length + out.omittedTail).toBe(short.length);
   });
 
+  it('全文没有换行且没有锚点时，窗口严格停在 maxChars（回归：向后对齐一路吞到文末）', () => {
+    const flat = 'x'.repeat(5000);
+    const out = truncateAround(flat, '', 1000);
+    expect(out.text).toHaveLength(1000);
+    expect(out.omittedHead).toBe(0);
+    expect(out.omittedTail).toBe(4000);
+    expect(out.omittedHead + out.text.length + out.omittedTail).toBe(flat.length);
+  });
+
+  it('全文没有换行时锚点窗口也不超过 maxChars，且仍覆盖锚点', () => {
+    const flat = 'a'.repeat(2000) + 'needle' + 'b'.repeat(2000);
+    const out = truncateAround(flat, 'needle', 500);
+    expect(out.text).toContain('needle');
+    expect(out.text).toHaveLength(500);
+    expect(out.omittedHead + out.text.length + out.omittedTail).toBe(flat.length);
+  });
+
   it('锚点找不到时从开头截取', () => {
     const out = truncateAround(text, '不存在的词', 50);
     expect(out.text.startsWith('line-0')).toBe(true);
