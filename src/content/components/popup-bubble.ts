@@ -344,8 +344,8 @@ export class PopupBubble extends ShadowView {
   private _chatUi: ChatUiState = { draft: '', thinkOpen: false };
   /** 进助手模式前的翻译尺寸（切回翻译模式时还原） */
   private _translateSize: { w: number; h: number } | null = null;
-  /** 助手模式的尺寸：storage 里的值在初始化时先存下，进助手模式时才生效 */
-  private _assistantSize: { w: number; h: number } | null = null;
+  /** 助手模式的尺寸：storage 里的值在初始化时先存下，进助手模式时才生效（允许只存了一半） */
+  private _assistantSize: { w?: number; h?: number } | null = null;
   /** 对话是否跟随最新消息滚动（用户往上翻后不再打扰） */
   private _autoScroll = true;
   private _scrollBound = false;
@@ -577,6 +577,8 @@ export class PopupBubble extends ShadowView {
     this.loading = false;
     this.error = '';
     this._chatUi.draft = '';
+    // 关卡片后重新打开要重新跟随最新消息：用户上次翻到中间不代表这次也要停在中间
+    this._autoScroll = true;
     // 关卡片一律回到翻译模式，并还原进入助手前的翻译尺寸：
     // 否则下一次划词翻译（setLoading → show）会渲染成助手卡片，把新译文藏在后面。
     // 这里直接改 _mode 而不走 setMode()：切回翻译的 emit('mode-change') 会被
@@ -626,17 +628,21 @@ export class PopupBubble extends ShadowView {
   /** 切换模式：进助手自动加宽加高（翻译尺寸先存起来，切回时还原） */
   setMode(mode: 'translate' | 'assistant'): void {
     if (this._mode === mode) return;
+    this._autoScroll = true;   // 换模式后重新跟随最新消息（上一次翻上去的历史作废）
     if (mode === 'assistant') {
       this._translateSize = { w: this._width, h: this._maxHeight };
       // 上次调过的助手尺寸优先，没存过才用「加宽加高」的下限
       const keep = this._assistantSize;
-      this._width = keep ? keep.w : Math.max(this._width, 420);
-      this._maxHeight = keep ? keep.h : Math.max(this._maxHeight, Math.min(window.innerHeight * 0.72, window.innerHeight - 16));
+      this._width = keep?.w ?? Math.max(this._width, 420);
+      this._maxHeight = keep?.h ?? Math.max(this._maxHeight, Math.min(window.innerHeight * 0.72, window.innerHeight - 16));
     } else {
       this._assistantSize = { w: this._width, h: this._maxHeight };
       if (this._translateSize) {
         this._width = this._translateSize.w;
         this._maxHeight = this._translateSize.h;
+        // 快照已消费：翻译尺寸回到当前值本身，否则用户之后在翻译模式里拖出的新尺寸
+        // 会被下一次 hide() 用这个陈旧快照盖掉
+        this._translateSize = null;
       }
     }
     this._mode = mode;
@@ -657,6 +663,7 @@ export class PopupBubble extends ShadowView {
   handleEscape(): boolean {
     if (this._mode !== 'assistant' || !this._chatUi.draft) return false;
     this._chatUi.draft = '';
+    // 输入框与发送按钮都绑在 live() 上：这次重渲染会把 DOM 里的旧草稿和按钮态一起拉回空草稿
     this.update();
     return true;
   }
@@ -664,10 +671,15 @@ export class PopupBubble extends ShadowView {
   /**
    * 外接恢复助手模式尺寸。初始化时卡片还在翻译模式，此时直接改 _width/_maxHeight
    * 会盖掉刚恢复的翻译尺寸，所以先记下来，进助手模式时再生效。
+   * 调用方只要求存了宽或高其中之一就调用，所以这里允许半条记录：
+   * 通过校验的那半生效，缺的那半留空，进助手模式时由「加宽加高」的下限补齐。
    */
-  restoreAssistantDimensions(w: number, h: number): void {
-    if (!(w >= MIN_W && w <= MAX_W) || !(h >= MIN_H)) return;
-    this._assistantSize = { w, h };
+  restoreAssistantDimensions(w?: number, h?: number): void {
+    const next: { w?: number; h?: number } = {};
+    if (typeof w === 'number' && w >= MIN_W && w <= MAX_W) next.w = w;
+    if (typeof h === 'number' && h >= MIN_H) next.h = h;
+    if (next.w === undefined && next.h === undefined) return;
+    this._assistantSize = next;
   }
 
   private _chatHandlers(): ChatViewHandlers {
@@ -676,6 +688,9 @@ export class PopupBubble extends ShadowView {
       onAsk: (q) => {
         const v = q.trim();
         if (!v) return;
+        // 生成中 controller 会静默丢弃这一问：先清草稿等于把用户刚打的字吞掉，
+        // 所以这里直接不处理，草稿留在输入框里，等这轮结束再发
+        if (this._assistant?.busy) return;
         this._chatUi.draft = '';
         this._assistant?.ask(v);
         this.update();
@@ -812,7 +827,9 @@ export class PopupBubble extends ShadowView {
     this._resize = null;
     // 助手模式下拖出来的尺寸立即记快照：hide() 会消费掉快照并回到翻译模式，
     // 不在这里更新的话，下次进助手模式拿到的是更早那次的尺寸。
+    // 反过来，翻译模式下拖过尺寸 ⇒ 当前值就是权威，进助手前存的那个快照已经过时，丢掉。
     if (this._mode === 'assistant') this._assistantSize = { w: this._width, h: this._maxHeight };
+    else this._translateSize = null;
     this.update();
     this.emit('resize-end', { width: this._width, maxHeight: this._maxHeight, mode: this._mode });
   }

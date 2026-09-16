@@ -1,4 +1,8 @@
 import { html, nothing, type TemplateResult } from 'lit';
+// `live` 只在子路径导出（lit 主入口只再导出 lit-html 的 is-server），
+// 用它是因为普通绑定只跟「上次提交的值」比对：草稿被外部清空时提交值早已是 ''，
+// lit 会跳过赋值，DOM 里的 textarea 与按钮就停在旧状态上。
+import { live } from 'lit/directives/live.js';
 import type { AssistantController, AssistantFocus } from './controller';
 import { QUICK_PROMPTS } from '../../shared/assistant';
 import { iconSend, iconStop, iconTrash, iconChevronDown, iconSpeak, iconCopy } from '../icons';
@@ -196,19 +200,25 @@ export function chatBody(ctrl: AssistantController, ui: ChatUiState, h: ChatView
  * 发送按钮的可用态跟着草稿走。
  * onDraft 故意不触发重渲染（连续输入时重渲染会把光标甩到末尾），
  * 所以草稿变化要在这里就地同步，否则按钮会一直停在渲染时的状态。
+ * 只认发送按钮（`?disabled` 绑在它身上）：生成中这个位置是停止按钮，
+ * 给它写 disabled 会让停止点不动，而停止按钮没有绑定能在重渲染时纠正。
  */
 function syncSendBtn(field: HTMLTextAreaElement): void {
-  const send = field.closest('.input-row')?.querySelector('.send') as HTMLButtonElement | null;
+  const send = field.closest('.input-row')?.querySelector<HTMLButtonElement>('.send:not(.stop)');
   if (send) send.disabled = !field.value.trim();
 }
 
 export function chatInput(ctrl: AssistantController, ui: ChatUiState, h: ChatViewHandlers): TemplateResult {
+  // 草稿不变式：ui.draft 是唯一真源，textarea 的值与发送按钮的可用态都必须跟着它走。
+  // 清草稿发生在三处（发送、输入框内 Esc、文档级 Esc → popupBubble.handleEscape），
+  // 三处都会重渲染，所以两个绑定都用 live()：它比对的是 DOM 现值而不是上次提交的值，
+  // 即使提交值已经是 ''/true，也会强制把 DOM 拉回草稿的样子。
   return html`<div>
     <div class="input-row">
       <textarea
         rows="1"
         placeholder=${ctrl.busy ? '正在回答…' : '就这一页提问，Enter 发送 / Shift+Enter 换行'}
-        .value=${ui.draft}
+        .value=${live(ui.draft)}
         @input=${(e: Event) => {
           const ta = e.target as HTMLTextAreaElement;
           syncSendBtn(ta);
@@ -239,7 +249,7 @@ export function chatInput(ctrl: AssistantController, ui: ChatUiState, h: ChatVie
       ></textarea>
       ${ctrl.busy
         ? html`<button class="send stop" title="停止" @click=${() => h.onStop()}>${iconStop}</button>`
-        : html`<button class="send" title="发送" ?disabled=${!ui.draft.trim()} @click=${() => h.onAsk(ui.draft)}>${iconSend}</button>`}
+        : html`<button class="send" title="发送" ?disabled=${live(!ui.draft.trim())} @click=${() => h.onAsk(ui.draft)}>${iconSend}</button>`}
     </div>
     <div class="input-tools">
       <button class="tool ${ctrl.deepThink ? 'on' : ''}" title="本次会话用最强思考（覆盖设置）" @click=${() => h.onDeepThink()}>深想</button>
