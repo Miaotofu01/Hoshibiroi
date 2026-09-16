@@ -6,10 +6,13 @@
 /** 采集上限：截断发生在更上层，这里只是防止对超长页面做无谓遍历 */
 export const MAX_PAGE_CHARS = 60000;
 
-const SKIP_TAGS = new Set([
+const SKIP_TAGS = [
   'SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'SVG', 'CANVAS', 'IFRAME', 'VIDEO', 'AUDIO',
   'NAV', 'FOOTER', 'ASIDE', 'HEADER', 'FORM', 'BUTTON', 'SELECT', 'TEXTAREA', 'OPTION',
-]);
+];
+
+/** 命中的容器连同其后代整体跳过：只比对父元素会漏掉 <nav><div><span> 这类深层嵌套 */
+const SKIP_SELECTOR = [...SKIP_TAGS.map(t => t.toLowerCase()), '[aria-hidden="true"]', '[hidden]'].join(',');
 
 /** 正文根：优先语义化容器，回落到 body */
 function contentRoot(): Element | null {
@@ -25,8 +28,7 @@ export function collectPageText(maxChars = MAX_PAGE_CHARS): string {
     acceptNode(node: Node) {
       const parent = node.parentElement;
       if (!parent) return NodeFilter.FILTER_REJECT;
-      if (SKIP_TAGS.has(parent.tagName)) return NodeFilter.FILTER_REJECT;
-      if (parent.closest('[aria-hidden="true"], [hidden]')) return NodeFilter.FILTER_REJECT;
+      if (parent.closest(SKIP_SELECTOR)) return NodeFilter.FILTER_REJECT;
       return node.nodeValue && node.nodeValue.trim() ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
     },
   });
@@ -48,24 +50,24 @@ export function headingPath(): string {
   const origin = start.nodeType === Node.TEXT_NODE ? start.parentElement : (start as Element | null);
   if (!origin) return '';
 
-  const found: string[] = [];
+  // 逐层向上找最近的标题：越靠上层级越高；只保留级别严格递减的，最多 3 层
+  const hits: Array<{ level: number; text: string }> = [];
   let cur: Element | null = origin;
-  while (cur && found.length < 3) {
-    // 往前找最近的 h1-h3（前兄弟节点本身或其后代里的最后一个标题）
+  while (cur && hits.length < 3) {
     let prev: Element | null = cur.previousElementSibling;
     while (prev) {
       const heading = /^H[1-3]$/.test(prev.tagName) ? prev : prev.querySelector('h1, h2, h3');
       if (heading) {
+        const level = Number(heading.tagName[1]);
         const text = (heading.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
-        if (text) found.unshift(`${heading.tagName}: ${text}`);
+        if (text && !hits.some(h => h.level <= level)) hits.push({ level, text });
         break;
       }
       prev = prev.previousElementSibling;
     }
-    if (found.length > 0) break;
     cur = cur.parentElement;
   }
-  return found.join(' > ');
+  return hits.reverse().map(h => `H${h.level}: ${h.text}`).join(' > ');
 }
 
 export function pageTitle(): string {
