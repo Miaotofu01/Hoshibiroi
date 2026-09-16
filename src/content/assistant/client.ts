@@ -26,27 +26,38 @@ export class AssistantClient {
     this.handlers = handlers;
     this._busy = true;
 
-    const port = chrome.runtime.connect({ name: ASSISTANT_PORT });
-    this.port = port;
-    port.onMessage.addListener((ev: AssistantStreamEvent) => this._onEvent(ev));
-    port.onDisconnect.addListener(() => {
-      // 后台被回收 / 扩展重载：把在途请求标记为失败，用户可重试
-      if (!this._busy) return;
+    try {
+      const port = chrome.runtime.connect({ name: ASSISTANT_PORT });
+      this.port = port;
+      port.onMessage.addListener((ev: AssistantStreamEvent) => this._onEvent(ev));
+      port.onDisconnect.addListener(() => {
+        // 后台被回收 / 扩展重载：把在途请求标记为失败，用户可重试
+        if (!this._busy) return;
+        const h = this.handlers;
+        this._finish();
+        h?.onError('与后台的连接中断（后台可能被回收），请重试');
+      });
+      const req: AssistantStreamRequest = { kind: 'ask', payload };
+      port.postMessage(req);
+    } catch {
+      // connect 抛错（扩展重载、上下文失效）或首条消息发不出去：不接任何事件，
+      // 若不在这里复位，busy 会永远为 true，stop() 也救不回来。_finish() 断开可能
+      // 已建立的端口，保证不留半开端口。
       const h = this.handlers;
       this._finish();
-      h?.onError('与后台的连接中断（后台可能被回收），请重试');
-    });
-    const req: AssistantStreamRequest = { kind: 'ask', payload };
-    port.postMessage(req);
+      h?.onError('与后台的连接失败，请刷新页面后重试');
+    }
   }
 
   abort(): void {
     if (!this.port) return;
     const port = this.port;
-    this._finish();
+    // 先发 abort 再断端口：反过来的话 postMessage 必然抛进下面的 catch，
+    // worker 只能靠 onDisconnect 兜底中止，而且本端再也收不到 done{aborted:true}。
     try {
       port.postMessage({ kind: 'abort' } satisfies AssistantStreamRequest);
     } catch { /* 端口已断开 */ }
+    this._finish();
   }
 
   private _onEvent(ev: AssistantStreamEvent): void {

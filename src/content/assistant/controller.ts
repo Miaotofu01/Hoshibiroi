@@ -40,8 +40,10 @@ export class AssistantController {
   /**
    * 系统提示词按 focus 缓存：会话内前缀逐字节稳定，DeepSeek 前缀缓存才能命中
    * （命中部分输入价约为未命中的 1/50）。换选中范围只影响用户消息，不动前缀。
+   * 缓存连带记下当时的页面地址：SPA 路由切换后标题/正文/地址都变了，必须重建，
+   * 否则助手会一直描述上一个页面。
    */
-  private promptCache = new Map<AssistantFocus, string>();
+  private promptCache = new Map<AssistantFocus, { url: string; content: string }>();
 
   get busy(): boolean { return this.client.busy; }
 
@@ -53,6 +55,7 @@ export class AssistantController {
   setSettings(raw: unknown): void {
     this.settings = normalizeAssistantSettings(raw);
     this.promptCache.clear();
+    this.lastFinishReason = '';               // 上一轮的截断提示不能飘到新设置下
     this.notify(true);
   }
 
@@ -68,6 +71,8 @@ export class AssistantController {
     const sel = (opts.selection ?? this.selection.text).trim();
 
     if (focus === 'document-start' && this.settings.contextChars === 0) {
+      // 清掉上一轮的结束原因：否则截断提示会和这条无关的错误同屏
+      this.lastFinishReason = '';
       this.session.fail('上下文长度为 0，无法速览整页：请在设置里把「上下文长度」调大。');
       this.notify(true);
       return;
@@ -107,6 +112,10 @@ export class AssistantController {
   stop(): void {
     if (!this.client.busy) return;
     this.client.abort();
+    // 端口已断开，不会再收到 done —— 本地收敛这一轮，避免「生成中」永远停不下来
+    this.session.finish(ZERO_STATS);
+    this.lastFinishReason = 'aborted';
+    this.notify(true);
   }
 
   clear(): void {
@@ -150,10 +159,11 @@ export class AssistantController {
   }
 
   private _systemPrompt(focus: AssistantFocus, anchor: string): string {
+    // 同一地址内命中即逐字节复用（前缀缓存）；地址变了就当作新页面重建
     const cached = this.promptCache.get(focus);
-    if (cached) return cached;
+    if (cached && cached.url === pageUrl()) return cached.content;
     const built = buildSystemPrompt({ page: this._page(focus, anchor), instructions: this.settings.instructions });
-    this.promptCache.set(focus, built);
+    this.promptCache.set(focus, { url: pageUrl(), content: built });
     return built;
   }
 
