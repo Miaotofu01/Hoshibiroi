@@ -47,7 +47,11 @@ export function headingPath(): string {
   const sel = window.getSelection();
   if (!sel || sel.rangeCount === 0) return '';
   const start = sel.getRangeAt(0).startContainer;
-  const origin = start.nodeType === Node.TEXT_NODE ? start.parentElement : (start as Element | null);
+  // 程序化选区（如 selectNodeContents(document)）的 startContainer 可能是 Document 等非元素节点，
+  // 直接对它们取 .closest 会抛 TypeError 并冒泡到询问流程，这里统一降级为 ''
+  const origin = start.nodeType === Node.TEXT_NODE
+    ? start.parentElement
+    : (start instanceof Element ? start : null);
   if (!origin) return '';
 
   const label = (el: Element): string => (el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
