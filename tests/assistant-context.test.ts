@@ -19,6 +19,8 @@ describe('estimateTokens', () => {
     expect(estimateTokens('你好世界')).toBe(4);
     expect(estimateTokens('abcdefgh')).toBe(2);
     expect(estimateTokens('你好abcd')).toBe(3);
+    // 单个非 CJK 字符必须向上取整为 1（钉住 ceil，排除 floor）
+    expect(estimateTokens('a')).toBe(1);
   });
   it('空串为 0', () => {
     expect(estimateTokens('')).toBe(0);
@@ -33,7 +35,16 @@ describe('truncateAround', () => {
     expect(out.text).toContain('line-50');
     expect(out.omittedHead).toBeGreaterThan(0);
     expect(out.omittedTail).toBeGreaterThan(0);
-    expect(out.omittedHead + out.text.length + out.omittedTail).toBeGreaterThanOrEqual(text.length - 2);
+    // 不变式：省略头 + 窗口 + 省略尾必须精确等于原文长度
+    expect(out.omittedHead + out.text.length + out.omittedTail).toBe(text.length);
+  });
+
+  it('向后对齐越过文本末尾时省略尾不为负（回归：text[len - maxChars] 是换行）', () => {
+    const short = 'a\nc';
+    const out = truncateAround(short, 'c', 2);
+    expect(out.text).toBe('c');
+    expect(out.omittedTail).toBe(0);
+    expect(out.omittedHead + out.text.length + out.omittedTail).toBe(short.length);
   });
 
   it('锚点找不到时从开头截取', () => {
@@ -99,9 +110,13 @@ describe('trimHistory', () => {
   });
 
   it('按 token 上限再裁一层', () => {
-    const out = trimHistory(msgs, 12, 12);
-    expect(out.length).toBeLessThan(msgs.length);
-    expect(out[0].role).toBe('user');
+    // 每轮 6 token（问/答各 3），12 轮共 72；上限 12 恰好只剩最后两轮
+    expect(trimHistory(msgs, 12, 12)).toEqual([
+      { role: 'user', content: '问题10' },
+      { role: 'assistant', content: '回答10' },
+      { role: 'user', content: '问题11' },
+      { role: 'assistant', content: '回答11' },
+    ]);
   });
 });
 

@@ -81,7 +81,8 @@ export function truncateAround(
     const nl = text.indexOf('\n', to);
     to = nl === -1 ? text.length : nl;
   }
-  if (to <= from) to = Math.min(text.length, from + maxChars);
+  // from 已后移到行首，to 可能越过文本末尾，必须夹住，否则省略量为负
+  to = Math.min(text.length, to);
   return { text: text.slice(from, to), omittedHead: from, omittedTail: text.length - to };
 }
 
