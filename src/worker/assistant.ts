@@ -103,6 +103,7 @@ export async function* streamAssistant(req: AssistantRequest): AsyncGenerator<As
   const ctrl = new AbortController();
   const onAbort = () => ctrl.abort();
   req.signal?.addEventListener('abort', onAbort);
+  if (req.signal?.aborted) ctrl.abort();   // 调用前就已中止的信号不会再派发 abort 事件，必须补查一次
 
   let idle: ReturnType<typeof setTimeout> | null = null;
   const armIdle = () => {

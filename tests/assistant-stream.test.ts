@@ -123,4 +123,41 @@ describe('streamAssistant', () => {
       vi.useRealTimers();
     }
   });
+
+  it('signal 在调用前就已中止时不发请求，并按用户停止抛出 AbortError', async () => {
+    vi.useFakeTimers();
+    try {
+      // 记录「真的发出去了」的请求数：真实环境里就是被计费、且再也取消不掉的那次调用
+      let issued = 0;
+      vi.stubGlobal('fetch', vi.fn(async (_u: string, init?: RequestInit) => {
+        if (init?.signal?.aborted) throw new DOMException('aborted', 'AbortError');   // 真实 fetch：signal 已中止则直接拒绝
+        issued++;
+        return {
+          ok: true,
+          body: new ReadableStream<Uint8Array>({
+            start(c) {
+              init?.signal?.addEventListener('abort', () => c.error(new DOMException('aborted', 'AbortError')));
+            },
+          }),
+        } as unknown as Response;
+      }));
+
+      const ctrl = new AbortController();
+      ctrl.abort();                       // 同一 tick 里点了停止，或复用同一个 controller 发下一次请求
+      const drained = (async () => {
+        for await (const _ of streamAssistant({ apiKey: 'k', messages: [], thinking: 'off', maxTokens: 500, signal: ctrl.signal })) { /* drain */ }
+      })();
+      const outcome = drained.then(() => null, (err: unknown) => err);
+
+      await vi.advanceTimersByTimeAsync(0);      // 只跑完微任务，不推进 60 秒空闲超时
+
+      expect(issued).toBe(0);                    // 请求没有被发出（若被发出，这里已经是 1，随后才靠空闲超时兜底）
+      const err = await outcome;
+      expect(err).toBeInstanceOf(DOMException);
+      expect((err as DOMException).name).toBe('AbortError');   // 用户停止：原样抛出，交给上层判定
+      expect((err as DOMException).message).not.toMatch(/超时/);   // 不能被误报成空闲超时
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
