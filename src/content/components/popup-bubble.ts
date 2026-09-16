@@ -1,7 +1,7 @@
 import { html, nothing } from 'lit';
 import type { TranslationResult } from '../../shared/types';
 import { ShadowView } from '../shadow-view';
-import { iconSpeak, iconStar, iconChevronRight, iconRetry, iconPin, iconSettings, iconClose, iconCopy, iconMore } from '../icons';
+import { iconSpeak, iconStar, iconChevronRight, iconRetry, iconSettings, iconClose, iconCopy } from '../icons';
 
 const MIN_W = 240, MAX_W = 640;
 const MIN_H = 120;
@@ -58,7 +58,6 @@ const CSS = `
     background: rgba(255, 255, 255, calc(var(--card-opacity, 1) * 0.85));
     box-shadow: 0 12px 40px rgba(31, 35, 40, 0.18), 0 3px 10px rgba(31, 35, 40, 0.12);
   }
-  .bubble.pinned { border-top-color: var(--syo-cyan); }
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
   .meta {
@@ -81,6 +80,15 @@ const CSS = `
   .grip::before, .grip::after {
     content: '⋮'; display: block; line-height: 1; font-size: 12px;
   }
+  .meta-close {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; margin-left: auto; flex-shrink: 0;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: var(--syo-radius-sm);
+    color: var(--text-muted); cursor: pointer; transition: var(--transition);
+  }
+  .meta-close:hover { color: var(--accent-red); background: var(--bg-hover); border-color: var(--accent-red); }
+  .meta-close svg { width: 12px; height: 12px; }
   .chip {
     font-family: var(--font-mono); font-size: calc(var(--font-size-sm) - 1px);
     padding: 2px 7px; border-radius: 5px;
@@ -110,7 +118,6 @@ const CSS = `
   .iconbtn svg { width: 15px; height: 15px; }
   .iconbtn.on { color: var(--accent-yellow); border-color: rgba(210,153,34,.4); }
   .iconbtn.on svg { fill: var(--accent-yellow); }
-  .iconbtn.pinned-on { color: var(--syo-cyan); border-color: rgba(125,207,255,.35); }
   .iconbtn.copied { color: var(--accent-green); border-color: rgba(63,185,80,.4); }
 
   .expand {
@@ -124,37 +131,6 @@ const CSS = `
   }
   .expand:hover { background: rgba(122,162,247,.18); }
   .expand svg { width: 14px; height: 14px; }
-
-  /* ── 溢出菜单（低频操作：设置 / 固定）── */
-  .more-wrap { position: relative; }
-  .more-menu {
-    position: absolute; bottom: calc(100% + 6px); right: 0;
-    min-width: 150px;
-    background: rgba(22, 27, 34, calc(var(--card-opacity, 1) * 0.95));
-    -webkit-backdrop-filter: blur(14px) saturate(140%);
-    backdrop-filter: blur(14px) saturate(140%);
-    border: 1px solid var(--border);
-    border-radius: var(--syo-radius-lg);
-    box-shadow: 0 8px 32px rgba(0,0,0,.5);
-    padding: 4px;
-    z-index: 3;
-    animation: popIn 160ms var(--syo-ease-out);
-  }
-  :host(.theme-light) .more-menu {
-    background: rgba(255, 255, 255, calc(var(--card-opacity, 1) * 0.97));
-    box-shadow: 0 8px 32px rgba(31, 35, 40, 0.18);
-  }
-  .more-item {
-    display: flex; align-items: center; gap: 8px;
-    width: 100%; padding: 7px 10px;
-    background: none; border: none; border-radius: var(--syo-radius-sm);
-    font-family: var(--font-display); font-size: 13px;
-    color: var(--text-secondary); cursor: pointer;
-    transition: var(--transition);
-  }
-  .more-item:hover { background: var(--bg-hover); color: var(--text-primary); }
-  .more-item.on { color: var(--syo-cyan); }
-  .more-item svg { width: 14px; height: 14px; }
 
   /* ── 调尺寸手柄（右下角，低调）── */
   .resize-handle {
@@ -316,8 +292,8 @@ const CSS = `
 
 export class PopupBubble extends ShadowView {
   translation: TranslationResult | null = null;
-  /** 固定态：置 true 后全局点击不会关闭此卡片 */
-  pinned = false;
+  /** 固定态：置 true 后全局点击/滚动不会关闭此卡片。默认置顶固定，靠右上角 ✕ 关闭 */
+  pinned = true;
 
   private loading = false;
   private error = '';
@@ -328,8 +304,6 @@ export class PopupBubble extends ShadowView {
   private _fontScale = 20;
   /** 设置面板是否展开 */
   private _showSettings = false;
-  /** 溢出菜单是否展开 */
-  private _showMore = false;
   /** 设置浮窗锚点（齿轮按钮的左下角坐标） */
   private _settingsX = 0;
   private _settingsY = 0;
@@ -400,6 +374,9 @@ export class PopupBubble extends ShadowView {
           <button class="expand" @click=${() => this._openOptions()} title="打开设置页检查翻译源与 API Key">
             ${iconSettings} 去设置
           </button>
+          <button class="expand" style="margin-left:auto" @click=${() => this._onCloseClick()} title="关闭">
+            ${iconClose} 关闭
+          </button>
         </div>
       </div>`;
     }
@@ -410,12 +387,13 @@ export class PopupBubble extends ShadowView {
     const showOrig = t.text !== this._originalWord && this._originalWord.length <= 120;
     const bubbleStyle = `width:${this._width}px;max-height:${this._maxHeight}px`;
 
-    return html`<div class="bubble ${this.pinned ? 'pinned' : ''}" style="${bubbleStyle}">
+    return html`<div class="bubble" style="${bubbleStyle}">
       <div class="meta" @mousedown=${(e: MouseEvent) => this._onDragStart(e)}>
         <span class="sig">${this._sig || ''}</span>
         <span class="grip" title="拖拽移动卡片"></span>
         ${this._secOn('register') && t.register ? html`<span class="chip reg" title="语域">${t.register}</span>` : nothing}
         <span class="chip">${t.source}</span>
+        <button class="meta-close" title="关闭" @click=${(e: MouseEvent) => this._onCloseClick(e)}>${iconClose}</button>
       </div>
       <div class="body">
         ${showOrig ? html`<div class="orig">${this._originalWord}</div>` : nothing}
@@ -428,10 +406,7 @@ export class PopupBubble extends ShadowView {
         <button class="iconbtn" title="复制译文" @click=${() => this._copyTranslation()}>${iconCopy}</button>
         <button class="iconbtn" title="朗读" @click=${() => this.emit('speak-word', { word: this._originalWord })}>${iconSpeak}</button>
         <button class="iconbtn ${this.isFavorited ? 'on' : ''}" title="收藏" @click=${() => this._toggleFavorite()}>${iconStar}</button>
-        <div class="more-wrap">
-          <button class="iconbtn ${this._showMore ? 'on' : ''}" title="更多操作" @click=${() => this._toggleMore()}>${iconMore}</button>
-          ${this._showMore ? this._moreMenuTemplate() : nothing}
-        </div>
+        <button class="iconbtn" title="设置字体、透明度、翻译方向与源" @click=${(e: Event) => this._openSettings(e.currentTarget as HTMLElement)}>${iconSettings}</button>
         <button class="expand" title="展开详情" @click=${() => this.emit('expand-detail')}>详情 ${iconChevronRight}</button>
       </div>
       <div class="resize-handle" title="拖拽调整卡片尺寸" @mousedown=${(e: MouseEvent) => this._onResizeStart(e)}></div>
@@ -511,7 +486,7 @@ export class PopupBubble extends ShadowView {
     this._sig = sig;
     this.error = '';
     this.loading = false;
-    this.pinned = false;
+    this.pinned = true;
     this.isFavorited = isFavorited;
     this.setVisible(true);
     this.update();
@@ -522,7 +497,7 @@ export class PopupBubble extends ShadowView {
     this.loading = true;
     this.error = '';
     this.translation = null;
-    this.pinned = false;
+    this.pinned = true;
     this.setVisible(true);
     this.update();
     this._position(anchorRect);
@@ -531,7 +506,7 @@ export class PopupBubble extends ShadowView {
   setError(msg: string, anchorRect: DOMRect) {
     this.error = msg;
     this.loading = false;
-    this.pinned = false;
+    this.pinned = true;
     this.setVisible(true);
     this.update();
     this._position(anchorRect);
@@ -540,7 +515,6 @@ export class PopupBubble extends ShadowView {
   hide() {
     this.pinned = false;
     this._showSettings = false;
-    this._showMore = false;
     this.setVisible(false);
     this.translation = null;
     this.loading = false;
@@ -734,9 +708,8 @@ export class PopupBubble extends ShadowView {
 
   /** 关闭设置浮窗；返回 true 表示有关闭动作 */
   closeSettings(): boolean {
-    const closed = this._showSettings || this._showMore;
+    const closed = this._showSettings;
     this._showSettings = false;
-    this._showMore = false;
     if (closed) this.update();
     return closed;
   }
@@ -752,27 +725,13 @@ export class PopupBubble extends ShadowView {
     this._settingsX = r.left;
     this._settingsY = r.bottom + 4;
     this._showSettings = true;
-    this._showMore = false;
     this.update();
   }
 
-  // ── 溢出菜单（低频操作收纳）──
-
-  private _toggleMore(): void {
-    this._showMore = !this._showMore;
-    this._showSettings = false;
-    this.update();
-  }
-
-  private _moreMenuTemplate() {
-    return html`<div class="more-menu">
-      <button class="more-item" title="固定卡片：点页面其他地方不会关" @click=${() => this._togglePin()}>
-        ${iconPin}${this.pinned ? '取消固定' : '固定卡片'}
-      </button>
-      <button class="more-item" title="设置字体、透明度、翻译方向与源" @click=${(e: Event) => this._openSettings(e.currentTarget as HTMLElement)}>
-        ${iconSettings}设置
-      </button>
-    </div>`;
+  /** 右上角关闭按钮：通知 content script 联动收起触发图标与侧栏 */
+  private _onCloseClick(e?: MouseEvent): void {
+    e?.stopPropagation();
+    this.emit('close-popup');
   }
 
   private _settingsPopTemplate() {
@@ -877,12 +836,6 @@ export class PopupBubble extends ShadowView {
     this._showSettings = false;
     // 不调 update() — 让 content 那边的 setLoading() 接管，避免旧译文闪一下
     this.emit('switch-source', { sourceId: id });
-  }
-
-  private _togglePin() {
-    this.pinned = !this.pinned;
-    this._showMore = false;
-    this.update();
   }
 
   private _position(rect: DOMRect) {

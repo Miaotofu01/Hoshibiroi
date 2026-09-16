@@ -212,6 +212,13 @@ function init(): void {
     }
   });
 
+  // ── 卡片右上角 ✕：联动收起触发图标与侧栏 ──
+  popupBubble.el.addEventListener('close-popup', () => {
+    popupBubble.hide();
+    sidePanel.hide();
+    triggerIcon.hide();
+  });
+
   // ── 翻译核心：发请求 → 浮层展示（所有翻译入口统一走这里）──
   function doTranslate(sourceId?: string) {
     if (!lastSelection) return;
