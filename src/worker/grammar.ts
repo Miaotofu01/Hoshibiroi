@@ -49,11 +49,12 @@ Important:
       'Authorization': `Bearer ${ds.apiKey}`,
     },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: 'deepseek-flash',
       messages: [
         { role: 'system', content: 'You are a grammar analysis assistant. Always respond with ONLY valid JSON, no markdown fences, no extra explanation.' },
         { role: 'user', content: prompt },
       ],
+      thinking: { type: 'disabled' },   // 语法分析要确定性 JSON，不要思维链
       temperature: 0.1,
       max_tokens: 2000,
     }),

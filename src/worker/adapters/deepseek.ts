@@ -60,11 +60,15 @@ export const deepseekTranslator: TranslatorAdapter = {
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          // 官方文档当前模型取值为 deepseek-flash / deepseek-v4-pro；
+          // 翻译是结构化抽取，不需要思维链：显式关闭思考模式，
+          // 否则思考默认开启（effort=high）会拖慢首个 token 并让 temperature 失效。
+          model: 'deepseek-flash',
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             { role: 'user', content: `Translate "${text}" ${direction}` },
           ],
+          thinking: { type: 'disabled' },
           temperature: 0.3,
           max_tokens: 4096, // 长文本分块可达 2000 字符，输出需要更大预算
         }),
