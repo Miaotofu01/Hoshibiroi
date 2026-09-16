@@ -50,18 +50,33 @@ export function headingPath(): string {
   const origin = start.nodeType === Node.TEXT_NODE ? start.parentElement : (start as Element | null);
   if (!origin) return '';
 
-  // 逐层向上找最近的标题：越靠上层级越高；只保留级别严格递减的，最多 3 层
+  const label = (el: Element): string => (el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
+
+  // 最内层：选中位置本身落在某个标题里（含标题元素自身）
   const hits: Array<{ level: number; text: string }> = [];
-  let cur: Element | null = origin;
+  const own = origin.closest('h1, h2, h3');
+  if (own) {
+    const text = label(own);
+    if (text) hits.push({ level: Number(own.tagName[1]), text });
+  }
+
+  // 逐层向上找标题：越靠上层级越高；只保留级别严格递减的，最多 3 层。
+  // 同一层必须一路扫到第一个前兄弟为止：更靠前的浅标题仍可能是外层章节，
+  // 撞见一个更深的标题就收手会把目录、上一节这类非祖先标题当成章节。
+  // 起点用 own 本身而不是它的父元素：选中标题时也要收下它前面的更浅标题，
+  // 否则那一层空着，反而让目录这类非祖先标题补位。
+  let cur: Element | null = own ?? origin;
   while (cur && hits.length < 3) {
     let prev: Element | null = cur.previousElementSibling;
     while (prev) {
       const heading = /^H[1-3]$/.test(prev.tagName) ? prev : prev.querySelector('h1, h2, h3');
       if (heading) {
+        const text = label(heading);
         const level = Number(heading.tagName[1]);
-        const text = (heading.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
-        if (text && !hits.some(h => h.level <= level)) hits.push({ level, text });
-        break;
+        // 空标题、站名/目录这类噪声容器里的标题都不算章节，继续往前找，不要就此收手
+        if (text && !heading.closest(SKIP_SELECTOR) && !hits.some(h => h.level <= level)) {
+          hits.push({ level, text });
+        }
       }
       prev = prev.previousElementSibling;
     }
