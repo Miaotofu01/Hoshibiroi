@@ -41,7 +41,13 @@ export class ChatSession {
     this._streaming = false;
   }
 
+  /**
+   * 记录失败。调用方可能没有先 ask()（例如「上下文长度为 0，无法整页速览」这类短路分支），
+   * 此时最后一条消息是上一轮已完成的回答：必须新开一条助手消息来写错误，
+   * 不能把错误文本盖到那份回答上，否则上一轮的真实答案会被抹掉并从历史里整轮消失。
+   */
   fail(message: string): void {
+    if (!this._openAssistant()) this.messages.push({ role: 'assistant', content: '' });
     const last = this._lastAssistant();
     if (last) {
       last.content = message;
@@ -76,5 +82,14 @@ export class ChatSession {
   private _lastAssistant(): AssistantMessage | null {
     const last = this.messages[this.messages.length - 1];
     return last && last.role === 'assistant' ? last : null;
+  }
+
+  /**
+   * ask() 打开、还没结束（finish / fail / reset）的那条助手消息。
+   * 只有它才接收错误文本；上一轮已完成的回答不属于任何打开的轮次，
+   * 因此 fail() 遇到它时必须另起一条，而不是就地覆写。
+   */
+  private _openAssistant(): AssistantMessage | null {
+    return this._streaming ? this._lastAssistant() : null;
   }
 }

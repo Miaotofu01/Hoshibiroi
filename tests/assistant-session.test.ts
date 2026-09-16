@@ -50,6 +50,25 @@ describe('ChatSession', () => {
     expect(s.streaming).toBe(false);
   });
 
+  it('没有先 ask() 时 fail() 自己开一条错误消息，不覆盖上一轮的答案', () => {
+    const s = new ChatSession();
+    s.ask('上一轮的问题');
+    s.pushAnswer('上一轮的答案');
+    s.finish(stats);
+    s.fail('出错了');
+    expect(s.messages.length).toBe(3);
+    expect(s.messages[1].content).toBe('上一轮的答案');
+    expect(s.messages[1].error).toBeUndefined();
+    expect(s.messages[2].role).toBe('assistant');
+    expect(s.messages[2].content).toBe('出错了');
+    expect(s.messages[2].error).toBe(true);
+    expect(s.streaming).toBe(false);
+    expect(s.toApiMessages()).toEqual([
+      { role: 'user', content: '上一轮的问题' },
+      { role: 'assistant', content: '上一轮的答案' },
+    ]);
+  });
+
   it('历史超过轮数上限时丢最老的轮次', () => {
     const s = new ChatSession();
     for (let i = 0; i < MAX_HISTORY_TURNS + 3; i++) {
