@@ -14,9 +14,14 @@ const SKIP_TAGS = [
 /** 命中的容器连同其后代整体跳过：只比对父元素会漏掉 <nav><div><span> 这类深层嵌套 */
 const SKIP_SELECTOR = [...SKIP_TAGS.map(t => t.toLowerCase()), '[aria-hidden="true"]', '[hidden]'].join(',');
 
+/** 语义化正文容器；页面没有这类容器时返回 null */
+function semanticRoot(): Element | null {
+  return document.querySelector('article, main, [role="main"]');
+}
+
 /** 正文根：优先语义化容器，回落到 body */
 function contentRoot(): Element | null {
-  return document.querySelector('article, main, [role="main"]') ?? document.body;
+  return semanticRoot() ?? document.body;
 }
 
 export function collectPageText(maxChars = MAX_PAGE_CHARS): string {
@@ -54,15 +59,17 @@ export function headingPath(): string {
     : (start instanceof Element ? start : null);
   if (!origin) return '';
 
-  const root = contentRoot();
+  const root = semanticRoot();
   const label = (el: Element): string => (el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
 
   /** 站名/目录/页脚这类页面噪声里的标题不算章节；
-      但正文根内部被整体跳过的容器是正文自己的标题区（如 <article><header><h1>），要算 */
+      但正文根内部的 <header>/<aside> 是文章自己的标题区，要算。
+      没有语义化正文容器时保守处理：宁可少给一段，也不要标错章节 */
   const isNoise = (el: Element): boolean => {
     const holder = el.closest(SKIP_SELECTOR);
     if (!holder) return false;
-    return !root || !root.contains(holder);
+    if (!root) return true;
+    return !root.contains(holder);
   };
 
   /** 前一个兄弟节点子树里「文档顺序最后」的标题 = 最近的上一级标题 */
