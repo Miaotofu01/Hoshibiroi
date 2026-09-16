@@ -54,12 +54,28 @@ export function headingPath(): string {
     : (start instanceof Element ? start : null);
   if (!origin) return '';
 
+  const root = contentRoot();
   const label = (el: Element): string => (el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 60);
+
+  /** 站名/目录/页脚这类页面噪声里的标题不算章节；
+      但正文根内部被整体跳过的容器是正文自己的标题区（如 <article><header><h1>），要算 */
+  const isNoise = (el: Element): boolean => {
+    const holder = el.closest(SKIP_SELECTOR);
+    if (!holder) return false;
+    return !root || !root.contains(holder);
+  };
+
+  /** 前一个兄弟节点子树里「文档顺序最后」的标题 = 最近的上一级标题 */
+  const nearestHeadingIn = (node: Element): Element | null => {
+    if (/^H[1-3]$/.test(node.tagName)) return node;
+    const list = node.querySelectorAll('h1, h2, h3');
+    return list.length > 0 ? list[list.length - 1] : null;
+  };
 
   // 最内层：选中位置本身落在某个标题里（含标题元素自身）
   const hits: Array<{ level: number; text: string }> = [];
   const own = origin.closest('h1, h2, h3');
-  if (own) {
+  if (own && !isNoise(own)) {
     const text = label(own);
     if (text) hits.push({ level: Number(own.tagName[1]), text });
   }
@@ -73,12 +89,12 @@ export function headingPath(): string {
   while (cur && hits.length < 3) {
     let prev: Element | null = cur.previousElementSibling;
     while (prev) {
-      const heading = /^H[1-3]$/.test(prev.tagName) ? prev : prev.querySelector('h1, h2, h3');
+      const heading = nearestHeadingIn(prev);
       if (heading) {
         const text = label(heading);
         const level = Number(heading.tagName[1]);
         // 空标题、站名/目录这类噪声容器里的标题都不算章节，继续往前找，不要就此收手
-        if (text && !heading.closest(SKIP_SELECTOR) && !hits.some(h => h.level <= level)) {
+        if (text && !isNoise(heading) && !hits.some(h => h.level <= level)) {
           hits.push({ level, text });
         }
       }
