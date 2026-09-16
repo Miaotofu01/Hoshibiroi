@@ -1,4 +1,5 @@
-import type { TranslationResult, FavoriteWord, HistoryEntry, TranslatorConfig, Preferences, GrammarAnalysis, ReviewRecord, VocabSettings } from './types';
+import type { TranslationResult, FavoriteWord, HistoryEntry, TranslatorConfig, Preferences, GrammarAnalysis, ReviewRecord, VocabSettings, AssistantStats, AssistantThinking } from './types';
+import type { ApiMessage } from './assistant';
 
 // ── 请求类型 ──
 
@@ -64,6 +65,35 @@ export interface AnalyzeGrammarRequest {
   text: string;
   lang: string;
   detail: 'brief' | 'full';
+}
+
+// ── AI 助手（流式走 runtime.connect 长连接，见 ASSISTANT_PORT）──
+
+/** content → worker 助手流式端口名 */
+export const ASSISTANT_PORT = 'assistant-stream';
+
+export interface AskAssistantPayload {
+  messages: ApiMessage[];
+  thinking: AssistantThinking;
+  maxTokens: number;
+}
+
+export type AssistantStreamEvent =
+  | { kind: 'reasoning'; text: string }
+  | { kind: 'answer'; text: string }
+  | { kind: 'done'; stats: AssistantStats; finishReason?: string; aborted?: boolean }
+  | { kind: 'error'; message: string }
+  | { kind: 'ping' };
+
+export type AssistantStreamRequest =
+  | { kind: 'ask'; payload: AskAssistantPayload }
+  | { kind: 'abort' }
+  | { kind: 'pong' };
+
+/** 非流式兜底（端口不可用/测试用） */
+export interface AskAssistantRequest {
+  type: 'ASK_ASSISTANT';
+  payload: AskAssistantPayload;
 }
 
 export interface SaveSettingsRequest {
@@ -147,6 +177,7 @@ export type WorkerRequest =
   | GetSettingsRequest
   | GetSourcesRequest
   | AnalyzeGrammarRequest
+  | AskAssistantRequest
   | SaveSettingsRequest
   | TestTranslatorRequest
   | ImportWordsRequest
@@ -252,6 +283,19 @@ export interface GrammarErrorResponse {
   error: string;
 }
 
+export interface AskAssistantResponse {
+  type: 'ASSISTANT_RESULT';
+  text: string;
+  reasoning: string;
+  stats: AssistantStats;
+  finishReason?: string;
+}
+
+export interface AskAssistantErrorResponse {
+  type: 'ASSISTANT_ERROR';
+  error: string;
+}
+
 export interface ReviewResponse {
   type: 'REVIEW_RESULT';
   word: FavoriteWord;
@@ -330,6 +374,8 @@ export type WorkerResponse =
   | SourcesResponse
   | GrammarResponse
   | GrammarErrorResponse
+  | AskAssistantResponse
+  | AskAssistantErrorResponse
   | ReviewResponse
   | DueWordsResponse
   | LearnStatsResponse
@@ -350,6 +396,7 @@ const RESPONSE_TYPES: WorkerResponse['type'][] = [
   'FAVORITE_RESULT', 'HISTORY_RESULT', 'FAVORITES_RESULT', 'FAVORITE_CHECK_RESULT', 'OPEN_OPTIONS_RESULT', 'SETTINGS_RESULT',
   'SOURCES_RESULT',
   'GRAMMAR_RESULT', 'GRAMMAR_ERROR',
+  'ASSISTANT_RESULT', 'ASSISTANT_ERROR',
   'REVIEW_RESULT', 'DUE_WORDS_RESULT', 'LEARN_STATS_RESULT',
   'WORD_HISTORY_RESULT', 'FORECAST_RESULT', 'FULL_STATS_RESULT', 'VOCAB_SETTINGS_RESULT',
   'STAR_RESULT', 'NOTE_RESULT', 'NOTE_CARDS_RESULT', 'TEST_TRANSLATOR_RESULT',
@@ -379,6 +426,10 @@ export function getSourcesRequest(): GetSourcesRequest {
 
 export function analyzeGrammarRequest(text: string, lang: string, detail: 'brief' | 'full' = 'brief'): AnalyzeGrammarRequest {
   return { type: 'ANALYZE_GRAMMAR', text, lang, detail };
+}
+
+export function askAssistantRequest(payload: AskAssistantPayload): AskAssistantRequest {
+  return { type: 'ASK_ASSISTANT', payload };
 }
 
 export function speakRequest(text: string, lang: string): SpeakRequest {

@@ -1,8 +1,10 @@
 import type { WorkerRequest } from '../shared/messages';
+import { ASSISTANT_PORT } from '../shared/messages';
 import { testTranslator } from './translator';
 import { cleanExpiredCache } from './cache';
 import { handleTranslate } from './handlers/translate';
 import { handleSpeak, handleAnalyzeGrammar } from './handlers/sidebar';
+import { handleAskAssistant, registerAssistantPort } from './handlers/assistant';
 import { handleToggleFavorite, handleRemoveFavorite, handleGetFavorites } from './handlers/favorites';
 import { handleSubmitReview, handleGetDueWords, handleGetLearnStats, handleGetWordHistory } from './handlers/review';
 import { handleGetSettings, handleSaveSettings, handleGetSources, handleSaveVocabSettings } from './handlers/settings';
@@ -108,6 +110,12 @@ chrome.runtime.onMessage.addListener(
   }
 );
 
+// ── AI 助手流式端口（长连接，逐块回推回答与思考过程）──
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== ASSISTANT_PORT) return;
+  registerAssistantPort(port);
+});
+
 async function handleRequest(req: WorkerRequest): Promise<unknown> {
   switch (req.type) {
     // ── 翻译（含写历史，见 handlers/translate.ts）──
@@ -163,6 +171,11 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
 
     case 'ANALYZE_GRAMMAR': {
       return handleAnalyzeGrammar(req);
+    }
+
+    // ── AI 助手（非流式兜底；流式走 assistant-stream 端口）──
+    case 'ASK_ASSISTANT': {
+      return handleAskAssistant(req);
     }
 
     case 'SAVE_SETTINGS': {

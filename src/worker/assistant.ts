@@ -1,4 +1,5 @@
 import type { AssistantStats, AssistantThinking } from '../shared/types';
+import type { AssistantStreamEvent } from '../shared/messages';
 import { estimateTokens, type ApiMessage } from '../shared/assistant';
 
 export const ASSISTANT_MODEL = 'deepseek-flash';
@@ -21,13 +22,10 @@ export interface AssistantRequest {
 }
 
 /**
- * worker 产出的事件。端口协议（含 error/ping）在 shared/messages.ts 统一定义，
- * Task 4 会把这里改成 Extract<AssistantStreamEvent, ...>。
+ * worker 只产出这三种事件，端口协议里还包含 error/ping（由 handler 生成）。
+ * 事件形状以 shared/messages.ts 的 AssistantStreamEvent 为唯一来源，避免两处定义漂移。
  */
-export type AssistantEvent =
-  | { kind: 'reasoning'; text: string }
-  | { kind: 'answer'; text: string }
-  | { kind: 'done'; stats: AssistantStats; finishReason?: string; aborted?: boolean };
+export type AssistantEvent = Extract<AssistantStreamEvent, { kind: 'reasoning' | 'answer' | 'done' }>;
 
 interface RawUsage {
   prompt_tokens?: number;
