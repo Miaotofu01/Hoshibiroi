@@ -69,6 +69,23 @@ describe('ChatSession', () => {
     ]);
   });
 
+  it('失败的一轮在后续提问后依然不进历史（展示层仍保留全部四条）', () => {
+    const s = new ChatSession();
+    s.ask('q1');
+    s.fail('出错了');
+    s.ask('q2');
+    s.pushAnswer('a2');
+    s.finish(stats);
+    expect(s.toApiMessages()).toEqual([
+      { role: 'user', content: 'q2' },
+      { role: 'assistant', content: 'a2' },
+    ]);
+    expect(s.messages.length).toBe(4);
+    expect(s.messages.map(m => m.role)).toEqual(['user', 'assistant', 'user', 'assistant']);
+    expect(s.messages[1].error).toBe(true);
+    expect(s.messages[1].content).toBe('出错了');
+  });
+
   it('历史超过轮数上限时丢最老的轮次', () => {
     const s = new ChatSession();
     for (let i = 0; i < MAX_HISTORY_TURNS + 3; i++) {
