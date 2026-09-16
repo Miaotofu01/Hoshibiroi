@@ -403,6 +403,13 @@ function init(): void {
     if (message?.action === 'speak-selection' && lastSelection) {
       sendToWorker(speakRequest(lastSelection.text, 'auto')).catch(() => {});
     }
+    // Alt+Q：直接进助手模式对选中内容提问（已在助手模式时 setMode 提前返回、
+    // 不发 mode-change，所以这里显式 ensureVisible）
+    if (message?.action === 'ask-selection') {
+      if (!lastSelection) return;
+      popupBubble.setMode('assistant');
+      popupBubble.ensureVisible(lastSelection.rect);
+    }
     if (message?.action === 'show-sidebar' && message.word && message.translation) {
       popupBubble.hide();
       triggerIcon.hide();

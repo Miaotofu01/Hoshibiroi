@@ -34,6 +34,10 @@
     "speak": {
       "suggested_key": { "default": "Alt+R" },
       "description": "朗读原文"
+    },
+    "ask": {
+      "suggested_key": { "default": "Alt+Q" },
+      "description": "向 AI 提问选中内容"
     }
   },
   "web_accessible_resources": [

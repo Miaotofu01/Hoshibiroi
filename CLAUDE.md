@@ -21,10 +21,13 @@ src/content/index.ts  ─msg→   src/worker/            ←msg→ src/vocab/
   Shadow DOM 注入               handlers/review.ts          panels/learn.ts  学习页
   划词翻译弹泡                   handlers/favorites.ts      panels/browse.ts 词库
   收藏单词                      handlers/stats.ts          panels/stats.ts  统计
+  src/content/assistant/ 助手（模式切换/流式对话/页面上下文）
+                                handlers/assistant.ts
                                 storage.ts                 
                                 srs.ts  ← FSRS-5 调度器    
                                 statistics.ts              
                                 translate.ts  API 调用     
+                                assistant.ts  对话流
 ```
 
 **消息协议**：`src/shared/messages.ts` — 所有 content↔worker↔vocab 的通信类型。
@@ -40,6 +43,9 @@ src/content/index.ts  ─msg→   src/worker/            ←msg→ src/vocab/
 | `src/vocab/panels/stats.ts` | 统计面板：日历热力图、趋势折线、薄弱词 |
 | `src/worker/storage.ts` | `getFavorites()` / `getDueWords()` 等数据层 |
 | `src/content/index.ts` | 划词监听 → 注入 Shadow DOM 弹泡 |
+| `src/shared/assistant.ts` | 助手设置归一化、系统/用户提示词装配、页面窗口截取（`buildSystemPrompt`/`truncateAround`） |
+| `src/worker/assistant.ts` | 助手流式调用 DeepSeek（`streamAssistant`），助手模型名集中在这里 |
+| `src/content/assistant/controller.ts` | 弹泡与侧栏共享的助手控制器（会话、设置、页面上下文、请求装配） |
 
 ## 记忆调度策略
 
@@ -64,3 +70,6 @@ npx vitest run tests/srs.test.ts    # SRS 调度器黑盒测试（19项）
 - **统计面板 `renderStats()` 只调一次 `computeRetention`**：结果传给多个子渲染函数共享，避免重复计算
 - **SVG 图标全部内联**：`src/vocab/utils.ts` 的 `ico()` 函数和 `Icons` map，不要引入外部图标库
 - **`vite-plugin-web-extension` 构建**：manifest 里的路径在构建后会被改写，src 里的导入用相对路径即可
+- **助手流式走端口**：`chrome.runtime.connect({name:'assistant-stream'})`，worker 每 20s 发 `ping` 抵抗 MV3 30s 空闲回收，content 回 `pong`；端口断开要当成错误提示用户重试
+- **DeepSeek 前缀缓存**：系统提示词（含页面上下文）在会话内必须逐字节稳定，选中范围放每轮用户消息里；正常情况下只在改设置/清空会话时重建，页面地址变化或选中范围已不在缓存正文里也会重建（见 `controller.ts` 的 `promptCache`）。命中价约为未命中的 1/50
+- **`reasoning_content` 永不回传**：不带 `tools` 时 API 会忽略它，放进请求体只会白烧 token；思考模式下 `temperature` 被忽略，翻译/语法分析因此显式 `thinking: {type:'disabled'}`

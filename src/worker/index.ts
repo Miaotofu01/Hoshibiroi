@@ -84,6 +84,8 @@ chrome.commands.onCommand.addListener(async (command) => {
     chrome.tabs.sendMessage(tab.id, { action: 'translate-selection' }).catch(() => notifyShortcutUnavailable('翻译'));
   } else if (command === 'speak') {
     chrome.tabs.sendMessage(tab.id, { action: 'speak-selection' }).catch(() => notifyShortcutUnavailable('朗读'));
+  } else if (command === 'ask') {
+    chrome.tabs.sendMessage(tab.id, { action: 'ask-selection' }).catch(() => notifyShortcutUnavailable('AI 助手'));
   }
 });
 

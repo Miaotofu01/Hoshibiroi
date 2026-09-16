@@ -65,7 +65,17 @@ Requires Node.js ≥ 18. Output goes to `dist/`.
 - Chinese / English / Japanese / Korean / French / German / Spanish
 - Multiple sources (DeepSeek, Google, Tencent, Baidu, DeepL) with one-click source switching inside the popup
 - Enriched breakdown: IPA, parts of speech, inflections, synonyms/antonyms, collocations, word roots, usage notes, memory tips, register — popup sections are user-configurable. The AI picks fields by input type: full knowledge for words, no word roots for phrases/terms, translation-only for sentences, plus a **professional encyclopedia entry** for technical terms
-- Shortcuts: `Alt+T` translate, `Alt+R` read aloud, `Esc` close
+- Shortcuts: `Alt+T` translate, `Alt+R` read aloud, `Alt+Q` ask the assistant, `Esc` close
+
+### AI assistant (ask about this page)
+
+- Switch between translate and assistant from the popup icons or the side-panel tab; the conversation is shared between the popup and the side panel
+- Injects the current page context (windowed around your selection) plus the selected range — ask, follow up, or summarize the whole page
+- Streaming output with collapsible reasoning; the footnote shows input/output tokens, prefix-cache hit rate, and elapsed time
+- Quick prompts: explain the selection / plain words / examples / quiz me / what is this page about; answers can be read aloud or copied
+- `Alt+Q` asks about the current selection directly
+- Settings: context length (0–32000 characters, 0 = selection only), thinking depth (off / low / high / max), extra instructions, answer length cap — editable in both the popup settings popover and the options page, applied immediately
+- Requires a DeepSeek API key: the assistant reuses the DeepSeek key configured for the translation source, and tells you to open settings when it is missing
 
 ### Vocabulary & spaced repetition
 
