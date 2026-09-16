@@ -720,6 +720,7 @@ export class PopupBubble extends ShadowView {
       onSpeak: (text) => this.emit('speak-word', { word: text }),
       onCopy: (text) => this._copyText(text),
       onOpenSettings: () => this._openSettings(this.el),
+      onOpenPanel: () => this.emit('open-assistant-panel'),
     };
   }
 

@@ -1,10 +1,13 @@
 import { html, nothing } from 'lit';
 import type { AssistantSettings, TranslationResult, GrammarAnalysis } from '../../shared/types';
-import { DEFAULT_ASSISTANT_SETTINGS, normalizeAssistantSettings } from '../../shared/assistant';
+import type { AssistantController } from '../assistant/controller';
+import { chatBody, chatCss, chatInput, type ChatUiState, type ChatViewHandlers } from '../assistant/chat-view';
+import { DEFAULT_ASSISTANT_SETTINGS, QUICK_PROMPTS, normalizeAssistantSettings } from '../../shared/assistant';
 import { ShadowView } from '../shadow-view';
-import { iconLanguages, iconSpeakSm, iconStar, iconCopy, iconClose } from '../icons';
+import { iconLanguages, iconSpeakSm, iconStar, iconCopy, iconClose, iconSparkle } from '../icons';
 
-const CSS = `
+// 助手页签与弹泡共享同一份 chatCss（两个 surface 都用它，故只吃 --syo-* / --font-* 宿主 token）
+const CSS = chatCss + `
   :host {
     position: fixed; top: 0; right: 0; width: 380px; max-width: 100vw; height: 100vh;
     z-index: 2147483647;
@@ -27,6 +30,8 @@ const CSS = `
   .closing { transform: translateX(100%); }
 
   .panel { padding: 22px 22px 26px; min-height: 100%; display: flex; flex-direction: column; }
+  /* 助手页签：面板钉成宿主高度（380px × 100vh），滚动交给对话区，输入行留在面板底部 */
+  .panel.fill { height: 100%; min-height: 0; }
 
   .phead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
   .brand {
@@ -42,6 +47,17 @@ const CSS = `
   }
   .closebtn:hover { background: var(--syo-danger); border-color: var(--syo-danger); color: #1a1b26; }
   .closebtn svg { width: 14px; height: 14px; }
+
+  /* ── 翻译详情 / 助手 页签 ── */
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tabs .tab {
+    flex: 1; height: 30px; border-radius: var(--syo-radius-sm);
+    background: transparent; border: 1px solid var(--syo-border-muted); color: var(--syo-fg-muted);
+    font-family: var(--font-display); font-size: 13px; cursor: pointer;
+  }
+  .tabs .tab:hover { color: var(--syo-fg-body); }
+  .tabs .tab.active { color: var(--syo-info); border-color: var(--syo-info); background: rgba(125,207,255,.1); }
+  .tabs .tab:disabled { opacity: .4; cursor: default; }
 
   .headword { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 4px; }
   .headword .w { font-family: var(--font-mono); font-size: var(--font-size-xl, 26px); font-weight: 600; color: var(--syo-fg-default); word-break: break-word; line-height: 1.15; }
@@ -157,13 +173,138 @@ export class SidePanel extends ShadowView {
    */
   assistantSettings: AssistantSettings = DEFAULT_ASSISTANT_SETTINGS;
 
+  // ── 页签与助手（助手页签与弹泡共享同一个控制器，对话在两侧之间延续）──
+  private _tab: 'detail' | 'assistant' = 'detail';
+  private _assistant: AssistantController | null = null;
+  private _chatUi: ChatUiState = { draft: '', thinkOpen: false };
+  /**
+   * 关闭动画的收尾句柄。面板可以「关了又立刻开」（弹泡的「侧栏」按钮），
+   * 而 hide() 的 transitionend 监听与 350ms 安全网都还挂在那里：
+   * 不取消的话，刚打开的侧栏会在几十毫秒后被上一次的关闭收掉。
+   */
+  private _closeEnd: (() => void) | null = null;
+  private _closeTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
     super(CSS);
     this.update();
   }
 
+  /** content script 注入共享的助手控制器（与弹泡同一个实例） */
+  attachAssistant(ctrl: AssistantController): void {
+    this._assistant = ctrl;
+    ctrl.onChange(() => this.update());
+    this.update();
+  }
+
+  setTab(tab: 'detail' | 'assistant'): void {
+    this._tab = tab;
+    this._reopen();
+  }
+
+  /** 直接以助手页签打开（可先于翻译结果存在） */
+  showAssistant(): void {
+    this._tab = 'assistant';
+    this._reopen();
+  }
+
+  get tab(): 'detail' | 'assistant' { return this._tab; }
+
+  /** 打开/切页签：取消在途的关闭动画并确保面板可见 */
+  private _reopen(): void {
+    this._cancelClose();
+    this.el.classList.remove('closing');
+    this.setVisible(true);
+    this.update();
+  }
+
+  private _cancelClose(): void {
+    if (this._closeEnd) {
+      this.el.removeEventListener('transitionend', this._closeEnd);
+      this._closeEnd = null;
+    }
+    if (this._closeTimer) { clearTimeout(this._closeTimer); this._closeTimer = null; }
+  }
+
+  private _chatHandlers(): ChatViewHandlers {
+    return {
+      onDraft: (text) => { this._chatUi.draft = text; },
+      onAsk: (q) => {
+        const v = q.trim();
+        if (!v) return;
+        // 生成中 controller 会静默丢弃这一问：先清草稿等于把用户刚打的字吞掉（与弹泡一致）
+        if (this._assistant?.busy) return;
+        this._chatUi.draft = '';
+        this._assistant?.ask(v);
+        this.update();
+      },
+      onQuick: (id) => {
+        const q = QUICK_PROMPTS.find(p => p.id === id);
+        if (!q || !this._assistant) return;
+        if (q.needsSelection && !this._assistant.selection.text) return;
+        this._assistant.ask(q.prompt, { focus: q.focus, selection: this._assistant.selection.text });
+      },
+      onStop: () => this._assistant?.stop(),
+      onClear: () => this._assistant?.clear(),
+      onDeepThink: () => {
+        if (!this._assistant) return;
+        this._assistant.deepThink = !this._assistant.deepThink;
+        this.update();
+      },
+      onThinkToggle: () => { this._chatUi.thinkOpen = !this._chatUi.thinkOpen; this.update(); },
+      onSpeak: (text) => this.emit('speak-word', { word: text }),
+      onCopy: (text) => this._copyText(text),
+      onOpenSettings: () => this.emit('open-options'),
+      onOpenPanel: () => { /* 已在侧栏，无需处理 */ },
+    };
+  }
+
+  /**
+   * 复制助手回答。与弹泡同一套降级：http 页面里 content script 拿不到
+   * navigator.clipboard（非安全上下文），退回 execCommand。
+   */
+  private _copyText(text: string): void {
+    if (!text) return;
+    const legacy = () => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      } catch { /* 两条通道都不可用：面板没有 toast，静默失败 */ }
+    };
+    if (navigator.clipboard?.writeText) void navigator.clipboard.writeText(text).catch(legacy);
+    else legacy();
+  }
+
   protected template() {
     const t = this.translation;
+    if (!t && this._tab !== 'assistant') return nothing;
+    if (!this._assistant) return nothing;
+
+    const tabs = html`<div class="tabs">
+      <button class="tab ${this._tab === 'detail' ? 'active' : ''}" ?disabled=${!t} @click=${() => this.setTab('detail')}>翻译详情</button>
+      <button class="tab ${this._tab === 'assistant' ? 'active' : ''}" @click=${() => this.setTab('assistant')}>助手</button>
+    </div>`;
+
+    if (this._tab === 'assistant') {
+      return html`<div class="panel fill">
+        <div class="phead">
+          <span class="brand">${iconSparkle} AI 助手</span>
+          <button class="closebtn" title="关闭" @click=${() => this.hide()}>${iconClose}</button>
+        </div>
+        ${tabs}
+        <div style="display:flex;flex-direction:column;flex:1 1 auto;min-height:0">
+          ${chatBody(this._assistant, this._chatUi, this._chatHandlers())}
+        </div>
+        ${chatInput(this._assistant, this._chatUi, this._chatHandlers())}
+      </div>`;
+    }
+
+    // 详情页签要求有译文：上面的守卫已拦过，这里只是把类型收窄（TS 不做跨变量的析取推导）
     if (!t) return nothing;
 
     const meanings = t.partsOfSpeech && t.partsOfSpeech.length > 0
@@ -176,6 +317,7 @@ export class SidePanel extends ShadowView {
         <span class="brand">${iconLanguages} 翻译详情</span>
         <button class="closebtn" title="关闭" @click=${() => this.hide()}>${iconClose}</button>
       </div>
+      ${tabs}
 
       <div class="headword">
         <span class="w ${this._originalWord.length > 60 ? 'long' : ''}" title="${this._originalWord}">${this._originalWord}</span>
@@ -291,8 +433,9 @@ export class SidePanel extends ShadowView {
     this._sources = sources;
     this._activeSourceId = activeSourceId || trans.sourceId || '';
     this._switchingId = '';
-    this.setVisible(true);
-    this.update();
+    // 新译文一律落在「翻译详情」页签：面板停在助手页签时，用户要的是刚翻出来的这条
+    this._tab = 'detail';
+    this._reopen();
   }
 
   /** 换源成功后原地刷新（面板保持打开） */
@@ -310,20 +453,26 @@ export class SidePanel extends ShadowView {
   }
 
   hide() {
+    // 关面板一律回到「翻译详情」页签并清掉助手草稿：下次打开是干净的状态
+    this._tab = 'detail';
+    this._chatUi.draft = '';
     if (!this.translation) { this.setVisible(false); return; }
     // 滑出动画，动画结束后真隐藏
     const onEnd = () => {
-      this.el.removeEventListener('transitionend', onEnd);
+      this._cancelClose();
       this.setVisible(false);
+      this.el.classList.remove('closing');   // 收起后归位，下次打开是干净的宿主状态
       this.translation = null;
       this._switchingId = '';
       this._clearGrammar();
       this.update();
     };
+    this._cancelClose();   // 上一轮关闭还没收尾就再关一次：换上新句柄，别让两个收尾打架
+    this._closeEnd = onEnd;
     this.el.addEventListener('transitionend', onEnd);
     this.el.classList.add('closing');
     // 安全网：动画 300ms 还没结束就强制收
-    setTimeout(() => { this.el.classList.remove('closing'); onEnd(); }, 350);
+    this._closeTimer = setTimeout(onEnd, 350);
   }
 
   setFavorited(val: boolean) {

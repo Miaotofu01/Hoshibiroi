@@ -75,6 +75,7 @@ function init(): void {
   // ── AI 助手：一个页面一个控制器，弹泡与侧栏共享同一会话 ──
   const assistant = new AssistantController();
   popupBubble.attachAssistant(assistant);
+  sidePanel.attachAssistant(assistant);
 
   root.appendChild(triggerIcon.el);
   root.appendChild(popupBubble.el);
@@ -318,6 +319,12 @@ function init(): void {
     sidePanel.show(originalWord, translation, sources, translation.sourceId);
   });
 
+  // ── 从弹泡把对话搬到侧栏（会话在控制器里，搬过去不中断）──
+  popupBubble.el.addEventListener('open-assistant-panel', () => {
+    popupBubble.hide();
+    sidePanel.showAssistant();
+  });
+
   // ── 朗读（语言由 worker 按文本自动检测）──
   function onSpeak(e: Event) {
     const detail = (e as CustomEvent).detail;
@@ -378,9 +385,12 @@ function init(): void {
   popupBubble.el.addEventListener('retry-translate', () => doTranslate());
 
   // ── 打开设置页（content script 不能直接调 openOptionsPage，经 worker 中转）──
-  popupBubble.el.addEventListener('open-options', () => {
+  // 弹泡的「去设置」与侧栏助手的「上下文/思考设置」入口共用这一条
+  function onOpenOptions(): void {
     sendToWorker({ type: 'OPEN_OPTIONS' } as WorkerRequest).catch(() => {});
-  });
+  }
+  popupBubble.el.addEventListener('open-options', onOpenOptions);
+  sidePanel.el.addEventListener('open-options', onOpenOptions);
 
   // ── 快捷键 / popup 打开侧栏（来自 background 转发）──
   chrome.runtime.onMessage.addListener((msg: unknown) => {

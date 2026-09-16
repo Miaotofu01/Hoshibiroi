@@ -23,6 +23,8 @@ export interface ChatViewHandlers {
   onSpeak(text: string): void;
   onCopy(text: string): void;
   onOpenSettings(): void;
+  /** 把对话搬到侧栏（侧栏本身已有此页签，无需处理） */
+  onOpenPanel(): void;
 }
 
 export const chatCss = `
@@ -254,6 +256,7 @@ export function chatInput(ctrl: AssistantController, ui: ChatUiState, h: ChatVie
     <div class="input-tools">
       <button class="tool ${ctrl.deepThink ? 'on' : ''}" title="本次会话用最强思考（覆盖设置）" @click=${() => h.onDeepThink()}>深想</button>
       <button class="tool" @click=${() => h.onQuick('summary')} ?disabled=${ctrl.busy}>整页速览</button>
+      <button class="tool" title="在侧栏打开（更长对话）" @click=${() => h.onOpenPanel()}>侧栏</button>
       <button class="tool" title="清空对话" @click=${() => h.onClear()}>${iconTrash} 清空</button>
       <span class="hint">${ctrl.busy ? '生成中…' : 'Enter 发送'}</span>
     </div>
