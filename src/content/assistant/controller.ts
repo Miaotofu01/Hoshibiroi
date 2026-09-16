@@ -36,14 +36,15 @@ export class AssistantController {
   private client = new AssistantClient();
   private listeners = new Set<() => void>();
   private notifyTimer: ReturnType<typeof setTimeout> | null = null;
-  private pageCache: { at: number; text: string } | null = null;
+  /** 页面正文缓存：按地址区分，SPA 导航后旧正文不能冒充新页面 */
+  private pageCache: { url: string; at: number; text: string } | null = null;
   /**
    * 系统提示词按 focus 缓存：会话内前缀逐字节稳定，DeepSeek 前缀缓存才能命中
-   * （命中部分输入价约为未命中的 1/50）。换选中范围只影响用户消息，不动前缀。
-   * 缓存连带记下当时的页面地址：SPA 路由切换后标题/正文/地址都变了，必须重建，
-   * 否则助手会一直描述上一个页面。
+   * （命中部分输入价约为未命中的 1/50）。
+   * 连带记下当时的页面地址与选段探针：地址变了要重建（否则助手会一直描述上一个页面），
+   * 选段变了也要重建（正文是按选中范围开窗的，沿用旧窗口会让新选区拿不到对应片段）。
    */
-  private promptCache = new Map<AssistantFocus, { url: string; content: string }>();
+  private promptCache = new Map<AssistantFocus, { url: string; anchor: string; content: string }>();
 
   get busy(): boolean { return this.client.busy; }
 
@@ -113,7 +114,7 @@ export class AssistantController {
     if (!this.client.busy) return;
     this.client.abort();
     // 端口已断开，不会再收到 done —— 本地收敛这一轮，避免「生成中」永远停不下来
-    this.session.finish(ZERO_STATS);
+    this.session.finish({ ...ZERO_STATS });
     this.lastFinishReason = 'aborted';
     this.notify(true);
   }
@@ -137,12 +138,15 @@ export class AssistantController {
     };
   }
 
-  /** 取页面正文（5 秒缓存，避免连续提问重复遍历 DOM） */
+  /** 取页面正文（同一地址 5 秒缓存，避免连续提问重复遍历 DOM；换地址立即重采） */
   private _pageText(): string {
     const now = Date.now();
-    if (this.pageCache && now - this.pageCache.at < PAGE_CACHE_MS) return this.pageCache.text;
+    const url = pageUrl();
+    if (this.pageCache && this.pageCache.url === url && now - this.pageCache.at < PAGE_CACHE_MS) {
+      return this.pageCache.text;
+    }
     const text = collectPageText();
-    this.pageCache = { at: now, text };
+    this.pageCache = { url, at: now, text };
     return text;
   }
 
@@ -159,12 +163,17 @@ export class AssistantController {
   }
 
   private _systemPrompt(focus: AssistantFocus, anchor: string): string {
-    // 同一地址内命中即逐字节复用（前缀缓存）；地址变了就当作新页面重建
+    const url = pageUrl();
     const cached = this.promptCache.get(focus);
-    if (cached && cached.url === pageUrl()) return cached.content;
-    const built = buildSystemPrompt({ page: this._page(focus, anchor), instructions: this.settings.instructions });
-    this.promptCache.set(focus, { url: pageUrl(), content: built });
-    return built;
+    const probe = anchor.trim().slice(0, 60);
+    // 选中范围仍落在缓存片段里（或本次不需要锚点）时复用，保持系统前缀逐字节稳定以命中 DeepSeek 前缀缓存
+    if (cached && cached.url === url && (!probe || cached.anchor === probe || cached.content.includes(probe))) {
+      return cached.content;
+    }
+    const page = this._page(focus, anchor);
+    const content = buildSystemPrompt({ page, instructions: this.settings.instructions });
+    this.promptCache.set(focus, { url, anchor: probe, content });
+    return content;
   }
 
   /** 节流通知：流式期间合并重渲染（后台标签页 setTimeout 会被降频，但不会丢最后一次） */

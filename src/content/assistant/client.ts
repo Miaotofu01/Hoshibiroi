@@ -52,8 +52,9 @@ export class AssistantClient {
   abort(): void {
     if (!this.port) return;
     const port = this.port;
-    // 先发 abort 再断端口：反过来的话 postMessage 必然抛进下面的 catch，
-    // worker 只能靠 onDisconnect 兜底中止，而且本端再也收不到 done{aborted:true}。
+    // 先发 abort 再断端口：这样中止消息确实能送达 worker，让它尽快取消在途请求；
+    // 断开之后本端不可能再收到任何终态事件（worker 的 abort 分支不发终态事件，
+    // 端口也已断开），所以这一轮由调用方在本地收敛。
     try {
       port.postMessage({ kind: 'abort' } satisfies AssistantStreamRequest);
     } catch { /* 端口已断开 */ }
