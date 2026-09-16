@@ -321,8 +321,10 @@ function init(): void {
 
   // ── 从弹泡把对话搬到侧栏（会话在控制器里，搬过去不中断）──
   popupBubble.el.addEventListener('open-assistant-panel', () => {
+    // hide() 会清掉弹泡那份草稿，先把没发出去的问题读出来交给面板
+    const draft = popupBubble.chatDraft;
     popupBubble.hide();
-    sidePanel.showAssistant();
+    sidePanel.showAssistant(draft);
   });
 
   // ── 朗读（语言由 worker 按文本自动检测）──

@@ -23,8 +23,11 @@ export interface ChatViewHandlers {
   onSpeak(text: string): void;
   onCopy(text: string): void;
   onOpenSettings(): void;
-  /** 把对话搬到侧栏（侧栏本身已有此页签，无需处理） */
-  onOpenPanel(): void;
+  /**
+   * 把对话搬到侧栏。可选：只有需要这个入口的 surface（弹泡）才提供，
+   * 侧栏自己就是这个页签，不给 handler，按钮随之不渲染（不留空操作按钮）。
+   */
+  onOpenPanel?(): void;
 }
 
 export const chatCss = `
@@ -81,7 +84,11 @@ export const chatCss = `
   .caret { display: inline-block; width: 7px; height: 14px; margin-left: 2px; vertical-align: -2px; background: var(--syo-info); animation: blink 1s steps(2, start) infinite; }
   @keyframes blink { to { visibility: hidden; } }
 
-  .chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 0 0; }
+  /* 快捷提问的容器用对话区专属类名：不能写成 .chips —— 侧栏详情页签的
+     词形变化/同反义词也用 .chips，chatCss 拼在它前面，同特异度下这条
+     未声明的 padding 会漏进详情视图。chatInput 渲染的 chips 在 .chat 之外
+     （弹泡的 .chat-foot / 侧栏的 .panel），所以也不能收窄成 .chat .chips。 */
+  .quick-chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 0 0; }
   .chipq {
     font-family: var(--font-display); font-size: 12px; padding: 4px 9px; border-radius: 12px;
     background: transparent; border: 1px solid var(--syo-border); color: var(--syo-fg-body); cursor: pointer;
@@ -135,7 +142,7 @@ function statsLine(ctrl: AssistantController): string {
 
 export function quickChips(ctrl: AssistantController, h: ChatViewHandlers): TemplateResult {
   const hasSel = !!ctrl.selection.text;
-  return html`<div class="chips">
+  return html`<div class="quick-chips">
     ${QUICK_PROMPTS.map(q => html`<button
       class="chipq"
       ?disabled=${ctrl.busy || (q.needsSelection && !hasSel)}
@@ -215,6 +222,7 @@ export function chatInput(ctrl: AssistantController, ui: ChatUiState, h: ChatVie
   // 清草稿发生在三处（发送、输入框内 Esc、文档级 Esc → popupBubble.handleEscape），
   // 三处都会重渲染，所以两个绑定都用 live()：它比对的是 DOM 现值而不是上次提交的值，
   // 即使提交值已经是 ''/true，也会强制把 DOM 拉回草稿的样子。
+  const onOpenPanel = h.onOpenPanel;   // 提出来收窄：闭包里读 h.onOpenPanel 会丢掉 narrowing
   return html`<div>
     <div class="input-row">
       <textarea
@@ -256,7 +264,7 @@ export function chatInput(ctrl: AssistantController, ui: ChatUiState, h: ChatVie
     <div class="input-tools">
       <button class="tool ${ctrl.deepThink ? 'on' : ''}" title="本次会话用最强思考（覆盖设置）" @click=${() => h.onDeepThink()}>深想</button>
       <button class="tool" @click=${() => h.onQuick('summary')} ?disabled=${ctrl.busy}>整页速览</button>
-      <button class="tool" title="在侧栏打开（更长对话）" @click=${() => h.onOpenPanel()}>侧栏</button>
+      ${onOpenPanel ? html`<button class="tool" title="在侧栏打开（更长对话）" @click=${() => onOpenPanel()}>侧栏</button>` : nothing}
       <button class="tool" title="清空对话" @click=${() => h.onClear()}>${iconTrash} 清空</button>
       <span class="hint">${ctrl.busy ? '生成中…' : 'Enter 发送'}</span>
     </div>

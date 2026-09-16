@@ -677,6 +677,12 @@ export class PopupBubble extends ShadowView {
   }
 
   /**
+   * 未发送的助手草稿。交接用：hide() 会清掉这份状态，
+   * 从弹泡点「侧栏」时调用方要先把草稿读出来交给侧栏，别把用户打了一半的问题吞掉。
+   */
+  get chatDraft(): string { return this._chatUi.draft; }
+
+  /**
    * 外接恢复助手模式尺寸。初始化时卡片还在翻译模式，此时直接改 _width/_maxHeight
    * 会盖掉刚恢复的翻译尺寸，所以先记下来，进助手模式时再生效。
    * 调用方只要求存了宽或高其中之一就调用，所以这里允许半条记录：

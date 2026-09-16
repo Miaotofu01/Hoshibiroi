@@ -177,6 +177,9 @@ export class SidePanel extends ShadowView {
   private _tab: 'detail' | 'assistant' = 'detail';
   private _assistant: AssistantController | null = null;
   private _chatUi: ChatUiState = { draft: '', thinkOpen: false };
+  /** 对话是否跟随最新消息滚动（用户往上翻之后不再打扰），与弹泡同一套约定 */
+  private _autoScroll = true;
+  private _scrollBound = false;
   /**
    * 关闭动画的收尾句柄。面板可以「关了又立刻开」（弹泡的「侧栏」按钮），
    * 而 hide() 的 transitionend 监听与 350ms 安全网都还挂在那里：
@@ -199,12 +202,19 @@ export class SidePanel extends ShadowView {
 
   setTab(tab: 'detail' | 'assistant'): void {
     this._tab = tab;
+    this._autoScroll = true;   // 进页签即重新跟随最新消息（上一次翻上去的位置作废）
     this._reopen();
   }
 
-  /** 直接以助手页签打开（可先于翻译结果存在） */
-  showAssistant(): void {
+  /**
+   * 直接以助手页签打开（可先于翻译结果存在）。
+   * draft：从弹泡搬过来的未发送草稿（弹泡 hide() 会清掉自己那份，所以由调用方在
+   * hide 之前读出来交进来），surface 切换不会吞掉用户打了一半的问题。
+   */
+  showAssistant(draft?: string): void {
     this._tab = 'assistant';
+    this._autoScroll = true;
+    if (draft !== undefined) this._chatUi.draft = draft;
     this._reopen();
   }
 
@@ -255,8 +265,36 @@ export class SidePanel extends ShadowView {
       onSpeak: (text) => this.emit('speak-word', { word: text }),
       onCopy: (text) => this._copyText(text),
       onOpenSettings: () => this.emit('open-options'),
-      onOpenPanel: () => { /* 已在侧栏，无需处理 */ },
+      // 不给 onOpenPanel：面板自己就是侧栏，chatInput 因此不渲染那个按钮
     };
+  }
+
+  /**
+   * 渲染收尾：把滚到底这件事补上。与弹泡同一套做法——
+   * 助手分支与详情分支是两个不同的模板调用点，lit 每次进助手页签都会重建容器，
+   * scrollTop 归零（弹泡→侧栏的交接、从详情页签切回来都会落到最老的一条上），
+   * 而流式回答又是在滚动区下方长出来的。
+   * 监听挂在 shadowRoot 的捕获阶段：scroll 不冒泡，但捕获阶段会经过祖先节点。
+   */
+  private _afterRender(): void {
+    const root = this.el.shadowRoot;
+    if (!root) return;
+    if (!this._scrollBound) {
+      this._scrollBound = true;
+      root.addEventListener('scroll', (e) => {
+        const target = e.target as HTMLElement;
+        if (!target?.classList?.contains('chat-scroll')) return;
+        this._autoScroll = target.scrollHeight - target.scrollTop - target.clientHeight < 32;
+      }, { capture: true, passive: true });
+    }
+    if (this._tab !== 'assistant' || !this._autoScroll) return;
+    const box = root.querySelector('.chat-scroll') as HTMLElement | null;
+    if (box) box.scrollTop = box.scrollHeight;
+  }
+
+  protected update(): void {
+    super.update();
+    this._afterRender();
   }
 
   /**
@@ -456,6 +494,8 @@ export class SidePanel extends ShadowView {
     // 关面板一律回到「翻译详情」页签并清掉助手草稿：下次打开是干净的状态
     this._tab = 'detail';
     this._chatUi.draft = '';
+    // 关掉后重新打开要重新跟随最新消息：上次翻到中间不代表这次也要停在中间
+    this._autoScroll = true;
     if (!this.translation) { this.setVisible(false); return; }
     // 滑出动画，动画结束后真隐藏
     const onEnd = () => {
