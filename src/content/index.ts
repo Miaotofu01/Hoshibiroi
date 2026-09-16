@@ -162,6 +162,27 @@ function init(): void {
     popupBubble.setSections((data as any)?.popupSections);
   }).catch(() => {});
 
+  // ── 助手设置：读 local，变更写回，并跨上下文同步 ──
+  function applyAssistantSettings(raw: unknown): void {
+    assistant.setSettings(raw);
+    popupBubble.setAssistantSettings(raw);
+    sidePanel.setAssistantSettings(raw);
+  }
+  chrome.storage.local.get(['assistantSettings']).then(d => {
+    applyAssistantSettings((d as any)?.assistantSettings);
+  }).catch(() => applyAssistantSettings(undefined));
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !changes.assistantSettings) return;
+    applyAssistantSettings(changes.assistantSettings.newValue);   // 选项页改完立即生效
+  });
+
+  popupBubble.el.addEventListener('assistant-settings-change', (e: Event) => {
+    const s = (e as CustomEvent).detail?.settings;
+    if (!s) return;
+    chrome.storage.local.set({ assistantSettings: s }).catch(() => {});
+  });
+
   // ── 恢复翻译方向 ──
   chrome.storage.sync.get(['preferences']).then(data => {
     const prefs = (data as any)?.preferences;

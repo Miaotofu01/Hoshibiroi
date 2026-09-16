@@ -286,6 +286,37 @@
   <p class="hint">点击 ▲ ▼ 按钮调整翻译源优先级，靠前的优先使用</p>
   <div id="translators-list"></div>
 
+  <h2>AI 助手</h2>
+  <p class="hint">划词弹泡里切到助手模式后，可把当前页面上下文 + 选中范围发给 DeepSeek 提问。需要启用并配置 DeepSeek。</p>
+  <div class="translator-card" style="flex-direction:column;align-items:stretch;gap:10px">
+    <div>
+      <div class="translator-name">上下文长度</div>
+      <div class="translator-desc">随提问发送的页面正文字符数（围绕选中内容截取）。0 = 只发送选中范围。</div>
+      <input type="range" id="assistant-context" min="0" max="6" step="1" style="width:100%;margin-top:6px">
+      <div class="hint" id="assistant-context-val"></div>
+    </div>
+    <div>
+      <div class="translator-name">思考深度</div>
+      <div class="translator-desc">关闭最快；越高越准，也更慢更贵（思考 token 按输出计费）。</div>
+      <select id="assistant-thinking" class="api-key-input" style="width:220px;margin-left:0">
+        <option value="off">关闭</option>
+        <option value="low">低</option>
+        <option value="high">高</option>
+        <option value="max">最大</option>
+      </select>
+    </div>
+    <div>
+      <div class="translator-name">回答长度上限</div>
+      <div class="translator-desc">单次回答的 token 上限（思考模式会额外追加预算）。</div>
+      <input type="number" id="assistant-max-tokens" class="api-key-input" style="width:120px;margin-left:0" min="200" max="8000" step="100">
+    </div>
+    <div>
+      <div class="translator-name">附加指令（可选）</div>
+      <div class="translator-desc">拼在系统提示词末尾，例如「回答控制在两句话内」。</div>
+      <textarea id="assistant-instructions" class="api-key-input" style="width:100%;height:64px;margin-left:0"></textarea>
+    </div>
+  </div>
+
   <h2>语言偏好</h2>
   <div style="display:flex;gap:16px;align-items:center">
     <label>

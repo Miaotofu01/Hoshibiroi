@@ -1,8 +1,8 @@
 import { html, nothing } from 'lit';
-import type { TranslationResult } from '../../shared/types';
+import type { AssistantSettings, AssistantThinking, TranslationResult } from '../../shared/types';
 import type { AssistantController } from '../assistant/controller';
 import { chatBody, chatCss, chatInput, type ChatUiState, type ChatViewHandlers } from '../assistant/chat-view';
-import { QUICK_PROMPTS } from '../../shared/assistant';
+import { CONTEXT_STEPS, DEFAULT_ASSISTANT_SETTINGS, QUICK_PROMPTS, THINKING_LEVELS, normalizeAssistantSettings } from '../../shared/assistant';
 import { ShadowView } from '../shadow-view';
 import { iconSpeak, iconStar, iconChevronRight, iconRetry, iconSettings, iconClose, iconCopy, iconLanguages, iconSparkle } from '../icons';
 
@@ -349,6 +349,8 @@ export class PopupBubble extends ShadowView {
   /** 对话是否跟随最新消息滚动（用户往上翻后不再打扰） */
   private _autoScroll = true;
   private _scrollBound = false;
+  /** 助手设置（上下文长度 / 思考深度），与 storage.local.assistantSettings 保持同步 */
+  private _assistantSettings: AssistantSettings = DEFAULT_ASSISTANT_SETTINGS;
 
   /** 外部注入弹泡知识区配置（content script 从 storage 读出后调用） */
   setSections(sections: Record<string, boolean> | undefined): void {
@@ -620,6 +622,12 @@ export class PopupBubble extends ShadowView {
   attachAssistant(ctrl: AssistantController): void {
     this._assistant = ctrl;
     ctrl.onChange(() => this.update());
+    this.update();
+  }
+
+  /** content script 注入当前设置（含 storage 变更同步） */
+  setAssistantSettings(raw: unknown): void {
+    this._assistantSettings = normalizeAssistantSettings(raw);
     this.update();
   }
 
@@ -935,7 +943,7 @@ export class PopupBubble extends ShadowView {
   private _settingsPopTemplate() {
     // 把小浮窗夹在视口内
     const m = 8, vw = window.innerWidth, vh = window.innerHeight;
-    const w = 250, hEst = 460;
+    const w = 250, hEst = 600;
     let left = this._settingsX;
     let top = this._settingsY;
     if (left + w > vw - m) left = vw - w - m;
@@ -957,6 +965,20 @@ export class PopupBubble extends ShadowView {
         <div class="set-row">
           <div class="set-label"><span>◐ 透明度</span><span class="val">${Math.round(this._opacity * 100)}%</span></div>
           <input type="range" class="set-slider" min="40" max="100" .value=${String(Math.round(this._opacity * 100))} @input=${(e: Event) => this._onOpacityInput(e)} />
+        </div>
+        <div class="set-row">
+          <div class="set-label"><span>上下文长度</span><span class="val">${this._ctxLabel()}</span></div>
+          <input type="range" class="set-slider" min="0" max="${CONTEXT_STEPS.length - 1}"
+            .value=${String(Math.max(0, CONTEXT_STEPS.indexOf(this._assistantSettings.contextChars)))}
+            @input=${(e: Event) => this._onContextInput(e)} />
+        </div>
+        <div class="set-row">
+          <div class="set-label">思考深度</div>
+          <div class="set-sources">
+            ${THINKING_LEVELS.map(l => html`<button
+              class="set-src ${this._assistantSettings.thinking === l.id ? 'active' : ''}"
+              @click=${() => this._setThinking(l.id)}>${l.label}</button>`)}
+          </div>
         </div>
         <div class="set-row">
           <div class="set-label">翻译方向</div>
@@ -1010,6 +1032,28 @@ export class PopupBubble extends ShadowView {
     else this._targetLang = val;
     this.update();
     this.emit('direction-change', { sourceLang: this._sourceLang, targetLang: this._targetLang });
+  }
+
+  /** 上下文长度档位的展示文案（0 = 只带选中范围） */
+  private _ctxLabel(): string {
+    const n = this._assistantSettings.contextChars;
+    return n === 0 ? '仅选中' : `${n / 1000}k 字`;
+  }
+
+  private _emitAssistantSettings(patch: Partial<AssistantSettings>): void {
+    this._assistantSettings = { ...this._assistantSettings, ...patch };
+    this.update();
+    this.emit('assistant-settings-change', { settings: this._assistantSettings });
+  }
+
+  /** 上下文长度滑条：索引 → CONTEXT_STEPS 档位（0 = 只带选中范围） */
+  private _onContextInput(e: Event): void {
+    const idx = parseInt((e.target as HTMLInputElement).value, 10);
+    this._emitAssistantSettings({ contextChars: CONTEXT_STEPS[Number.isFinite(idx) ? idx : 3] });
+  }
+
+  private _setThinking(id: AssistantThinking): void {
+    this._emitAssistantSettings({ thinking: id });
   }
 
   private _onOpacityInput(e: Event): void {

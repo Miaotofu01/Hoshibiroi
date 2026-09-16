@@ -1,5 +1,6 @@
 import { html, nothing } from 'lit';
-import type { TranslationResult, GrammarAnalysis } from '../../shared/types';
+import type { AssistantSettings, TranslationResult, GrammarAnalysis } from '../../shared/types';
+import { DEFAULT_ASSISTANT_SETTINGS, normalizeAssistantSettings } from '../../shared/assistant';
 import { ShadowView } from '../shadow-view';
 import { iconLanguages, iconSpeakSm, iconStar, iconCopy, iconClose } from '../icons';
 
@@ -149,6 +150,12 @@ export class SidePanel extends ShadowView {
   private _grammarLoading = false;
   private _grammar: GrammarAnalysis | null = null;
   private _grammarError = '';
+  /**
+   * 助手设置：与 storage.local.assistantSettings 同步。
+   * 公开字段（而非 private）：Task 10 的侧栏助手页签才读取它，
+   * private 会在 noUnusedLocals 下报「声明未读取」。
+   */
+  assistantSettings: AssistantSettings = DEFAULT_ASSISTANT_SETTINGS;
 
   constructor() {
     super(CSS);
@@ -321,6 +328,12 @@ export class SidePanel extends ShadowView {
 
   setFavorited(val: boolean) {
     this._isFavorited = val;
+    this.update();
+  }
+
+  /** content script 注入助手设置（含 storage 变更同步） */
+  setAssistantSettings(raw: unknown): void {
+    this.assistantSettings = normalizeAssistantSettings(raw);
     this.update();
   }
 

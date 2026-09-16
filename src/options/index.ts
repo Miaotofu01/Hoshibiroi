@@ -1,4 +1,5 @@
 import type { TranslatorConfig, Preferences } from '../shared/types';
+import { CONTEXT_STEPS, normalizeAssistantSettings } from '../shared/assistant';
 
 /** 需要 API Key 的翻译源 ID 集合 */
 const API_KEY_IDS = new Set(['deepseek', 'tencent', 'baidu', 'deepl']);
@@ -213,6 +214,39 @@ async function init() {
     const toast = document.getElementById('toast')!;
     toast.classList.add('show');
     setTimeout(() => toast.classList.remove('show'), 2000);
+  });
+
+  // ── AI 助手设置（直接读写 storage.local，无需经 worker）──
+  const ctxSlider = document.getElementById('assistant-context') as HTMLInputElement;
+  const ctxVal = document.getElementById('assistant-context-val')!;
+  const thinkSel = document.getElementById('assistant-thinking') as HTMLSelectElement;
+  const maxTok = document.getElementById('assistant-max-tokens') as HTMLInputElement;
+  const instr = document.getElementById('assistant-instructions') as HTMLTextAreaElement;
+
+  const ctxLabel = () => (CONTEXT_STEPS[parseInt(ctxSlider.value, 10)] === 0
+    ? '仅选中范围'
+    : `${CONTEXT_STEPS[parseInt(ctxSlider.value, 10)] / 1000}k 字`);
+
+  const localAssistant = await chrome.storage.local.get(['assistantSettings']);
+  const a = normalizeAssistantSettings((localAssistant as any)?.assistantSettings);
+  ctxSlider.value = String(Math.max(0, CONTEXT_STEPS.indexOf(a.contextChars)));
+  ctxVal.textContent = ctxLabel();
+  thinkSel.value = a.thinking;
+  maxTok.value = String(a.maxAnswerTokens);
+  instr.value = a.instructions;
+
+  ctxSlider.addEventListener('input', () => { ctxVal.textContent = ctxLabel(); });
+
+  document.getElementById('save')!.addEventListener('click', async () => {
+    await chrome.storage.local.set({
+      assistantSettings: normalizeAssistantSettings({
+        contextChars: CONTEXT_STEPS[parseInt(ctxSlider.value, 10)],
+        thinking: thinkSel.value,
+        includeSelection: true,
+        maxAnswerTokens: parseInt(maxTok.value, 10),
+        instructions: instr.value,
+      }),
+    });
   });
 }
 
