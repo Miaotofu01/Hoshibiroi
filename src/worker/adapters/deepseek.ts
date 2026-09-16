@@ -46,8 +46,11 @@ export const deepseekTranslator: TranslatorAdapter = {
     const toName = langNames[to] || 'Chinese';
     const direction = fromName ? `from ${fromName} to ${toName}` : `to ${toName}`;
 
+    // LLM 生成式接口比机器翻译慢得多：长 SYSTEM_PROMPT + max_tokens 4096 的
+    // 完整 JSON 词典条目在高峰期首 token 常需数秒，3s 超时会稳定掐断请求
+    // （AbortError "The operation was aborted"）。15s 与选项页测试超时一致。
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 3000);
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
       const resp = await fetch('https://api.deepseek.com/v1/chat/completions', {
