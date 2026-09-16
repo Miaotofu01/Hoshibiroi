@@ -1,7 +1,10 @@
 import { html, nothing } from 'lit';
 import type { TranslationResult } from '../../shared/types';
+import type { AssistantController } from '../assistant/controller';
+import { chatBody, chatCss, chatInput, type ChatUiState, type ChatViewHandlers } from '../assistant/chat-view';
+import { QUICK_PROMPTS } from '../../shared/assistant';
 import { ShadowView } from '../shadow-view';
-import { iconSpeak, iconStar, iconChevronRight, iconRetry, iconSettings, iconClose, iconCopy } from '../icons';
+import { iconSpeak, iconStar, iconChevronRight, iconRetry, iconSettings, iconClose, iconCopy, iconLanguages, iconSparkle } from '../icons';
 
 const MIN_W = 240, MAX_W = 640;
 const MIN_H = 120;
@@ -20,7 +23,8 @@ const SECTION_ITEMS: Array<{ id: string; label: string }> = [
   { id: 'examples', label: '例句' },
 ];
 
-const CSS = `
+// 助手对话区样式与弹泡共享同一份 chatCss（两个 surface 都用它，故只吃 --syo-* token）
+const CSS = chatCss + `
   :host {
     position: fixed; z-index: 2147483647;
     --text-primary: var(--syo-fg-default, #e6edf3);
@@ -95,6 +99,21 @@ const CSS = `
     background: rgba(63,185,80,.13); color: var(--accent-green);
     border: 1px solid rgba(63,185,80,.22); white-space: nowrap;
   }
+
+  /* ── 翻译 / 助手 模式开关（两侧 meta 行都有）── */
+  .modes { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: 6px; }
+  .modes .mode {
+    display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 20px;
+    background: transparent; border: none; border-radius: 4px; color: var(--text-muted); cursor: pointer;
+    transition: var(--transition);
+  }
+  .modes .mode svg { width: 13px; height: 13px; }
+  .modes .mode:hover { color: var(--text-primary); background: var(--bg-hover); }
+  .modes .mode.on { color: var(--accent); background: rgba(122,162,247,.14); }
+
+  /* 助手输入区：在 .bubble 内、.body 之外 → 固定底部不随对话滚动；
+     卡片自身没有内边距，故这里补上与 .body 一致的左右留白 */
+  .chat-foot { flex: 0 0 auto; padding: 0 14px 10px; }
 
   .body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 14px 12px; font-family: var(--font-display); }
   .body::-webkit-scrollbar { width: 8px; }
@@ -319,6 +338,18 @@ export class PopupBubble extends ShadowView {
   /** 弹泡知识区显隐配置（id → 是否显示；缺省全开） */
   private _sections: Record<string, boolean> = {};
 
+  // ── 助手模式状态 ──
+  private _mode: 'translate' | 'assistant' = 'translate';
+  private _assistant: AssistantController | null = null;
+  private _chatUi: ChatUiState = { draft: '', thinkOpen: false };
+  /** 进助手模式前的翻译尺寸（切回翻译模式时还原） */
+  private _translateSize: { w: number; h: number } | null = null;
+  /** 助手模式的尺寸：storage 里的值在初始化时先存下，进助手模式时才生效 */
+  private _assistantSize: { w: number; h: number } | null = null;
+  /** 对话是否跟随最新消息滚动（用户往上翻后不再打扰） */
+  private _autoScroll = true;
+  private _scrollBound = false;
+
   /** 外部注入弹泡知识区配置（content script 从 storage 读出后调用） */
   setSections(sections: Record<string, boolean> | undefined): void {
     this._sections = sections ?? {};
@@ -380,6 +411,28 @@ export class PopupBubble extends ShadowView {
         </div>
       </div>`;
     }
+    // 助手模式不要求先有翻译结果（可由快捷键/触发按钮直接进入）
+    if (this._mode === 'assistant') {
+      const ctrl = this._assistant;
+      const bubbleStyleA = `width:${this._width}px;max-height:${this._maxHeight}px`;
+      return html`<div class="bubble" style="${bubbleStyleA}">
+        <div class="meta" @mousedown=${(e: MouseEvent) => this._onDragStart(e)}>
+          <span class="modes">
+            <button class="mode" title="翻译模式" @click=${() => this.setMode('translate')}>${iconLanguages}</button>
+            <button class="mode on" title="助手模式" @click=${() => this.setMode('assistant')}>${iconSparkle}</button>
+          </span>
+          <span class="sig">${this._sig || ''}</span>
+          <span class="grip" title="拖拽移动卡片"></span>
+          <button class="meta-close" title="关闭" @click=${(e: MouseEvent) => this._onCloseClick(e)}>${iconClose}</button>
+        </div>
+        <div class="body" style="display:flex;flex-direction:column;min-height:0">
+          ${ctrl ? chatBody(ctrl, this._chatUi, this._chatHandlers()) : html`<div class="state"><span class="loading">助手未初始化</span></div>`}
+        </div>
+        ${ctrl ? html`<div class="chat-foot">${chatInput(ctrl, this._chatUi, this._chatHandlers())}</div>` : nothing}
+        <div class="resize-handle" title="拖拽调整卡片尺寸" @mousedown=${(e: MouseEvent) => this._onResizeStart(e)}></div>
+      </div>
+      ${this._showSettings ? this._settingsPopTemplate() : nothing}`;
+    }
     if (!this.translation) return nothing;
 
     const t = this.translation;
@@ -389,6 +442,10 @@ export class PopupBubble extends ShadowView {
 
     return html`<div class="bubble" style="${bubbleStyle}">
       <div class="meta" @mousedown=${(e: MouseEvent) => this._onDragStart(e)}>
+        <span class="modes">
+          <button class="mode ${this._mode === 'translate' ? 'on' : ''}" title="翻译模式" @click=${() => this.setMode('translate')}>${iconLanguages}</button>
+          <button class="mode" title="助手模式：就这一页提问" @click=${() => this.setMode('assistant')}>${iconSparkle}</button>
+        </span>
         <span class="sig">${this._sig || ''}</span>
         <span class="grip" title="拖拽移动卡片"></span>
         ${this._secOn('register') && t.register ? html`<span class="chip reg" title="语域">${t.register}</span>` : nothing}
@@ -519,6 +576,7 @@ export class PopupBubble extends ShadowView {
     this.translation = null;
     this.loading = false;
     this.error = '';
+    this._chatUi.draft = '';
     this.update();
   }
 
@@ -541,6 +599,115 @@ export class PopupBubble extends ShadowView {
   restoreDimensions(w: number, maxH: number): void {
     if (w >= MIN_W && w <= MAX_W) this._width = w;
     if (maxH >= MIN_H) this._maxHeight = maxH;
+  }
+
+  // ── AI 助手模式 ──
+
+  /** 外部注入共享的助手控制器（content/index.ts 创建一次） */
+  attachAssistant(ctrl: AssistantController): void {
+    this._assistant = ctrl;
+    ctrl.onChange(() => this.update());
+    this.update();
+  }
+
+  get mode(): 'translate' | 'assistant' { return this._mode; }
+
+  /** 切换模式：进助手自动加宽加高（翻译尺寸先存起来，切回时还原） */
+  setMode(mode: 'translate' | 'assistant'): void {
+    if (this._mode === mode) return;
+    if (mode === 'assistant') {
+      this._translateSize = { w: this._width, h: this._maxHeight };
+      // 上次调过的助手尺寸优先，没存过才用「加宽加高」的下限
+      const keep = this._assistantSize;
+      this._width = keep ? keep.w : Math.max(this._width, 420);
+      this._maxHeight = keep ? keep.h : Math.max(this._maxHeight, Math.min(window.innerHeight * 0.72, window.innerHeight - 16));
+    } else {
+      this._assistantSize = { w: this._width, h: this._maxHeight };
+      if (this._translateSize) {
+        this._width = this._translateSize.w;
+        this._maxHeight = this._translateSize.h;
+      }
+    }
+    this._mode = mode;
+    this._showSettings = false;
+    this.update();
+    this.emit('mode-change', { mode });
+  }
+
+  /** 外部要求：确保卡片可见并按锚点摆放（助手模式从快捷键进入时用） */
+  ensureVisible(rect: DOMRect): void {
+    this.setVisible(true);
+    this.pinned = true;
+    this._position(rect);
+    this.update();
+  }
+
+  /** Esc：助手输入框有草稿 → 清草稿（返回 true 表示已消费） */
+  handleEscape(): boolean {
+    if (this._mode !== 'assistant' || !this._chatUi.draft) return false;
+    this._chatUi.draft = '';
+    this.update();
+    return true;
+  }
+
+  /**
+   * 外接恢复助手模式尺寸。初始化时卡片还在翻译模式，此时直接改 _width/_maxHeight
+   * 会盖掉刚恢复的翻译尺寸，所以先记下来，进助手模式时再生效。
+   */
+  restoreAssistantDimensions(w: number, h: number): void {
+    if (!(w >= MIN_W && w <= MAX_W) || !(h >= MIN_H)) return;
+    this._assistantSize = { w, h };
+  }
+
+  private _chatHandlers(): ChatViewHandlers {
+    return {
+      onDraft: (text) => { this._chatUi.draft = text; },
+      onAsk: (q) => {
+        const v = q.trim();
+        if (!v) return;
+        this._chatUi.draft = '';
+        this._assistant?.ask(v);
+        this.update();
+      },
+      onQuick: (id) => {
+        const q = QUICK_PROMPTS.find(p => p.id === id);
+        if (!q || !this._assistant) return;
+        if (q.needsSelection && !this._assistant.selection.text) return;
+        this._assistant.ask(q.prompt, { focus: q.focus, selection: this._assistant.selection.text });
+      },
+      onStop: () => this._assistant?.stop(),
+      onClear: () => this._assistant?.clear(),
+      onDeepThink: () => {
+        if (!this._assistant) return;
+        this._assistant.deepThink = !this._assistant.deepThink;
+        this.update();
+      },
+      onThinkToggle: () => { this._chatUi.thinkOpen = !this._chatUi.thinkOpen; this.update(); },
+      onSpeak: (text) => this.emit('speak-word', { word: text }),
+      onCopy: (text) => this._copyText(text),
+      onOpenSettings: () => this._openSettings(this.el),
+    };
+  }
+
+  private _afterRender(): void {
+    const root = this.el.shadowRoot;
+    if (!root) return;
+    if (!this._scrollBound) {
+      this._scrollBound = true;
+      root.addEventListener('scroll', (e) => {
+        const target = e.target as HTMLElement;
+        if (!target?.classList?.contains('chat-scroll')) return;
+        this._autoScroll = target.scrollHeight - target.scrollTop - target.clientHeight < 32;
+      }, { capture: true, passive: true });
+    }
+    if (this._mode !== 'assistant' || !this._autoScroll) return;
+    const box = root.querySelector('.chat-scroll') as HTMLElement | null;
+    if (box) box.scrollTop = box.scrollHeight;
+  }
+
+  protected update(): void {
+    super.update();
+    this._afterRender();
   }
 
   /** 当前字号缩放值（--font-size-xl px） */
@@ -633,7 +800,7 @@ export class PopupBubble extends ShadowView {
     if (this._resize) this.pinned = true;
     this._resize = null;
     this.update();
-    this.emit('resize-end', { width: this._width, maxHeight: this._maxHeight });
+    this.emit('resize-end', { width: this._width, maxHeight: this._maxHeight, mode: this._mode });
   }
   /* eslint-enable @typescript-eslint/member-ordering */
 
@@ -897,9 +1064,13 @@ export class PopupBubble extends ShadowView {
 
   // ── 复制译文 ──
   private _copyTranslation(): void {
-    const text = this.translation?.text ?? '';
+    this._copyText(this.translation?.text ?? '');
+  }
+
+  /** 复制任意文本（译文 / 助手回答） */
+  private _copyText(text: string): void {
     if (!text) return;
-    const done = () => this.showToast('已复制译文');
+    const done = () => this.showToast('已复制');
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text).then(done).catch(() => this._legacyCopy(text, done));
     } else {

@@ -5,6 +5,7 @@ import {
 import { TriggerIcon } from './components/trigger-icon';
 import { PopupBubble } from './components/popup-bubble';
 import { SidePanel } from './components/side-panel';
+import { AssistantController } from './assistant/controller';
 
 const DEBOUNCE_MS = 200;
 
@@ -70,6 +71,11 @@ function init(): void {
   const triggerIcon = new TriggerIcon();
   const popupBubble = new PopupBubble();
   const sidePanel = new SidePanel();
+
+  // ── AI 助手：一个页面一个控制器，弹泡与侧栏共享同一会话 ──
+  const assistant = new AssistantController();
+  popupBubble.attachAssistant(assistant);
+
   root.appendChild(triggerIcon.el);
   root.appendChild(popupBubble.el);
   root.appendChild(sidePanel.el);
@@ -145,6 +151,12 @@ function init(): void {
     if (sz?.width || sz?.maxHeight) popupBubble.restoreDimensions(sz.width, sz.maxHeight);
   }).catch(() => {});
 
+  // ── 恢复助手模式的卡片尺寸（初始化时还在翻译模式，进助手模式时生效）──
+  chrome.storage.local.get(['assistantSize']).then(data => {
+    const sz = (data as any)?.assistantSize;
+    if (sz?.width || sz?.maxHeight) popupBubble.restoreAssistantDimensions(sz.width, sz.maxHeight);
+  }).catch(() => {});
+
   // ── 恢复弹泡知识区显示配置 ──
   chrome.storage.local.get(['popupSections']).then(data => {
     popupBubble.setSections((data as any)?.popupSections);
@@ -187,7 +199,9 @@ function init(): void {
         return;
       }
       const rect = sel.getRangeAt(0).getBoundingClientRect();
-      lastSelection = { text, rect, context: getContext(sel) };
+      const context = getContext(sel);
+      lastSelection = { text, rect, context };
+      assistant.setSelection(text, context);
       triggerIcon.showAtRect(rect);
     }, DEBOUNCE_MS);
   });
@@ -202,14 +216,23 @@ function init(): void {
     }
   });
 
-  // Esc 关闭：先关设置窗，再关卡片（固定态也关——用户显式按键盘）
+  // Esc 关闭：先关设置窗，再清助手草稿，最后关卡片（固定态也关——用户显式按键盘）
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       if (popupBubble.closeSettings()) return;
+      if (popupBubble.handleEscape()) return;   // 助手输入框有草稿 → 先清草稿
       popupBubble.hide();
       sidePanel.hide();
       triggerIcon.hide();
     }
+  });
+
+  // ── 助手模式切换：进入时确保卡片可见并定位到选区 ──
+  popupBubble.el.addEventListener('mode-change', (e: Event) => {
+    const mode = (e as CustomEvent).detail?.mode as 'translate' | 'assistant' | undefined;
+    if (mode !== 'assistant') return;
+    const rect = lastSelection?.rect ?? new DOMRect(window.innerWidth / 2, 120, 1, 1);
+    popupBubble.ensureVisible(rect);
   });
 
   // ── 卡片右上角 ✕：联动收起触发图标与侧栏 ──
@@ -395,10 +418,11 @@ function init(): void {
     chrome.storage.local.set({ popupSections: detail.sections }).catch(() => {});
   });
 
-  // ── 卡片调尺寸 → 写入 local storage 记住 ──
+  // ── 卡片调尺寸 → 按模式分别记忆 ──
   popupBubble.el.addEventListener('resize-end', (e) => {
-    const detail = (e as CustomEvent).detail as { width: number; maxHeight: number } | undefined;
-    if (!detail) return;
-    chrome.storage.local.set({ popupSize: { width: detail.width, maxHeight: detail.maxHeight } }).catch(() => {});
+    const d = (e as CustomEvent).detail as { width: number; maxHeight: number; mode?: string } | undefined;
+    if (!d) return;
+    const key = d.mode === 'assistant' ? 'assistantSize' : 'popupSize';
+    chrome.storage.local.set({ [key]: { width: d.width, maxHeight: d.maxHeight } }).catch(() => {});
   });
 }
