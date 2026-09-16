@@ -42,6 +42,7 @@ export async function handleAskAssistant(req: AskAssistantRequest) {
  * 端口流式 runner。
  * 心跳：MV3 Service Worker 空闲 30s 会被回收，思考阶段可能长时间没有数据块，
  * 每 20s 发一次 ping（Chrome 116+ 端口活动会重置空闲计时器），content 回 pong 更稳。
+ * 中止：新 ask 会取代旧请求（旧请求静默收尾，见 catch）；abort 消息与端口断开只中止当前请求。
  */
 export function registerAssistantPort(port: chrome.runtime.Port): void {
   let controller: AbortController | null = null;
@@ -83,8 +84,15 @@ export function registerAssistantPort(port: chrome.runtime.Port): void {
           if (ev.kind === 'done') break;
         }
       } catch (err) {
-        if (isAbort(err) || ac.signal.aborted) send({ kind: 'done', stats: EMPTY_STATS, aborted: true });
-        else send({ kind: 'error', message: errorMessage(err) });
+        if (isAbort(err) || ac.signal.aborted) {
+          // 只有仍是当前请求才补一条 aborted done：被新 ask 取代的请求保持静默——
+          // 新请求本就会重置 content 侧状态，而这条迟到的终止事件与新一轮的 done 无法区分
+          // （旧请求可能停在 resolveApiKey() 上，其 done 甚至会落在新流开始之后），会被当成新一轮结束。
+          // 用户主动 abort 不替换 controller，依旧走这里；端口断开时 send 本就被吞掉，无需额外分支。
+          if (controller === ac) send({ kind: 'done', stats: EMPTY_STATS, aborted: true });
+        } else {
+          send({ kind: 'error', message: errorMessage(err) });
+        }
       } finally {
         if (heartbeat === timer) stopHeartbeat();
         if (controller === ac) controller = null;
