@@ -74,7 +74,7 @@ Requires Node.js ≥ 18. Output goes to `dist/`.
 - Streaming output with collapsible reasoning; the footnote shows input/output tokens, prefix-cache hit rate, and elapsed time
 - Quick prompts: explain the selection / plain words / examples / quiz me / what is this page about; answers can be read aloud or copied
 - `Alt+Q` asks about the current selection directly
-- Settings: context length (0–32000 characters, 0 = selection only), thinking depth (off / low / high / max), extra instructions, answer length cap — editable in both the popup settings popover and the options page, applied immediately
+- Settings: context length (0–32000 characters, 0 = selection only) and thinking depth (off / low / high / max) live in the popup settings popover; extra instructions and the answer length cap live on the options page. A popover change applies immediately; the options page shows stored values when next opened
 - Requires a DeepSeek API key: the assistant reuses the DeepSeek key configured for the translation source, and tells you to open settings when it is missing
 
 ### Vocabulary & spaced repetition
