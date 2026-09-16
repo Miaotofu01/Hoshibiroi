@@ -25,7 +25,7 @@ export const chatCss = `
   .chat { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
   .ctx-line {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-    padding: 6px 0 8px; font-family: var(--syo-font-mono, monospace); font-size: 11px; color: var(--syo-fg-muted);
+    padding: 6px 0 8px; font-family: var(--font-mono, monospace); font-size: 11px; color: var(--syo-fg-muted);
   }
   .ctx-chip {
     padding: 1px 6px; border-radius: 8px;
@@ -40,7 +40,7 @@ export const chatCss = `
   .chat-scroll::-webkit-scrollbar-thumb { background: var(--syo-border); border-radius: 4px; }
 
   .msg { display: flex; flex-direction: column; gap: 6px; }
-  .msg .who { font-family: var(--syo-font-mono, monospace); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--syo-fg-muted); }
+  .msg .who { font-family: var(--font-mono, monospace); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--syo-fg-muted); }
   .msg.user .bubble-txt {
     background: var(--syo-bg-elevated); border: 1px solid var(--syo-border-muted);
     border-radius: var(--syo-radius-md); padding: 7px 10px;
@@ -51,7 +51,7 @@ export const chatCss = `
     white-space: pre-wrap; word-break: break-word;
   }
   .msg.assistant.error .bubble-txt { color: var(--syo-danger); font-size: var(--font-size-sm); }
-  .msg .foot { display: flex; align-items: center; gap: 8px; font-family: var(--syo-font-mono, monospace); font-size: 10px; color: var(--syo-fg-muted); }
+  .msg .foot { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono, monospace); font-size: 10px; color: var(--syo-fg-muted); }
   .msg .foot .minibtn {
     display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
     background: transparent; border: 1px solid var(--syo-border-muted); border-radius: var(--syo-radius-sm);
@@ -63,7 +63,7 @@ export const chatCss = `
   .think { border-left: 2px solid var(--syo-border); padding-left: 8px; }
   .think .head {
     display: inline-flex; align-items: center; gap: 4px; background: none; border: none; cursor: pointer;
-    font-family: var(--syo-font-mono, monospace); font-size: 11px; color: var(--syo-fg-muted); padding: 0;
+    font-family: var(--font-mono, monospace); font-size: 11px; color: var(--syo-fg-muted); padding: 0;
   }
   .think .head:hover { color: var(--syo-fg-body); }
   .think .head svg { width: 12px; height: 12px; transition: transform .15s var(--syo-ease-out); }
@@ -109,16 +109,16 @@ export const chatCss = `
   .tool:hover { color: var(--syo-fg-body); border-color: var(--syo-border); }
   .tool.on { color: var(--syo-accent); border-color: rgba(187,154,247,.4); background: rgba(187,154,247,.1); }
   .tool svg { width: 12px; height: 12px; }
-  .hint { font-family: var(--syo-font-mono, monospace); font-size: 10px; color: var(--syo-fg-muted); margin-left: auto; }
+  .hint { font-family: var(--font-mono, monospace); font-size: 10px; color: var(--syo-fg-muted); margin-left: auto; }
 `;
 
 /**
  * 用量脚注：↑输入（缓存命中率）↓输出 · 耗时。
- * 只有真正拿到 usage 的那一轮才有脚注；错误消息没有用量，被放弃的一轮带的是全零统计
- * （读成「0 tokens」会误导），因此停止时改为「已停止」。
+ * 错误消息没有用量、被放弃的一轮带的是全零统计（读成「0 tokens」会误导），
+ * 两种情况都不出数字；「已停止」由 chatBody 的 foot 统一渲染（正文为空也要显示）。
  */
 function statsLine(ctrl: AssistantController): string {
-  if (ctrl.lastFinishReason === 'aborted') return '已停止';
+  if (ctrl.lastFinishReason === 'aborted') return '';
   const last = ctrl.session.messages[ctrl.session.messages.length - 1];
   if (!last?.stats || last.error) return '';
   const s = last.stats;
@@ -169,11 +169,20 @@ export function chatBody(ctrl: AssistantController, ui: ChatUiState, h: ChatView
             ${ui.thinkOpen ? html`<div class="body">${m.reasoning}</div>` : nothing}
           </div>` : nothing}
           <div class="bubble-txt">${m.content}${streamingNow ? html`<span class="caret"></span>` : nothing}</div>
-          ${(!streamingNow && !m.error && m.content) ? html`<div class="foot">
-            ${stats ? html`<span>${stats}</span>` : nothing}
-            <button class="minibtn" title="朗读答案" @click=${() => h.onSpeak(m.content)}>${iconSpeak}</button>
-            <button class="minibtn" title="复制答案" @click=${() => h.onCopy(m.content)}>${iconCopy}</button>
-          </div>` : nothing}
+          ${(() => {
+            // 停止标记只认「最后一轮 + 已被放弃 + 不再流式」：正文为空也要说「已停止」，
+            // 否则思考阶段被停下的一轮看起来像什么都没发生。
+            const aborted = isLast && ctrl.lastFinishReason === 'aborted' && !streamingNow;
+            const withActions = !streamingNow && !m.error && !!m.content;   // 朗读/复制要有正文才有意义
+            if (!aborted && !withActions) return nothing;
+            return html`<div class="foot">
+              ${aborted ? html`<span>已停止</span>` : nothing}
+              ${withActions && stats ? html`<span>${stats}</span>` : nothing}
+              ${withActions ? html`
+                <button class="minibtn" title="朗读答案" @click=${() => h.onSpeak(m.content)}>${iconSpeak}</button>
+                <button class="minibtn" title="复制答案" @click=${() => h.onCopy(m.content)}>${iconCopy}</button>` : nothing}
+            </div>`;
+          })()}
           ${(isLast && ctrl.lastFinishReason === 'length') ? html`<div class="foot" style="color:var(--syo-warning)">回答达到长度上限被截断，可在设置里调大「回答长度」或在输入框重新追问</div>` : nothing}
         </div>`;
       })}
@@ -206,14 +215,25 @@ export function chatInput(ctrl: AssistantController, ui: ChatUiState, h: ChatVie
           h.onDraft(ta.value);
         }}
         @keydown=${(e: KeyboardEvent) => {
-          e.stopPropagation();                                   // 不要惊动宿主页面的快捷键
-          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); h.onAsk(ui.draft); }
-          if (e.key === 'Escape' && ui.draft) {
+          // 只吃自己真正消费掉的键：空草稿时的 Esc 继续冒泡，
+          // 让文档级处理（关卡片）照常收到；其余按键不惊动宿主页面快捷键。
+          if (e.key === 'Escape') {
+            if (!ui.draft) return;                               // 没有可清的草稿 → 交给上层
+            e.stopPropagation();
             e.preventDefault();
             const ta = e.target as HTMLTextAreaElement;
             ta.value = '';                                       // 草稿要就地清掉才看得见（onDraft 不重渲染）
             syncSendBtn(ta);
             h.onDraft('');
+            return;
+          }
+          e.stopPropagation();
+          if (e.key === 'Enter' && !e.shiftKey) {
+            // 输入法合成中（选词/上屏的回车，keyCode 229）不是「发送」：
+            // 不提交也不 preventDefault，否则会把回车从输入法手里抢走
+            if (e.isComposing || e.keyCode === 229) return;
+            e.preventDefault();
+            h.onAsk(ui.draft);
           }
         }}
       ></textarea>

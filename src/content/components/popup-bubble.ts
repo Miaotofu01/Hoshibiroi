@@ -23,7 +23,7 @@ const SECTION_ITEMS: Array<{ id: string; label: string }> = [
   { id: 'examples', label: '例句' },
 ];
 
-// 助手对话区样式与弹泡共享同一份 chatCss（两个 surface 都用它，故只吃 --syo-* token）
+// 助手对话区样式与弹泡共享同一份 chatCss（两个 surface 都用它，故只吃 --syo-* / --font-* 宿主 token）
 const CSS = chatCss + `
   :host {
     position: fixed; z-index: 2147483647;
@@ -577,6 +577,17 @@ export class PopupBubble extends ShadowView {
     this.loading = false;
     this.error = '';
     this._chatUi.draft = '';
+    // 关卡片一律回到翻译模式，并还原进入助手前的翻译尺寸：
+    // 否则下一次划词翻译（setLoading → show）会渲染成助手卡片，把新译文藏在后面。
+    // 这里直接改 _mode 而不走 setMode()：切回翻译的 emit('mode-change') 会被
+    // content/index.ts 的监听转成 ensureVisible()，卡片当场又弹回来。尺寸快照同理——
+    // 走 setMode 会把刚还原的翻译尺寸又当成助手尺寸记回去。
+    this._mode = 'translate';
+    if (this._translateSize) {
+      this._width = this._translateSize.w;
+      this._maxHeight = this._translateSize.h;
+      this._translateSize = null;   // 快照已消费，翻译尺寸回到当前值本身
+    }
     this.update();
   }
 
@@ -799,6 +810,9 @@ export class PopupBubble extends ShadowView {
     // 拖过尺寸 = 想自己控制，自动固定
     if (this._resize) this.pinned = true;
     this._resize = null;
+    // 助手模式下拖出来的尺寸立即记快照：hide() 会消费掉快照并回到翻译模式，
+    // 不在这里更新的话，下次进助手模式拿到的是更早那次的尺寸。
+    if (this._mode === 'assistant') this._assistantSize = { w: this._width, h: this._maxHeight };
     this.update();
     this.emit('resize-end', { width: this._width, maxHeight: this._maxHeight, mode: this._mode });
   }
