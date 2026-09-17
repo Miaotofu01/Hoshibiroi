@@ -4,7 +4,7 @@ import { testTranslator } from './translator';
 import { cleanExpiredCache } from './cache';
 import { handleTranslate } from './handlers/translate';
 import { handleSpeak, handleAnalyzeGrammar } from './handlers/sidebar';
-import { handleAskAssistant, registerAssistantPort } from './handlers/assistant';
+import { registerAssistantPort } from './handlers/assistant';
 import { handleToggleFavorite, handleRemoveFavorite, handleGetFavorites } from './handlers/favorites';
 import { handleSubmitReview, handleGetDueWords, handleGetLearnStats, handleGetWordHistory } from './handlers/review';
 import { handleGetSettings, handleSaveSettings, handleGetSources, handleSaveVocabSettings } from './handlers/settings';
@@ -173,11 +173,6 @@ async function handleRequest(req: WorkerRequest): Promise<unknown> {
 
     case 'ANALYZE_GRAMMAR': {
       return handleAnalyzeGrammar(req);
-    }
-
-    // ── AI 助手（非流式兜底；流式走 assistant-stream 端口）──
-    case 'ASK_ASSISTANT': {
-      return handleAskAssistant(req);
     }
 
     case 'SAVE_SETTINGS': {

@@ -74,7 +74,7 @@ Requires Node.js ≥ 18. Output goes to `dist/`.
 - Streaming output with collapsible reasoning; the footnote shows input/output tokens, prefix-cache hit rate, and elapsed time
 - Quick prompts: explain the selection / plain words / examples / quiz me / what is this page about; answers can be read aloud or copied
 - `Alt+Q` asks about the current selection directly
-- Settings: context length (0–32000 characters, 0 = selection only) and thinking depth (off / low / high / max) live in the popup settings popover; extra instructions and the answer length cap live on the options page. A popover change applies immediately; the options page shows stored values when next opened
+- Settings: **the options page holds all four** — context length (0–32000 characters, 0 = selection only), thinking depth (off / low / high / max), extra instructions, and the answer length cap; the popup settings popover is a shortcut for the first two (use the options page for the rest). A popover change applies immediately; the options page shows stored values when next opened
 - Requires a DeepSeek API key: the assistant reuses the DeepSeek key configured for the translation source, and tells you to open settings when it is missing
 
 ### Vocabulary & spaced repetition
@@ -117,9 +117,12 @@ src/content/index.ts  ──msg→  src/worker/       ←msg→ src/vocab/
   Shadow DOM injection         handlers/               panels/learn.ts
   translation bubble           review.ts               panels/browse.ts
   favorites                    stats.ts                panels/stats.ts
+  src/content/assistant/       handlers/assistant.ts
+    assistant (mode switch / streaming chat / page context)
                                storage.ts
                                srs.ts  FSRS-5
                                translate.ts
+                               assistant.ts  streaming chat
 ```
 
 All content↔worker↔vocab messages are typed in `src/shared/messages.ts`.
@@ -131,7 +134,7 @@ TypeScript + Vite + [vite-plugin-web-extension](https://github.com/aklinker1/vit
 ## Tests
 
 ```bash
-npx vitest run tests/srs.test.ts
+npx vitest run tests/    # all 77 tests in 8 files: FSRS scheduler, import, and the assistant suites
 ```
 
 ## Contributing

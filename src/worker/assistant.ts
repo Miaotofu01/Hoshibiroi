@@ -169,19 +169,3 @@ export async function* streamAssistant(req: AssistantRequest): AsyncGenerator<As
   if (!sawDone) finishReason = finishReason ?? 'incomplete';
   yield { kind: 'done', stats, finishReason };
 }
-
-/** 非流式兜底路径：把流式结果抽干成一次性结果（端口不可用时用） */
-export async function askAssistant(
-  req: AssistantRequest
-): Promise<{ text: string; reasoning: string; stats: AssistantStats; finishReason?: string }> {
-  let text = '';
-  let reasoning = '';
-  let stats: AssistantStats = { elapsedMs: 0, promptTokens: 0, cachedTokens: 0, answerTokens: 0, reasoningTokens: 0 };
-  let finishReason: string | undefined;
-  for await (const ev of streamAssistant(req)) {
-    if (ev.kind === 'reasoning') reasoning += ev.text;
-    else if (ev.kind === 'answer') text += ev.text;
-    else { stats = ev.stats; finishReason = ev.finishReason; }
-  }
-  return { text, reasoning, stats, finishReason };
-}

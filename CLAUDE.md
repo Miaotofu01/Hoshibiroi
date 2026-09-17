@@ -44,7 +44,8 @@ src/content/index.ts  ─msg→   src/worker/            ←msg→ src/vocab/
 | `src/worker/storage.ts` | `getFavorites()` / `getDueWords()` 等数据层 |
 | `src/content/index.ts` | 划词监听 → 注入 Shadow DOM 弹泡 |
 | `src/shared/assistant.ts` | 助手设置归一化、系统/用户提示词装配、页面窗口截取（`buildSystemPrompt`/`truncateAround`） |
-| `src/worker/assistant.ts` | 助手流式调用 DeepSeek（`streamAssistant`），助手模型名集中在这里 |
+| `src/worker/assistant.ts` | 助手流式调用 DeepSeek（`streamAssistant`） |
+| `src/worker/deepseek-model.ts` | DeepSeek 模型名唯一来源，助手/翻译/语法分析共用 `DEEPSEEK_MODEL` |
 | `src/content/assistant/controller.ts` | 弹泡与侧栏共享的助手控制器（会话、设置、页面上下文、请求装配） |
 
 ## 记忆调度策略
@@ -59,7 +60,7 @@ src/content/index.ts  ─msg→   src/worker/            ←msg→ src/vocab/
 ## 测试
 
 ```bash
-npx vitest run tests/srs.test.ts    # SRS 调度器黑盒测试（19项）
+npx vitest run tests/    # 全部 77 项 / 8 个文件：SRS 调度器、导入、助手（上下文/流式/端口/会话/模型名）
 ```
 
 ## Gotchas

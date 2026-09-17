@@ -104,7 +104,7 @@ npm run build
 - 流式输出 + 思考过程可折叠；脚注显示输入/输出 token、上下文缓存命中率与耗时
 - 快捷提问：解释选中 / 说人话 / 给例子 / 考考我 / 这页讲了什么；答案可朗读、可复制
 - `Alt+Q` 直接对选中内容提问
-- 设置分两处：上下文长度（0–32000 字，0 = 只带选中范围）、思考深度（关闭/低/高/最大）在弹泡设置浮窗里调，附加指令、回答长度上限在选项页里调；弹泡里改完即时生效，选项页下次打开时读到的是已存的新值
+- 设置分两处：**选项页能调全部四项**——上下文长度（0–32000 字，0 = 只带选中范围）、思考深度（关闭/低/高/最大）、附加指令、回答长度上限；弹泡里的设置浮窗是其中「上下文长度 + 思考深度」的快捷入口（其余两项请到选项页调）。弹泡里改完即时生效，选项页下次打开时读到的是已存的新值
 - 需要 DeepSeek API Key：助手复用翻译源里已配置的 DeepSeek Key，没配时对话里会提示去设置
 
 ### 生词本 · 间隔复习
@@ -148,9 +148,12 @@ src/content/index.ts  ──→  src/worker/       ←──  src/vocab/
   Shadow DOM 注入            handlers/               panels/learn.ts
   划词弹泡                    review.ts              panels/browse.ts
   收藏单词                    stats.ts               panels/stats.ts
-                              storage.ts
-                              srs.ts  FSRS-5
-                              translate.ts
+  src/content/assistant/     handlers/assistant.ts
+    助手（模式切换/流式对话/页面上下文）
+                             storage.ts
+                             srs.ts  FSRS-5
+                             translate.ts
+                             assistant.ts  对话流
 ```
 
 **消息协议**：`src/shared/messages.ts` 定义所有 content↔worker↔vocab 通信类型。
@@ -175,12 +178,15 @@ TypeScript + Vite + [vite-plugin-web-extension](https://github.com/aklinker1/vit
 src/
   content/       # Content script — 划词监听、Shadow DOM 弹泡
     index.ts
+    assistant/   # 助手：控制器、会话状态机、流式客户端、对话视图
   worker/        # Service Worker — 消息路由、FSRS、翻译 API
     index.ts
     srs.ts
     storage.ts
     translate.ts
-    handlers/    # 按功能拆分的消息处理
+    assistant.ts        # 助手流式调用 DeepSeek（streamAssistant）
+    deepseek-model.ts   # DeepSeek 模型名唯一来源（助手/翻译/语法分析共用）
+    handlers/    # 按功能拆分的消息处理（含 assistant.ts 的助手流式端口）
   vocab/         # 生词本页面
     index.html / index.ts
     panels/      # learn / browse / stats 三个面板
@@ -192,8 +198,8 @@ src/
   shared/        # 共享类型与消息协议
     types.ts
     messages.ts
-tests/
-  srs.test.ts    # FSRS 调度器黑盒测试（19 项）
+    assistant.ts # 助手设置归一化、提示词装配、页面窗口截取
+tests/           # vitest：SRS/导入/助手（上下文、流式、端口、会话、模型名）
 docs/
   srs-strategy.md
 ```
@@ -201,7 +207,7 @@ docs/
 ## 测试
 
 ```bash
-npx vitest run tests/srs.test.ts
+npx vitest run tests/    # 全部 77 项（8 个文件）：FSRS 调度器、导入、助手各套件
 ```
 
 ## 贡献

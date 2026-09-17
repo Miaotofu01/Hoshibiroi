@@ -1,7 +1,5 @@
-import type {
-  AskAssistantRequest, AssistantStreamEvent, AssistantStreamRequest,
-} from '../../shared/messages';
-import { streamAssistant, askAssistant } from '../assistant';
+import type { AssistantStreamEvent, AssistantStreamRequest } from '../../shared/messages';
+import { streamAssistant } from '../assistant';
 import { getSettings } from '../storage';
 
 const EMPTY_STATS = { elapsedMs: 0, promptTokens: 0, cachedTokens: 0, answerTokens: 0, reasoningTokens: 0 };
@@ -20,22 +18,6 @@ function errorMessage(err: unknown): string {
 
 function isAbort(err: unknown): boolean {
   return (err as Error)?.name === 'AbortError';
-}
-
-/** 非流式兜底：content 在端口不可用时可退回到 sendMessage */
-export async function handleAskAssistant(req: AskAssistantRequest) {
-  try {
-    const apiKey = await resolveApiKey();
-    const out = await askAssistant({
-      apiKey,
-      messages: req.payload.messages,
-      thinking: req.payload.thinking,
-      maxTokens: req.payload.maxTokens,
-    });
-    return { type: 'ASSISTANT_RESULT' as const, ...out };
-  } catch (err) {
-    return { type: 'ASSISTANT_ERROR' as const, error: errorMessage(err) };
-  }
 }
 
 /**
