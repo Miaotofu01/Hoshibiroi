@@ -6,9 +6,16 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { deepseekTranslator } from '../src/worker/adapters/deepseek';
+import { DEEPSEEK_MODEL } from '../src/worker/deepseek-model';
+import { ASSISTANT_MODEL } from '../src/worker/assistant';
 
 describe('deepseek 翻译请求参数', () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it('模型名只有一处定义，翻译与助手共用同一个常量', () => {
+    expect(DEEPSEEK_MODEL).toBe('deepseek-flash');
+    expect(ASSISTANT_MODEL).toBe(DEEPSEEK_MODEL);
+  });
 
   it('使用 deepseek-flash 且关闭思考模式', async () => {
     const spy = vi.fn(async (_url: string, _init?: RequestInit) => ({

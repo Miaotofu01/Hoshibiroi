@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { iterateSSE, streamAssistant, buildAssistantBody, ASSISTANT_MODEL } from '../src/worker/assistant';
+import { API_MESSAGE_MAX_CHARS, type ApiMessage } from '../src/shared/assistant';
 
 const enc = new TextEncoder();
 
@@ -65,6 +66,17 @@ describe('iterateSSE', () => {
     expect(usageChunk.finishReason).toBe('stop');
     expect(usageChunk.usage?.prompt_cache_hit_tokens).toBe(8);
   });
+
+  it('注释心跳行产出空增量（供上层重新计时），空行不产出', async () => {
+    const raw = ': keep-alive\n\n' + sse('{"choices":[{"delta":{"content":"答"}}]}', '[DONE]');
+    const out = [];
+    for await (const d of iterateSSE(streamOf([raw]))) out.push(d);
+    // 注释行 1 条 + 数据块 1 条 + [DONE] 1 条；事件之间的空行不算
+    expect(out).toHaveLength(3);
+    expect(out[0]).toEqual({ content: '', reasoning: '', done: false });
+    expect(out[1].content).toBe('答');
+    expect(out[2].done).toBe(true);
+  });
 });
 
 describe('streamAssistant', () => {
@@ -89,6 +101,37 @@ describe('streamAssistant', () => {
     expect(done.stats.reasoningTokens).toBe(5);
     expect(done.finishReason).toBe('stop');
     expect(done.stats.elapsedMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('流在没有 [DONE] 时断掉：标记 incomplete，但已收到的部分回答照常交付', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      // 直接关闭 body：既没有 [DONE]，也没有 finish_reason
+      body: streamOf([
+        sse('{"choices":[{"delta":{"content":"半截"}}]}'),
+        sse('{"choices":[{"delta":{"content":"回答"}}]}'),
+      ]),
+    } as unknown as Response)));
+
+    const events = [];
+    for await (const ev of streamAssistant({ apiKey: 'k', messages: [], thinking: 'off', maxTokens: 500 })) events.push(ev);
+
+    expect(events.map(e => e.kind)).toEqual(['answer', 'answer', 'done']);
+    const done = events[2] as Extract<typeof events[number], { kind: 'done' }>;
+    expect(done.finishReason).toBe('incomplete');
+    expect(done.aborted).toBeUndefined();          // 是「不完整」而不是错误/用户中止
+    expect(events.filter(e => e.kind === 'answer').map(e => (e as { text: string }).text).join('')).toBe('半截回答');
+  });
+
+  it('消息总量超过硬上限时在发请求前拒绝', async () => {
+    const spy = vi.fn();
+    vi.stubGlobal('fetch', spy);
+    const messages: ApiMessage[] = [{ role: 'user', content: 'x'.repeat(API_MESSAGE_MAX_CHARS + 1) }];
+
+    await expect(async () => {
+      for await (const _ of streamAssistant({ apiKey: 'k', messages, thinking: 'off', maxTokens: 500 })) { /* drain */ }
+    }).rejects.toThrow(/请求内容过大（200001 字，上限 200000）/);
+    expect(spy).not.toHaveBeenCalled();
   });
 
   it('HTTP 非 2xx 时抛出服务端错误信息', async () => {
@@ -119,6 +162,45 @@ describe('streamAssistant', () => {
       const assertion = expect(run).rejects.toThrow(/超时/);
       await vi.advanceTimersByTimeAsync(61_000);
       await assertion;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('只靠注释心跳保活的流不会被空闲超时掐断（心跳要重新计时）', async () => {
+    vi.useFakeTimers();
+    try {
+      let push!: (text: string) => void;
+      vi.stubGlobal('fetch', vi.fn(async (_u: string, init?: RequestInit) => ({
+        ok: true,
+        body: new ReadableStream<Uint8Array>({
+          start(c) {
+            push = (text: string) => c.enqueue(enc.encode(text));
+            init?.signal?.addEventListener('abort', () => c.error(new DOMException('aborted', 'AbortError')));
+          },
+        }),
+      } as unknown as Response)));
+
+      const answers: string[] = [];
+      let finish: string | undefined = 'UNSET';
+      const run = (async () => {
+        for await (const ev of streamAssistant({ apiKey: 'k', messages: [], thinking: 'off', maxTokens: 500 })) {
+          if (ev.kind === 'answer') answers.push(ev.text);
+          if (ev.kind === 'done') finish = ev.finishReason;
+        }
+      })();
+
+      for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(0);   // 让 fetch/流读取就位
+      await vi.advanceTimersByTimeAsync(59_000);                          // 第一个空闲窗口快到期
+      push(': keep-alive\n\n');                                           // 注释心跳
+      for (let i = 0; i < 5; i++) await vi.advanceTimersByTimeAsync(0);   // 跑完「产出空增量 → 重新计时」
+      await vi.advanceTimersByTimeAsync(30_000);                          // 不重新计时的话这里早已越过 60s
+      push('data: {"choices":[{"delta":{"content":"答案"}}]}\n\n');
+      push('data: [DONE]\n\n');
+      await run;
+
+      expect(answers).toEqual(['答案']);
+      expect(finish).toBeUndefined();
     } finally {
       vi.useRealTimers();
     }

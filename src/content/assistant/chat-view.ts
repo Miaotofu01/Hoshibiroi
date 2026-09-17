@@ -196,7 +196,15 @@ export function chatBody(ctrl: AssistantController, ui: ChatUiState, h: ChatView
                 <button class="minibtn" title="复制答案" @click=${() => h.onCopy(m.content)}>${iconCopy}</button>` : nothing}
             </div>`;
           })()}
-          ${(isLast && ctrl.lastFinishReason === 'length') ? html`<div class="foot" style="color:var(--syo-warning)">回答达到长度上限被截断，可在设置里调大「回答长度」或在输入框重新追问</div>` : nothing}
+          ${(() => {
+            // 结束原因提示：'length' 是撞到输出上限，'incomplete' 是流在没有 [DONE] 的情况下断掉
+            // （worker 侧兜底标记）。两者都必须说出来，否则半截回答看起来像完整答案。
+            if (!isLast) return nothing;
+            const reason = ctrl.lastFinishReason;
+            if (reason === 'length') return html`<div class="foot" style="color:var(--syo-warning)">回答达到长度上限被截断，可在设置里调大「回答长度」或在输入框重新追问</div>`;
+            if (reason === 'incomplete') return html`<div class="foot" style="color:var(--syo-warning)">连接中断，回答可能不完整，可重新提问</div>`;
+            return nothing;
+          })()}
         </div>`;
       })}
     </div>

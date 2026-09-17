@@ -1,8 +1,10 @@
 import type { AssistantStats, AssistantThinking } from '../shared/types';
 import type { AssistantStreamEvent } from '../shared/messages';
-import { estimateTokens, type ApiMessage } from '../shared/assistant';
+import { API_MESSAGE_MAX_CHARS, estimateTokens, type ApiMessage } from '../shared/assistant';
+import { DEEPSEEK_MODEL } from './deepseek-model';
 
-export const ASSISTANT_MODEL = 'deepseek-flash';
+/** 助手用的模型名（对外保留这个名字，实际取值集中在 deepseek-model.ts） */
+export const ASSISTANT_MODEL = DEEPSEEK_MODEL;
 const ENDPOINT = 'https://api.deepseek.com/chat/completions';
 
 /** 空闲超时：思考模式下首个数据块可能很晚才来，按「多久没数据」而不是总时长计时 */
@@ -71,8 +73,10 @@ export async function* iterateSSE(body: ReadableStream<Uint8Array>): AsyncGenera
         const line = buffer.slice(0, nl).trim();
         buffer = buffer.slice(nl + 1);
         nl = buffer.indexOf('\n');
-        if (!line || line.startsWith(':')) continue;
-        if (!line.startsWith('data:')) continue;
+        if (!line) continue;                    // 事件分隔的空行：没有数据，也不代表连接还活着
+        // 非 data 行（注释心跳 ": keep-alive"、event:/id: 等）也要产出一次空增量：
+        // 上层是按「有没有增量」重置空闲计时的，只被注释保活的流会在 60s 被误判成超时。
+        if (!line.startsWith('data:')) { yield { content: '', reasoning: '', done: false }; continue; }
         const payload = line.slice(5).trim();
         if (payload === '[DONE]') { yield { content: '', reasoning: '', done: true }; return; }
         let json: {
@@ -97,6 +101,13 @@ export async function* iterateSSE(body: ReadableStream<Uint8Array>): AsyncGenera
 
 /** 流式对话：产出 reasoning/answer 增量，最后产出 done（含用量统计） */
 export async function* streamAssistant(req: AssistantRequest): AsyncGenerator<AssistantEvent> {
+  // 硬上限：异常输入（整页正文重复注入、历史没裁干净）在发请求前就拒绝，
+  // 否则会白白计费一次注定被服务端拒绝的调用
+  const totalChars = req.messages.reduce((n, m) => n + m.content.length, 0);
+  if (totalChars > API_MESSAGE_MAX_CHARS) {
+    throw new Error(`请求内容过大（${totalChars} 字，上限 ${API_MESSAGE_MAX_CHARS}），请缩短上下文长度或清空对话`);
+  }
+
   const started = Date.now();
   const ctrl = new AbortController();
   const onAbort = () => ctrl.abort();

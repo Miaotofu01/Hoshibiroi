@@ -1,5 +1,6 @@
 import type { GrammarAnalysis } from '../shared/types';
 import { getSettings } from './storage';
+import { DEEPSEEK_MODEL } from './deepseek-model';
 
 /**
  * 用 DeepSeek 做句子语法解析。只走 DeepSeek（唯一个能做语法分析的源）。
@@ -49,7 +50,7 @@ Important:
       'Authorization': `Bearer ${ds.apiKey}`,
     },
     body: JSON.stringify({
-      model: 'deepseek-flash',
+      model: DEEPSEEK_MODEL,
       messages: [
         { role: 'system', content: 'You are a grammar analysis assistant. Always respond with ONLY valid JSON, no markdown fences, no extra explanation.' },
         { role: 'user', content: prompt },
