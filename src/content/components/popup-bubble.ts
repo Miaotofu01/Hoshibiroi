@@ -393,27 +393,8 @@ export class PopupBubble extends ShadowView {
   }
 
   protected template() {
-    if (this.loading) {
-      return html`<div class="bubble"><div class="state"><span class="dots"></span><span class="loading">翻译中…</span></div></div>`;
-    }
-    if (this.error) {
-      return html`<div class="bubble">
-        <div class="state"><span class="error">${this.error}</span></div>
-        <div class="divider"></div>
-        <div class="actions">
-          <button class="expand" @click=${() => this.emit('retry-translate')} style="margin-left:0">
-            ${iconRetry} 重试
-          </button>
-          <button class="expand" @click=${() => this._openOptions()} title="打开设置页检查翻译源与 API Key">
-            ${iconSettings} 去设置
-          </button>
-          <button class="expand" style="margin-left:auto" @click=${() => this._onCloseClick()} title="关闭">
-            ${iconClose} 关闭
-          </button>
-        </div>
-      </div>`;
-    }
-    // 助手模式不要求先有翻译结果（可由快捷键/触发按钮直接进入）
+    // 模式是权威：助手模式下永远渲染对话卡片，翻译的 loading/error 状态不能把它顶掉。
+    // 否则 Alt+Q 进助手后再翻译一次，卡片会显示成聊天，译文永远不会露面。
     if (this._mode === 'assistant') {
       const ctrl = this._assistant;
       const bubbleStyleA = `width:${this._width}px;max-height:${this._maxHeight}px`;
@@ -434,6 +415,26 @@ export class PopupBubble extends ShadowView {
         <div class="resize-handle" title="拖拽调整卡片尺寸" @mousedown=${(e: MouseEvent) => this._onResizeStart(e)}></div>
       </div>
       ${this._showSettings ? this._settingsPopTemplate() : nothing}`;
+    }
+    if (this.loading) {
+      return html`<div class="bubble"><div class="state"><span class="dots"></span><span class="loading">翻译中…</span></div></div>`;
+    }
+    if (this.error) {
+      return html`<div class="bubble">
+        <div class="state"><span class="error">${this.error}</span></div>
+        <div class="divider"></div>
+        <div class="actions">
+          <button class="expand" @click=${() => this.emit('retry-translate')} style="margin-left:0">
+            ${iconRetry} 重试
+          </button>
+          <button class="expand" @click=${() => this._openOptions()} title="打开设置页检查翻译源与 API Key">
+            ${iconSettings} 去设置
+          </button>
+          <button class="expand" style="margin-left:auto" @click=${() => this._onCloseClick()} title="关闭">
+            ${iconClose} 关闭
+          </button>
+        </div>
+      </div>`;
     }
     if (!this.translation) return nothing;
 
@@ -553,6 +554,10 @@ export class PopupBubble extends ShadowView {
   }
 
   setLoading(anchorRect: DOMRect) {
+    // 翻译流程一启动，模式必须交还给翻译：卡片现在渲染的是 loading（模式是权威），
+    // 但 _mode 还停在 'assistant' 的话，结果回来时 show() 也进不了翻译分支。
+    this._mode = 'translate';
+    this._showSettings = false;
     this.loading = true;
     this.error = '';
     this.translation = null;
@@ -563,6 +568,10 @@ export class PopupBubble extends ShadowView {
   }
 
   setError(msg: string, anchorRect: DOMRect) {
+    // 同上：失败卡片属于翻译模式。不回模式的话 Alt+Q 的 setMode('assistant')
+    // 会因「模式没变」提前返回、不发 mode-change，用户再也回不到助手。
+    this._mode = 'translate';
+    this._showSettings = false;
     this.error = msg;
     this.loading = false;
     this.pinned = true;
@@ -655,6 +664,12 @@ export class PopupBubble extends ShadowView {
     }
     this._mode = mode;
     this._showSettings = false;
+    // 切到翻译模式却没有任何可展示的内容（Alt+Q 进助手后点「翻译」、翻译失败后再点「翻译」）：
+    // 直接收起卡片，否则会留下一张固定住的空壳——看不见内容，也点不掉
+    if (mode === 'translate' && !this.translation && !this.loading && !this.error) {
+      this.hide();
+      return;
+    }
     this.update();
     this.emit('mode-change', { mode });
   }
@@ -726,6 +741,8 @@ export class PopupBubble extends ShadowView {
       onSpeak: (text) => this.emit('speak-word', { word: text }),
       onCopy: (text) => this._copyText(text),
       onOpenSettings: () => this._openSettings(this.el),
+      // 错误气泡里的「去设置」：与翻译失败卡片同一个出口（emit → content/index.ts → worker）
+      onOpenOptions: () => this._openOptions(),
       onOpenPanel: () => this.emit('open-assistant-panel'),
     };
   }

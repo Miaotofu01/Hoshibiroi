@@ -24,6 +24,12 @@ export interface ChatViewHandlers {
   onCopy(text: string): void;
   onOpenSettings(): void;
   /**
+   * 打开扩展设置页。可选：能直达设置页的 surface 才提供。
+   * 提供时，最后一条错误消息旁会多一个「去设置」按钮——
+   * 错误文案常是「请在设置里启用 DeepSeek 并填入 Key」，光有红字没有出口。
+   */
+  onOpenOptions?(): void;
+  /**
    * 把对话搬到侧栏。可选：只有需要这个入口的 surface（弹泡）才提供，
    * 侧栏自己就是这个页签，不给 handler，按钮随之不渲染（不留空操作按钮）。
    */
@@ -154,6 +160,7 @@ export function quickChips(ctrl: AssistantController, h: ChatViewHandlers): Temp
 export function chatBody(ctrl: AssistantController, ui: ChatUiState, h: ChatViewHandlers): TemplateResult {
   const ctx = ctrl.contextSummary();
   const empty = ctrl.session.empty;
+  const onOpenOptions = h.onOpenOptions;   // 提出来收窄：闭包里读 h.onOpenOptions 会丢掉 narrowing
   return html`<div class="chat">
     <div class="ctx-line">
       <span class="ctx-chip ${ctx.truncated ? 'warn' : ''}" title="注入的页面上下文规模">页面 ${(ctx.chars / 1000).toFixed(1)}k 字 · ≈${(ctx.tokens / 1000).toFixed(1)}k tokens${ctx.truncated ? '（已截取）' : ''}</span>
@@ -187,13 +194,16 @@ export function chatBody(ctrl: AssistantController, ui: ChatUiState, h: ChatView
             // 否则思考阶段被停下的一轮看起来像什么都没发生。
             const aborted = isLast && ctrl.lastFinishReason === 'aborted' && !streamingNow;
             const withActions = !streamingNow && !m.error && !!m.content;   // 朗读/复制要有正文才有意义
-            if (!aborted && !withActions) return nothing;
+            // 错误消息的出口：最后一条错误旁给一个「去设置」，别让用户对着红字猜去哪儿改
+            const goSettings = isLast && m.error && !streamingNow && !!onOpenOptions;
+            if (!aborted && !withActions && !goSettings) return nothing;
             return html`<div class="foot">
               ${aborted ? html`<span>已停止</span>` : nothing}
               ${withActions && stats ? html`<span>${stats}</span>` : nothing}
               ${withActions ? html`
                 <button class="minibtn" title="朗读答案" @click=${() => h.onSpeak(m.content)}>${iconSpeak}</button>
                 <button class="minibtn" title="复制答案" @click=${() => h.onCopy(m.content)}>${iconCopy}</button>` : nothing}
+              ${goSettings ? html`<button class="tool" title="打开扩展设置页" @click=${() => onOpenOptions()}>去设置</button>` : nothing}
             </div>`;
           })()}
           ${(() => {

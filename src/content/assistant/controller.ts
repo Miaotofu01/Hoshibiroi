@@ -12,6 +12,14 @@ const ZERO_STATS: AssistantStats = { elapsedMs: 0, promptTokens: 0, cachedTokens
 
 export type AssistantFocus = 'selection' | 'document-start';
 
+/** 输入行上方那枚上下文规模脚注 */
+export interface ContextSummary {
+  chars: number;
+  tokens: number;
+  truncated: boolean;
+  selectionChars: number;
+}
+
 export interface AskOptions {
   /** selection=围绕选中内容开窗；document-start=从页面开头取（整页速览用） */
   focus?: AssistantFocus;
@@ -45,6 +53,12 @@ export class AssistantController {
    * 选段变了也要重建（正文是按选中范围开窗的，沿用旧窗口会让新选区拿不到对应片段）。
    */
   private promptCache = new Map<AssistantFocus, { url: string; anchor: string; content: string }>();
+  /**
+   * 上下文规模脚注的缓存：算一次要走一遍 DOM（headingPath + 按选区开窗），
+   * 而流式期间每个渲染帧都会读它（~20 次/秒 × 两个 surface）。
+   * 键 = 页面地址 + 选中范围 + 上下文长度：这三者任一变化，缓存自然失效。
+   */
+  private summaryCache: { key: string; value: ContextSummary } | null = null;
 
   get busy(): boolean { return this.client.busy; }
 
@@ -127,15 +141,19 @@ export class AssistantController {
     this.notify(true);
   }
 
-  /** 上下文规模提示（输入行上方的脚注） */
-  contextSummary(focus: AssistantFocus = 'selection'): { chars: number; tokens: number; truncated: boolean; selectionChars: number } {
+  /** 上下文规模提示（输入行上方的脚注）。按「页面地址 + 选中范围 + 上下文长度」缓存 */
+  contextSummary(focus: AssistantFocus = 'selection'): ContextSummary {
+    const key = `${pageUrl()}\n${this.selection.text}\n${this.settings.contextChars}`;
+    if (this.summaryCache?.key === key) return this.summaryCache.value;
     const page = this._page(focus, this.selection.text);
-    return {
+    const value: ContextSummary = {
       chars: page.text.length,
       tokens: estimateTokens(page.text),
       truncated: page.totalChars > page.text.length,
       selectionChars: this.selection.text.length,
     };
+    this.summaryCache = { key, value };
+    return value;
   }
 
   /** 取页面正文（同一地址 5 秒缓存，避免连续提问重复遍历 DOM；换地址立即重采） */

@@ -164,10 +164,10 @@ function init(): void {
   }).catch(() => {});
 
   // ── 助手设置：读 local，变更写回，并跨上下文同步 ──
+  // 侧栏不用注入设置：它渲染的一切都从共享控制器读（控制器才是权威）
   function applyAssistantSettings(raw: unknown): void {
     assistant.setSettings(raw);
     popupBubble.setAssistantSettings(raw);
-    sidePanel.setAssistantSettings(raw);
   }
   chrome.storage.local.get(['assistantSettings']).then(d => {
     applyAssistantSettings((d as any)?.assistantSettings);
@@ -181,6 +181,9 @@ function init(): void {
   popupBubble.el.addEventListener('assistant-settings-change', (e: Event) => {
     const s = (e as CustomEvent).detail?.settings;
     if (!s) return;
+    // 先同步交给控制器：写盘可能失败（配额/权限），失败时滑条与实际请求用的值就分叉了，
+    // 而控制器是唯一决定下一次请求参数的权威
+    assistant.setSettings(s);
     chrome.storage.local.set({ assistantSettings: s }).catch(() => {});
   });
 

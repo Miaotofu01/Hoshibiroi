@@ -1,4 +1,4 @@
-import type { TranslatorConfig, Preferences } from '../shared/types';
+import type { TranslatorConfig, Preferences, AssistantSettings } from '../shared/types';
 import { CONTEXT_STEPS, normalizeAssistantSettings } from '../shared/assistant';
 
 /** 需要 API Key 的翻译源 ID 集合 */
@@ -229,20 +229,38 @@ async function init() {
 
   const localAssistant = await chrome.storage.local.get(['assistantSettings']);
   const a = normalizeAssistantSettings((localAssistant as any)?.assistantSettings);
-  ctxSlider.value = String(Math.max(0, CONTEXT_STEPS.indexOf(a.contextChars)));
-  ctxVal.textContent = ctxLabel();
-  thinkSel.value = a.thinking;
-  maxTok.value = String(a.maxAnswerTokens);
-  instr.value = a.instructions;
+
+  /** 把一条设置灌回四个控件（初始化与 storage 变更共用） */
+  const fillControls = (s: AssistantSettings): void => {
+    ctxSlider.value = String(Math.max(0, CONTEXT_STEPS.indexOf(s.contextChars)));
+    ctxVal.textContent = ctxLabel();
+    thinkSel.value = s.thinking;
+    maxTok.value = String(s.maxAnswerTokens);
+    instr.value = s.instructions;
+  };
+  fillControls(a);
 
   ctxSlider.addEventListener('input', () => { ctxVal.textContent = ctxLabel(); });
 
+  // 选项页可能长期开着：弹泡那边改了上下文长度/思考深度，这里要跟着刷新控件，
+  // 否则保存时会把弹泡刚改的值按过期的控件值写回去（下面保存时虽然会重读 storage，
+  // 但「四个控件值覆盖上去」的合并规则挡不住这份过期值）。
+  // includeSelection 没有对应控件，完全以 storage 为准，绝不在保存时被硬编码成 true。
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !changes.assistantSettings) return;
+    fillControls(normalizeAssistantSettings(changes.assistantSettings.newValue));
+  });
+
   document.getElementById('save')!.addEventListener('click', async () => {
+    // 先重读一次 storage 再做合并：本页初始化时读到的是一份旧快照，
+    // 直接按四个控件重写全部字段会顺手把弹泡改过的设置和已存的 includeSelection 抹掉
+    const stored = await chrome.storage.local.get(['assistantSettings']);
+    const base = normalizeAssistantSettings((stored as any)?.assistantSettings);
     await chrome.storage.local.set({
       assistantSettings: normalizeAssistantSettings({
+        ...base,
         contextChars: CONTEXT_STEPS[parseInt(ctxSlider.value, 10)],
         thinking: thinkSel.value,
-        includeSelection: true,
         maxAnswerTokens: parseInt(maxTok.value, 10),
         instructions: instr.value,
       }),

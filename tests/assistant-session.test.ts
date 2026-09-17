@@ -50,6 +50,20 @@ describe('ChatSession', () => {
     expect(s.streaming).toBe(false);
   });
 
+  it('流到一半失败时保留已收到的回答，错误另起一行追加', () => {
+    const s = new ChatSession();
+    s.ask('q');
+    s.pushReasoning('先想一下');
+    s.pushAnswer('已经流出的半截回答');
+    s.fail('与后台的连接中断（后台可能被回收），请重试');
+    expect(s.messages[1].content).toBe('已经流出的半截回答\n与后台的连接中断（后台可能被回收），请重试');
+    expect(s.messages[1].reasoning).toBe('先想一下');    // 思考过程也不受失败影响
+    expect(s.messages[1].error).toBe(true);
+    expect(s.streaming).toBe(false);
+    // 带错误的一轮整轮作废：半截回答不能当上下文回传给模型
+    expect(s.toApiMessages()).toEqual([]);
+  });
+
   it('没有先 ask() 时 fail() 自己开一条错误消息，不覆盖上一轮的答案', () => {
     const s = new ChatSession();
     s.ask('上一轮的问题');

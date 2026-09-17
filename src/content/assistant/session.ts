@@ -45,12 +45,14 @@ export class ChatSession {
    * 记录失败。调用方可能没有先 ask()（例如「上下文长度为 0，无法整页速览」这类短路分支），
    * 此时最后一条消息是上一轮已完成的回答：必须新开一条助手消息来写错误，
    * 不能把错误文本盖到那份回答上，否则上一轮的真实答案会被抹掉并从历史里整轮消失。
+   * 已经流出一部分回答时（端口中途断开）同样不能整段替换：
+   * 那会把用户正在读的内容抹掉，错误另起一行追加即可。
    */
   fail(message: string): void {
     if (!this._openAssistant()) this.messages.push({ role: 'assistant', content: '' });
     const last = this._lastAssistant();
     if (last) {
-      last.content = message;
+      last.content = last.content ? `${last.content}\n${message}` : message;
       last.error = true;
     }
     this._streaming = false;

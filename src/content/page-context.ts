@@ -90,7 +90,11 @@ export function headingPath(): string {
   // 最内层：选中位置本身落在某个标题里（含标题元素自身）
   const hits: Array<{ level: number; text: string }> = [];
   const own = origin.closest('h1, h2, h3');
-  if (own && !isNoise(own)) {
+  // 选区自己就在页面噪声里（目录/侧栏的标题）：直接认定没有章节。
+  // 不在这里收手的话，下面会继续往上走，把兄弟正文块里的标题当成它的章节——
+  // 错的标签比没有标签更糟（沿用控制器的取舍：宁缺毋错）。
+  if (own && isNoise(own)) return '';
+  if (own) {
     const text = label(own);
     if (text) hits.push({ level: Number(own.tagName[1]), text });
   }

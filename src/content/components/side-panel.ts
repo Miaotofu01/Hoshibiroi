@@ -1,8 +1,8 @@
 import { html, nothing } from 'lit';
-import type { AssistantSettings, TranslationResult, GrammarAnalysis } from '../../shared/types';
+import type { TranslationResult, GrammarAnalysis } from '../../shared/types';
 import type { AssistantController } from '../assistant/controller';
 import { chatBody, chatCss, chatInput, type ChatUiState, type ChatViewHandlers } from '../assistant/chat-view';
-import { DEFAULT_ASSISTANT_SETTINGS, QUICK_PROMPTS, normalizeAssistantSettings } from '../../shared/assistant';
+import { QUICK_PROMPTS } from '../../shared/assistant';
 import { ShadowView } from '../shadow-view';
 import { iconLanguages, iconSpeakSm, iconStar, iconCopy, iconClose, iconSparkle } from '../icons';
 
@@ -166,12 +166,6 @@ export class SidePanel extends ShadowView {
   private _grammarLoading = false;
   private _grammar: GrammarAnalysis | null = null;
   private _grammarError = '';
-  /**
-   * 助手设置：与 storage.local.assistantSettings 同步。
-   * 公开字段（而非 private）：Task 10 的侧栏助手页签才读取它，
-   * private 会在 noUnusedLocals 下报「声明未读取」。
-   */
-  assistantSettings: AssistantSettings = DEFAULT_ASSISTANT_SETTINGS;
 
   // ── 页签与助手（助手页签与弹泡共享同一个控制器，对话在两侧之间延续）──
   private _tab: 'detail' | 'assistant' = 'detail';
@@ -265,6 +259,7 @@ export class SidePanel extends ShadowView {
       onSpeak: (text) => this.emit('speak-word', { word: text }),
       onCopy: (text) => this._copyText(text),
       onOpenSettings: () => this.emit('open-options'),
+      onOpenOptions: () => this.emit('open-options'),
       // 不给 onOpenPanel：面板自己就是侧栏，chatInput 因此不渲染那个按钮
     };
   }
@@ -517,12 +512,6 @@ export class SidePanel extends ShadowView {
 
   setFavorited(val: boolean) {
     this._isFavorited = val;
-    this.update();
-  }
-
-  /** content script 注入助手设置（含 storage 变更同步） */
-  setAssistantSettings(raw: unknown): void {
-    this.assistantSettings = normalizeAssistantSettings(raw);
     this.update();
   }
 
