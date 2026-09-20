@@ -6,6 +6,7 @@ import { TriggerIcon } from './components/trigger-icon';
 import { PopupBubble } from './components/popup-bubble';
 import { SidePanel } from './components/side-panel';
 import { AssistantController } from './assistant/controller';
+import { triggerIntent } from './trigger-intent';
 
 const DEBOUNCE_MS = 200;
 
@@ -307,8 +308,15 @@ function init(): void {
 
   // ── 触发按钮 → 翻译 / 关闭（toggle）──
   triggerIcon.el.addEventListener('trigger-translate', () => {
-    if (popupBubble.translation) {
-      // 已有翻译结果浮层 → 关闭所有
+    // 意图由纯逻辑判定（见 trigger-intent.ts）：卡片上已经是当前选区这个词 → 关闭；
+    // 选区换成了别的词 → 翻译新词。旧实现只看「有没有译文」，导致卡片开着时
+    // 选中第二个词再点「译」会直接把卡片关掉，新选的词永远不被翻译。
+    const intent = triggerIntent({
+      hasCard: !!popupBubble.translation,
+      displayedWord: popupBubble.originalWord,
+      selectionText: lastSelection?.text ?? null,
+    });
+    if (intent === 'close') {
       popupBubble.hide();
       sidePanel.hide();
       triggerIcon.hide();

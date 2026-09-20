@@ -392,6 +392,8 @@ export class PopupBubble extends ShadowView {
 
   get targetLang(): string { return this._targetLang; }
   get sourceLang(): string { return this._sourceLang; }
+  /** 卡片上当前显示的原文（触发图标据此判断该翻译还是该关闭） */
+  get originalWord(): string { return this._originalWord; }
 
   setLangs(from: string, to: string): void {
     this._sourceLang = from || 'auto';

@@ -48,6 +48,7 @@ src/content/index.ts  ─msg→   src/worker/            ←msg→ src/vocab/
 | `src/worker/deepseek-model.ts` | DeepSeek 模型名唯一来源，助手/翻译/语法分析共用 `DEEPSEEK_MODEL` |
 | `src/content/assistant/controller.ts` | 弹泡与侧栏共享的助手控制器（会话、设置、页面上下文、请求装配）；`askPreset(id)` 是预设分发的唯一入口 |
 | `src/content/assistant/history.ts` | 译文历史纯逻辑（环形缓冲、同词同源去重、前后回退），无 DOM/chrome 依赖 |
+| `src/content/trigger-intent.ts` | 触发图标点击意图纯逻辑（该翻译新词还是该关闭） |
 
 ## 记忆调度策略
 
@@ -61,7 +62,7 @@ src/content/index.ts  ─msg→   src/worker/            ←msg→ src/vocab/
 ## 测试
 
 ```bash
-npx vitest run tests/    # 全部 103 项 / 9 个文件：SRS 调度器、导入、助手（上下文/流式/端口/会话/模型名）、译文历史
+npx vitest run tests/    # 全部 108 项 / 10 个文件：SRS 调度器、导入、助手（上下文/流式/端口/会话/模型名）、译文历史、触发图标意图
 ```
 
 ## Gotchas
@@ -79,3 +80,4 @@ npx vitest run tests/    # 全部 103 项 / 9 个文件：SRS 调度器、导入
 - **归一化是白名单式的**：`normalizeAssistantSettings` 返回对象是字面量，**未知字段被静默丢弃**。给 `AssistantSettings` 加字段必须同步加进归一化，否则读盘时会被无声抹掉（旧 `instructions` 就是这样被丢弃的，无迁移）
 - **预设 id 必须确定性生成**：归一化是纯函数、每次读盘都重跑，`id` 用 `randomUUID()` 会让同一份设置在两次读取间产生不同 id。见 `assistant.ts` 的 `contentId()`
 - **预设列表是唯一真源**：chip 栏与工具栏的整页类入口都从 `settings.presets` 派生（`controller.askPreset(id)`），**不要**再按固定 id 硬编码按钮——那正是「用户删了预设、按钮还在、点了没反应」的成因
+- **触发图标不是「有译文就关闭」**：意图由纯逻辑 `triggerIntent()`（`src/content/trigger-intent.ts`）判定——卡片上已经是当前选区那个词才关闭，选区换成别的词要**翻译新词**。写成 `if (translation) close` 会让卡片开着时选中第二个词点「译」直接关掉，新词永远翻不出来
