@@ -72,9 +72,11 @@ Requires Node.js ≥ 18. Output goes to `dist/`.
 - Switch between translate and assistant from the popup icons or the side-panel tab; the conversation is shared between the popup and the side panel
 - Injects the current page context (windowed around your selection) plus the selected range — ask, follow up, or summarize the whole page
 - Streaming output with collapsible reasoning; the footnote shows input/output tokens, prefix-cache hit rate, and elapsed time
-- Quick prompts: explain the selection / plain words / examples / quiz me / what is this page about; answers can be read aloud or copied
+- Quick prompts: explain the selection / plain words / examples / quiz me / what is this page about; **these presets are customizable** — add, delete, edit, reorder, and change whether each needs a selection or how it windows the page; the toolbar's whole-page entries are derived from the same preset list; answers can be read aloud or copied
 - `Alt+Q` asks about the current selection directly
-- Settings: **the options page holds all four** — context length (0–32000 characters, 0 = selection only), thinking depth (off / low / high / max), extra instructions, and the answer length cap; the popup settings popover is a shortcut for the first two (use the options page for the rest). A popover change applies immediately; the options page shows stored values when next opened
+- Assistant behaviour rules are editable (options page), with one fixed, non-editable anti-prompt-injection safeguard rule that always applies
+- Settings: **the options page holds everything** — context length (0–32000 characters, 0 = selection only), thinking depth (off / low / high / max), behaviour rules, preset prompts, and the answer length cap; the popup settings popover is a shortcut for context length and thinking depth only (use the options page for the rest). A popover change applies immediately; the options page shows stored values when next opened
+- The translation card remembers the last 10 words you looked up, with `‹ ›` in the meta row to step back and forward (it re-displays the cached result and does not re-request the translator); in-memory only, cleared when the page reloads
 - Requires a DeepSeek API key: the assistant reuses the DeepSeek key configured for the translation source, and tells you to open settings when it is missing
 
 ### Vocabulary & spaced repetition
