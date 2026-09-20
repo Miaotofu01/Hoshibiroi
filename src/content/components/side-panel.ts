@@ -2,7 +2,6 @@ import { html, nothing } from 'lit';
 import type { TranslationResult, GrammarAnalysis } from '../../shared/types';
 import type { AssistantController } from '../assistant/controller';
 import { chatBody, chatCss, chatInput, type ChatUiState, type ChatViewHandlers } from '../assistant/chat-view';
-import { QUICK_PROMPTS } from '../../shared/assistant';
 import { ShadowView } from '../shadow-view';
 import { iconLanguages, iconSpeakSm, iconStar, iconCopy, iconClose, iconSparkle } from '../icons';
 
@@ -243,10 +242,8 @@ export class SidePanel extends ShadowView {
         this.update();
       },
       onQuick: (id) => {
-        const q = QUICK_PROMPTS.find(p => p.id === id);
-        if (!q || !this._assistant) return;
-        if (q.needsSelection && !this._assistant.selection.text) return;
-        this._assistant.ask(q.prompt, { focus: q.focus, selection: this._assistant.selection.text });
+        // 与弹泡一致：分发给控制器，避免两份预设列表
+        this._assistant?.askPreset(id);
       },
       onStop: () => this._assistant?.stop(),
       onClear: () => this._assistant?.clear(),

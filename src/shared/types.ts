@@ -117,13 +117,37 @@ export interface Preferences {
 /** 思考深度：off=关闭思考（最快，temperature 生效）；low/high/max 对应 DeepSeek reasoning_effort */
 export type AssistantThinking = 'off' | 'low' | 'high' | 'max';
 
+/** 预设提问取页面上下文的方式：selection=围绕选中内容开窗；document-start=从页面开头取 */
+export type AssistantFocus = 'selection' | 'document-start';
+
+/**
+ * 预设提问（输入框上方的快捷按钮）。
+ * id 由 normalizeAssistantSettings 保证唯一——渲染与分发都以 id 为键，
+ * 重复 id 会导致点 A 发出 B 的提问。
+ */
+export interface AssistantPreset {
+  id: string;
+  label: string;                 // 按钮文字
+  prompt: string;                // 点击后发出的提问
+  needsSelection: boolean;       // true 时无选中范围则禁用并提示先划词
+  focus: AssistantFocus;         // 取上下文的方式
+}
+
 /** 助手设置（存 storage.local.assistantSettings） */
 export interface AssistantSettings {
   contextChars: number;          // 注入页面正文字符上限；0 = 只带选中范围
   thinking: AssistantThinking;   // 思考深度
   includeSelection: boolean;     // 是否把选中范围一并发出
   maxAnswerTokens: number;       // 回答 token 上限（不含思考预算）
-  instructions: string;          // 附加系统指令（用户自定义）
+  /**
+   * 可编辑规则：用户可改写的助手行为要求，注入系统提示词。
+   * 内置三条默认规则（见 DEFAULT_ASSISTANT_RULES）是它的默认值；
+   * 清空视为非法值、回落默认（用户无法表达「不要任何额外规则」）。
+   * 防提示词注入规则不在此列——它是硬编码的安全兜底，见 buildSystemPrompt。
+   */
+  rules: string;
+  /** 预设提问列表；空/非法则回落 DEFAULT_ASSISTANT_PRESETS */
+  presets: AssistantPreset[];
 }
 
 /** 页面上下文（content script 采集，纯数据） */

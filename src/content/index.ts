@@ -71,6 +71,8 @@ function init(): void {
   const triggerIcon = new TriggerIcon();
   const popupBubble = new PopupBubble();
   const sidePanel = new SidePanel();
+  // 历史回显要带正确的收藏态：把同一份缓存注入卡片（content script 是它的所有者）
+  popupBubble.attachFavoriteCache(favoriteCache);
 
   // ── AI 助手：一个页面一个控制器，弹泡与侧栏共享同一会话 ──
   const assistant = new AssistantController();
@@ -281,6 +283,8 @@ function init(): void {
         if (res.type === 'TRANSLATE_RESULT') {
           popupBubble.show(lastSelection!.text, res.translation, rect, langSig(res.from, res.to), favoriteCache.has(lastSelection!.text));
           popupBubble.setSources(sources, res.translation.sourceId ?? '');
+          // 记入译文历史（同词同源只留一条）；滚动/关闭不清空，只有刷新页面才清
+          popupBubble.pushHistory(lastSelection!.text, res.translation.sourceId ?? '', langSig(res.from, res.to), res.translation);
           // 单查收藏状态（不再全量拉取词库；带 lemma 使词形归并后仍能正确高亮）
           sendToWorker({ type: 'CHECK_FAVORITE', word: lastSelection!.text, lemma: res.translation.lemma } as WorkerRequest)
             .then(favRes => {

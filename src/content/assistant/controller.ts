@@ -1,4 +1,4 @@
-import type { AssistantSettings, AssistantStats } from '../../shared/types';
+import type { AssistantFocus, AssistantPreset, AssistantSettings, AssistantStats } from '../../shared/types';
 import {
   DEFAULT_ASSISTANT_SETTINGS, buildSystemPrompt, buildUserTurn, estimateTokens,
   normalizeAssistantSettings, truncateAround, type ApiMessage,
@@ -10,7 +10,8 @@ import { collectPageText, headingPath, pageTitle, pageUrl } from '../page-contex
 const PAGE_CACHE_MS = 5000;
 const ZERO_STATS: AssistantStats = { elapsedMs: 0, promptTokens: 0, cachedTokens: 0, answerTokens: 0, reasoningTokens: 0 };
 
-export type AssistantFocus = 'selection' | 'document-start';
+// AssistantFocus 的权威定义在 shared/types.ts：预设的 focus 字段与控制器共用同一个联合类型，
+// 这里不再重复声明（两处字面量联合容易在新增取值时只改一处）。
 
 /** 输入行上方那枚上下文规模脚注 */
 export interface ContextSummary {
@@ -61,6 +62,21 @@ export class AssistantController {
   private summaryCache: { key: string; value: ContextSummary } | null = null;
 
   get busy(): boolean { return this.client.busy; }
+
+  /** 当前预设提问列表（归一化后的权威来源；渲染与分发都读它） */
+  get presets(): AssistantPreset[] { return this.settings.presets; }
+
+  /**
+   * 按 id 取预设并直接发出该预设的提问。
+   * 所有 chip 与工具栏入口都走这里，因此预设列表是唯一真源——
+   * 用户删掉某条预设后，对应入口自然消失，不会留下一个点了没反应的按钮。
+   */
+  askPreset(id: string): void {
+    const p = this.settings.presets.find(x => x.id === id);
+    if (!p) return;
+    if (p.needsSelection && !this.selection.text) return;
+    this.ask(p.prompt, { focus: p.focus, selection: this.selection.text });
+  }
 
   onChange(cb: () => void): () => void {
     this.listeners.add(cb);
@@ -189,7 +205,7 @@ export class AssistantController {
       return cached.content;
     }
     const page = this._page(focus, anchor);
-    const content = buildSystemPrompt({ page, instructions: this.settings.instructions });
+    const content = buildSystemPrompt({ page, rules: this.settings.rules });
     this.promptCache.set(focus, { url, anchor: probe, content });
     return content;
   }

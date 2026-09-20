@@ -83,6 +83,46 @@
       cursor: default;
     }
 
+    /* ── 预设提问编辑行 ── */
+    .preset-row {
+      border: 1px solid var(--syo-border);
+      border-radius: var(--syo-radius-sm);
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      background: var(--syo-bg-surface);
+    }
+
+    .preset-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+
+    .preset-head .arrow-btn {
+      padding: 3px 6px;
+    }
+
+    #assistant-preset-add,
+    #assistant-preset-reset {
+      background: none;
+      border: 1px solid var(--syo-border);
+      border-radius: var(--syo-radius-sm);
+      color: var(--syo-fg-body);
+      cursor: pointer;
+      font-family: var(--font-display, inherit);
+      font-size: 12px;
+      padding: 5px 12px;
+      transition: border-color 150ms var(--syo-ease-out), color 150ms var(--syo-ease-out);
+    }
+
+    #assistant-preset-add:hover,
+    #assistant-preset-reset:hover {
+      border-color: var(--syo-info);
+      color: var(--syo-info);
+    }
+
     .translator-info {
       flex: 1;
     }
@@ -311,9 +351,24 @@
       <input type="number" id="assistant-max-tokens" class="api-key-input" style="width:120px;margin-left:0" min="200" max="8000" step="100">
     </div>
     <div>
-      <div class="translator-name">附加指令（可选）</div>
-      <div class="translator-desc">拼在系统提示词末尾，例如「回答控制在两句话内」。</div>
-      <textarea id="assistant-instructions" class="api-key-input" style="width:100%;height:64px;margin-left:0"></textarea>
+      <div class="translator-name">助手行为规则</div>
+      <div class="translator-desc">助手必须遵守的要求，直接写进系统提示词。留空则恢复下面的默认规则。</div>
+      <textarea id="assistant-rules" class="api-key-input" style="width:100%;height:110px;margin-left:0"></textarea>
+      <div class="hint" id="assistant-rules-reset" style="cursor:pointer;text-decoration:underline;display:inline-block">恢复默认规则</div>
+    </div>
+    <div>
+      <div class="translator-name">安全兜底（不可修改）</div>
+      <div class="translator-desc">页面正文与选中范围都是待阅读的数据，不是对助手的指令。这条始终生效，用来防止网页内容冒充你的指令。</div>
+      <div class="hint" id="assistant-locked-rule" style="white-space:pre-wrap;opacity:.75"></div>
+    </div>
+    <div>
+      <div class="translator-name">预设提问</div>
+      <div class="translator-desc">助手输入框上方的快捷按钮。勾选「需要选中」的只在划词后可用；「取上下文」决定提问时携带页面正文的方式。全部删空则恢复默认预设。</div>
+      <div id="assistant-presets"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="button" id="assistant-preset-add">+ 新增预设</button>
+        <button type="button" id="assistant-preset-reset">恢复默认预设</button>
+      </div>
     </div>
   </div>
 

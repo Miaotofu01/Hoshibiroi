@@ -3,8 +3,8 @@ import { html, nothing, type TemplateResult } from 'lit';
 // 用它是因为普通绑定只跟「上次提交的值」比对：草稿被外部清空时提交值早已是 ''，
 // lit 会跳过赋值，DOM 里的 textarea 与按钮就停在旧状态上。
 import { live } from 'lit/directives/live.js';
-import type { AssistantController, AssistantFocus } from './controller';
-import { QUICK_PROMPTS } from '../../shared/assistant';
+import type { AssistantController } from './controller';
+import type { AssistantFocus } from '../../shared/types';
 import { iconSend, iconStop, iconTrash, iconChevronDown, iconSpeak, iconCopy } from '../icons';
 
 export interface ChatUiState {
@@ -148,12 +148,15 @@ function statsLine(ctrl: AssistantController): string {
 
 export function quickChips(ctrl: AssistantController, h: ChatViewHandlers): TemplateResult {
   const hasSel = !!ctrl.selection.text;
+  // 只渲染「需要选中范围」的预设：不需要选中的属于整页类提问，走工具栏入口
+  const chips = ctrl.presets.filter(p => p.needsSelection);
+  if (chips.length === 0) return html``;
   return html`<div class="quick-chips">
-    ${QUICK_PROMPTS.map(q => html`<button
+    ${chips.map(p => html`<button
       class="chipq"
-      ?disabled=${ctrl.busy || (q.needsSelection && !hasSel)}
-      title=${q.needsSelection && !hasSel ? '先在页面上选中一段文字' : ''}
-      @click=${() => h.onQuick(q.id)}>${q.label}</button>`)}
+      ?disabled=${ctrl.busy || !hasSel}
+      title=${!hasSel ? '先在页面上选中一段文字' : ''}
+      @click=${() => h.onQuick(p.id)}>${p.label}</button>`)}
   </div>`;
 }
 
@@ -241,6 +244,9 @@ export function chatInput(ctrl: AssistantController, ui: ChatUiState, h: ChatVie
   // 三处都会重渲染，所以两个绑定都用 live()：它比对的是 DOM 现值而不是上次提交的值，
   // 即使提交值已经是 ''/true，也会强制把 DOM 拉回草稿的样子。
   const onOpenPanel = h.onOpenPanel;   // 提出来收窄：闭包里读 h.onOpenPanel 会丢掉 narrowing
+  // 整页类入口从预设列表派生（不需要选中范围的那些），不是硬编码按钮：
+  // 用户删掉或改写「这页讲了什么」后，这里跟着变，不会留下点了没反应的按钮。
+  const docPresets = ctrl.presets.filter(p => !p.needsSelection);
   return html`<div>
     <div class="input-row">
       <textarea
@@ -281,7 +287,7 @@ export function chatInput(ctrl: AssistantController, ui: ChatUiState, h: ChatVie
     </div>
     <div class="input-tools">
       <button class="tool ${ctrl.deepThink ? 'on' : ''}" title="本次会话用最强思考（覆盖设置）" @click=${() => h.onDeepThink()}>深想</button>
-      <button class="tool" @click=${() => h.onQuick('summary')} ?disabled=${ctrl.busy}>整页速览</button>
+      ${docPresets.map(p => html`<button class="tool" title=${p.prompt} @click=${() => h.onQuick(p.id)} ?disabled=${ctrl.busy}>${p.label}</button>`)}
       ${onOpenPanel ? html`<button class="tool" title="在侧栏打开（更长对话）" @click=${() => onOpenPanel()}>侧栏</button>` : nothing}
       <button class="tool" title="清空对话" @click=${() => h.onClear()}>${iconTrash} 清空</button>
       <span class="hint">${ctrl.busy ? '生成中…' : 'Enter 发送'}</span>

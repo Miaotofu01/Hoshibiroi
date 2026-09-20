@@ -2,7 +2,8 @@ import { html, nothing } from 'lit';
 import type { AssistantSettings, AssistantThinking, TranslationResult } from '../../shared/types';
 import type { AssistantController } from '../assistant/controller';
 import { chatBody, chatCss, chatInput, type ChatUiState, type ChatViewHandlers } from '../assistant/chat-view';
-import { CONTEXT_STEPS, DEFAULT_ASSISTANT_SETTINGS, QUICK_PROMPTS, THINKING_LEVELS, normalizeAssistantSettings } from '../../shared/assistant';
+import { CONTEXT_STEPS, DEFAULT_ASSISTANT_SETTINGS, THINKING_LEVELS, normalizeAssistantSettings } from '../../shared/assistant';
+import { TranslationHistory, type HistoryEntry } from '../assistant/history';
 import { ShadowView } from '../shadow-view';
 import { iconSpeak, iconStar, iconChevronRight, iconRetry, iconSettings, iconClose, iconCopy, iconLanguages, iconSparkle } from '../icons';
 
@@ -110,6 +111,22 @@ const CSS = chatCss + `
   .modes .mode svg { width: 13px; height: 13px; }
   .modes .mode:hover { color: var(--text-primary); background: var(--bg-hover); }
   .modes .mode.on { color: var(--accent); background: rgba(122,162,247,.14); }
+
+  /* ── 译文历史回退（‹ › + 位置指示）── */
+  .hist { display: inline-flex; align-items: center; gap: 1px; flex-shrink: 0; }
+  .hist button {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 20px; padding: 0;
+    background: transparent; border: none; border-radius: 4px;
+    color: var(--text-muted); cursor: pointer; transition: var(--transition);
+    font-size: 14px; line-height: 1;
+  }
+  .hist button:hover:not(:disabled) { color: var(--accent); background: var(--bg-hover); }
+  .hist button:disabled { opacity: .3; cursor: default; }
+  .hist .pos {
+    font-family: var(--font-mono); font-size: calc(var(--font-size-sm) - 2px);
+    color: var(--text-muted); min-width: 22px; text-align: center;
+  }
 
   /* 助手输入区：在 .bubble 内、.body 之外 → 固定底部不随对话滚动；
      卡片自身没有内边距，故这里补上与 .body 一致的左右留白 */
@@ -352,6 +369,16 @@ export class PopupBubble extends ShadowView {
   /** 助手设置（上下文长度 / 思考深度），与 storage.local.assistantSettings 保持同步 */
   private _assistantSettings: AssistantSettings = DEFAULT_ASSISTANT_SETTINGS;
 
+  /**
+   * 译文历史：最近查过的词，可前后回退。
+   * **它是 hide() 那条「清空一切状态」惯例的唯一例外**——滚动、点击页面、Esc、✕
+   * 都会调 hide()，若在这里一并清空，用户滚一下页面历史就没了。
+   * 只有刷新页面（整个 content script 重跑）才真正清空。
+   */
+  private _history = new TranslationHistory<TranslationResult>();
+  /** 收藏缓存引用：历史回显时用来还原收藏态 */
+  private _favCache: Set<string> | null = null;
+
   /** 外部注入弹泡知识区配置（content script 从 storage 读出后调用） */
   setSections(sections: Record<string, boolean> | undefined): void {
     this._sections = sections ?? {};
@@ -449,6 +476,11 @@ export class PopupBubble extends ShadowView {
           <button class="mode ${this._mode === 'translate' ? 'on' : ''}" title="翻译模式" @click=${() => this.setMode('translate')}>${iconLanguages}</button>
           <button class="mode" title="助手模式：就这一页提问" @click=${() => this.setMode('assistant')}>${iconSparkle}</button>
         </span>
+        ${this._history.size > 1 ? html`<span class="hist">
+          <button title="上一个查过的词" ?disabled=${!this._history.canBack} @click=${() => this.historyBack()}>‹</button>
+          <span class="pos">${this._history.position}/${this._history.size}</span>
+          <button title="下一个查过的词" ?disabled=${!this._history.canForward} @click=${() => this.historyForward()}>›</button>
+        </span>` : nothing}
         <span class="sig">${this._sig || ''}</span>
         <span class="grip" title="拖拽移动卡片"></span>
         ${this._secOn('register') && t.register ? html`<span class="chip reg" title="语域">${t.register}</span>` : nothing}
@@ -553,6 +585,48 @@ export class PopupBubble extends ShadowView {
     this._position(anchorRect);
   }
 
+  /**
+   * 记入译文历史并把游标移到这条。
+   * 与 show() 分开：show() 只负责渲染，历史是独立状态，
+   * 切源重译、重试都走这里，保证「同词同源只留一条」。
+   */
+  pushHistory(word: string, sourceId: string, sig: string, trans: TranslationResult): void {
+    this._history.push(word, sourceId, sig, trans);
+    this.update();
+  }
+
+  /** 回退到上一条译文（直接回显缓存，不重新请求） */
+  historyBack(): void {
+    const e = this._history.back();
+    if (e) this._showHistoryEntry(e);
+  }
+
+  /** 前进到下一条译文 */
+  historyForward(): void {
+    const e = this._history.forward();
+    if (e) this._showHistoryEntry(e);
+  }
+
+  /** 把某条历史记录渲染成当前卡片内容（不发网络请求） */
+  private _showHistoryEntry(e: HistoryEntry<TranslationResult>): void {
+    this._originalWord = e.word;
+    this.translation = e.payload;
+    this.error = '';
+    this.loading = false;
+    this._mode = 'translate';
+    this._sig = e.sig;
+    // 收藏态随词走：缓存里记过就点亮，没记过就熄灭（真实状态由 content script 单查后回填）
+    this.isFavorited = this._favCache?.has(e.word) ?? false;
+    this.setVisible(true);
+    this.pinned = true;
+    this.update();
+  }
+
+  /** 外接注入收藏缓存，使历史回显能带上正确的收藏态 */
+  attachFavoriteCache(cache: Set<string>): void {
+    this._favCache = cache;
+  }
+
   setLoading(anchorRect: DOMRect) {
     // 翻译流程一启动，模式必须交还给翻译：卡片现在渲染的是 loading（模式是权威），
     // 但 _mode 还停在 'assistant' 的话，结果回来时 show() 也进不了翻译分支。
@@ -588,6 +662,10 @@ export class PopupBubble extends ShadowView {
     this.loading = false;
     this.error = '';
     this._chatUi.draft = '';
+    // 译文历史**故意不清空**：滚动、点击页面、Esc、✕ 都走 hide()，
+    // 在这里清掉等于用户滚一下页面就丢失回退能力。
+    // 只把游标移出历史——下次打开卡片应停在最新一条，而不是上次翻到的中间位置。
+    this._history.detach();
     // 关卡片后重新打开要重新跟随最新消息：用户上次翻到中间不代表这次也要停在中间
     this._autoScroll = true;
     // 关卡片一律回到翻译模式，并还原进入助手前的翻译尺寸：
@@ -725,10 +803,9 @@ export class PopupBubble extends ShadowView {
         this.update();
       },
       onQuick: (id) => {
-        const q = QUICK_PROMPTS.find(p => p.id === id);
-        if (!q || !this._assistant) return;
-        if (q.needsSelection && !this._assistant.selection.text) return;
-        this._assistant.ask(q.prompt, { focus: q.focus, selection: this._assistant.selection.text });
+        // 分发交给控制器：它持有归一化后的预设列表（唯一真源），
+        // 这里再查一次就会出现两份列表、两套 needsSelection 判断
+        this._assistant?.askPreset(id);
       },
       onStop: () => this._assistant?.stop(),
       onClear: () => this._assistant?.clear(),
