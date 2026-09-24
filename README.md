@@ -209,7 +209,8 @@ docs/
 ## 测试
 
 ```bash
-npx vitest run tests/    # 全部 77 项（8 个文件）：FSRS 调度器、导入、助手各套件
+npm test                 # 全部 108 项（10 个文件）：FSRS 调度器、导入、助手各套件
+npx vitest run tests/    # 同上，直接跑 vitest
 ```
 
 ## 贡献

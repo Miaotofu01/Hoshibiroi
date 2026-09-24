@@ -7,3 +7,5 @@ dist.crx
 .superpowers/
 docs/superpowers/
 src/icons/
+# 本地 gh CLI 副本（41MB，非项目产物）
+.tools/
